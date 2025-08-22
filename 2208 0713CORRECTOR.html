@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corrector de Pedidos Pro v34.1 (CSV Fix)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #1a1d23; --bg-secondary: #242832; --bg-accent: #2d3748;
+            --text-primary: #e2e8f0; --text-secondary: #a0aec0; --accent-green: #48bb78;
+            --accent-blue: #4299e1; --border-color: #4a5568;
+        }
+        body { font-family: 'Courier Prime', monospace; background-color: var(--bg-primary); color: var(--text-primary); }
+        .panel { background-color: var(--bg-secondary); } 
+        .input-area, .internal-box { background-color: var(--bg-accent); } 
+        #debug-section { background-color: var(--bg-accent); border-left: 4px solid var(--accent-green); }
+        #debug-section h3 { color: var(--accent-green); }
+        .input-field { background-color: var(--bg-accent); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .input-field::placeholder { color: var(--text-secondary); }
+        .input-field:hover { border-color: var(--accent-blue); }
+        .input-field:focus { border-color: var(--accent-green); box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2); outline: none; }
+        .loader { border-top-color: var(--accent-blue); animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .disabled-section, button:disabled { opacity: 0.5; pointer-events: none; }
+        .switch-group input[type="radio"] { display: none; }
+        .switch-group label { cursor: pointer; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.375rem; transition: all 0.2s ease-in-out; }
+        .switch-group input[type="radio"]:checked + label { background-color: var(--accent-blue); border-color: var(--accent-blue); }
+        .highlight-cell { border: 2px solid #f59e0b !important; font-weight: 700; }
+        #price-modal-close:hover, #price-modal-close:focus { color: var(--text-primary); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 34.1 - CSV Fix</p></header>
+
+        <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
+            <h2 class="text-xl font-semibold mb-4">Búsqueda Inteligente en Catálogo</h2>
+            <input type="text" id="intelligent-search-input" class="input-field w-full p-2 rounded-md" placeholder="🔍 Buscar por SKU o descripción del producto...">
+            <div id="intelligent-search-results" class="mt-4 max-h-96 overflow-y-auto pr-2">
+                <p class="text-base text-secondary">Los resultados de la búsqueda aparecerán aquí...</p>
+            </div>
+        </div>
+
+        <div id="debug-section" class="p-4 rounded-lg shadow-md mb-8"><h3 class="text-lg font-semibold mb-2">🔧 Log de Procesamiento</h3><div id="debug-info" class="text-sm max-h-40 overflow-y-auto"><p>El análisis del pedido aparecerá aquí...</p></div></div>
+
+        <div id="upload-section" class="panel p-6 rounded-lg shadow-md mb-8">
+            <div id="upload-inputs">
+                <h2 class="text-xl font-semibold mb-4">Cargar Catálogo Único (CSV)</h2>
+                <div class="max-w-md mx-auto">
+                    <div>
+                        <label for="file-catalogo" class="block text-sm font-medium mb-2">Catálogo Completo</label>
+                        <input type="file" id="file-catalogo" accept=".csv" class="block w-full text-sm text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-900 file:text-blue-200 hover:file:bg-blue-800"/>
+                        <p id="status-catalogo" class="text-xs mt-1 text-secondary">Sube el archivo CSV con todos los precios.</p>
+                    </div>
+                </div>
+                <button id="btn-guardar-catalogo" class="mt-4 w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700" disabled>Cargar Catálogo y Continuar</button>
+            </div>
+            <div id="storage-status" class="hidden mt-4 flex justify-between items-center">
+                 <p id="status-cargado" class="text-sm font-semibold" style="color: var(--accent-green);">Catálogo cargado desde memoria.</p>
+                 <button id="btn-limpiar-storage" class="text-xs text-red-500 hover:underline">Limpiar y cargar nuevo</button>
+            </div>
+        </div>
+
+        <div id="main-interface" class="disabled-section">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="panel p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-4">1. Pegar Pedido y Opciones</h2>
+                    <textarea id="pedido-crudo" class="input-field w-full h-40 p-3 rounded-md" placeholder="Pegue aquí el pedido en cualquier formato..."></textarea>
+                    <div class="mt-4"><label for="nv-input" class="block text-sm font-medium mb-2">Nº Nota de Venta (Opcional):</label><input type="text" id="nv-input" class="input-field w-full p-2 rounded-md" placeholder="Ej: 12345"></div>
+                    <div class="mt-4"><label class="block text-sm font-medium mb-2">Tipo de Cliente:</label><div class="flex space-x-2 switch-group"><input type="radio" id="cliente-normal" name="tipo-cliente" value="normal" checked><label for="cliente-normal">Normal</label><input type="radio" id="cliente-vip" name="tipo-cliente" value="VIP"><label for="cliente-vip">VIP</label><input type="radio" id="cliente-webalia" name="tipo-cliente" value="PRECIOS WEBALIA"><label for="cliente-webalia">Webalia</label></div></div>
+                    <div class="mt-4"><label class="block text-sm font-medium mb-2">Precios del pedido son:</label><div class="flex space-x-2 switch-group"><input type="radio" id="precio-bruto" name="tipo-precio" value="bruto" checked><label for="precio-bruto">Brutos</label><input type="radio" id="precio-neto" name="tipo-precio" value="neto"><label for="precio-neto">Netos</label></div></div>
+                    <div class="mt-4"><label class="flex items-center text-sm font-medium"><input type="checkbox" id="agrupar-categorias" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked><span class="ml-2">Agrupar Cantidades por Categoría</span></label></div>
+                    <button id="btn-normalizar" class="mt-6 w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-md hover:bg-gray-700">2. Normalizar Pedido</button>
+                </div>
+                <div class="panel p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-4">3. Verificar y Corregir</h2>
+                    <input type="text" id="filtro-pedido" class="input-field w-full p-2 mb-2 rounded-md" placeholder="🔍 Buscar por SKU o descripción...">
+                    <div id="datos-normalizados" class="internal-box w-full h-60 p-3 border border-transparent rounded-md overflow-auto"><p class="text-sm text-secondary">Aquí aparecerán los datos para editar...</p></div>
+                    <button id="btn-corregir" class="mt-6 w-full text-white font-bold py-3 px-4 rounded-md" style="background-color: var(--accent-blue);" disabled>¡Corregir Precios!</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultados-container" class="panel mt-8 p-6 rounded-lg shadow-md hidden">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
+                 <h2 class="text-2xl font-semibold flex items-center">4. Resultados Finales<div id="loader" class="loader ease-linear rounded-full border-4 border-t-4 h-6 w-6 ml-4 hidden" style="border-color: var(--border-color);"></div></h2>
+                 <div class="flex gap-2 flex-wrap">
+                    <button id="btn-copiar-diferencias" class="hidden text-white font-bold py-2 px-4 rounded-md" style="background-color: var(--accent-blue);">Copiar Resumen</button>
+                    <button id="btn-capturar-tabla" class="hidden text-white font-bold py-2 px-4 rounded-md" style="background-color: var(--accent-green);">📷 Copiar Imagen de Tabla</button>
+                 </div>
+            </div>
+            <div id="resultados-correccion" class="overflow-x-auto"></div>
+            <div id="resumen-pedido" class="mt-6 pt-4" style="border-top: 1px solid var(--border-color);"></div>
+        </div>
+    </div>
+
+    <div id="price-modal" style="display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center;">
+        <div id="price-modal-content" class="panel" style="padding: 20px; border: 1px solid var(--border-color); width: 90%; max-width: 500px; border-radius: 8px; position: relative;">
+            <span id="price-modal-close" style="color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h3 id="price-modal-title" style="margin-top: 0; color: var(--text-primary);"></h3>
+            <div id="price-modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+    let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {}, tempCatalogo = null;
+
+    function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
+    function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
+    function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
+    function parsearPedidoUnificado(texto) { const textoNormalizado = texto.replace(/[\n\t]/g, ' ').replace(/\s{2,}/g, ' '); const productos = []; const regex = /(FC[0-9A-Z-]+)(.*?)\s*(\d+)\s*(\$[\s\d.,]+)/gi; let match; while ((match = regex.exec(textoNormalizado)) !== null) { let sku = normalizarSKU(match[1]); let item = match[2].replace(/SKU|ITEM|CANTIDAD|V\. UNITARIO|Descuento|SUBTOTAL/gi, '').trim(); let cantidad = parseInt(match[3], 10); let precio = limpiarValor(match[4]); if (item && cantidad > 0 && precio !== null) { productos.push({ sku: sku, item: item, cantidad: cantidad, v_unitario_usuario: precio }); } } if (productos.length > 0) { ui.debugInfo.innerHTML = `<p>Análisis completado. Se normalizaron <strong>${productos.length}</strong> productos.</p>`; } else { ui.debugInfo.innerHTML = `<p class="text-red-500">No se pudo extraer ningún producto válido.</p>`; } return productos; }
+    function getCategoriaPrecios(d) { const match = String(d).trim().match(/(.*?)\s*-\s*/); return (match && match[1]) ? match[1].trim() : "General"; }
+    function calcularCantidadesPorCategoria(p){ const c={}; p.forEach(i=>{ const pr=catalogoCompleto.find(p=>p.sku===i.sku); const d=pr?pr.descripcion:i.item||""; c[getCategoriaPrecios(d)]=(c[getCategoriaPrecios(d)]||0)+i.cantidad }); return c }
+    
+    // ======================================================================================
+    // === INICIO DEL CÓDIGO CORREGIDO: LÓGICA DE SELECCIÓN DE PRECIOS POR VOLUMEN =========
+    // ======================================================================================
+    function obtenerMejorPrecio(sku, tipoCliente, _, cantidadTotalCategoria) {
+        const preciosProducto = catalogoCompleto.filter(p => p.sku === sku);
+        if (preciosProducto.length === 0) return { p: null, t: "SKU NO ENCONTRADO" };
+
+        // Si solo hay un precio, devolverlo inmediatamente
+        if (preciosProducto.length === 1) {
+            const precioUnico = preciosProducto[0];
+            return { p: { n: precioUnico.precio_neto, b: precioUnico.precio_bruto }, t: precioUnico.tipo_precio };
+        }
+
+        // Lógica para clientes especiales
+        if (tipoCliente !== 'normal') {
+            const precioEspecial = preciosProducto.find(p => p.tipo_precio.toUpperCase().trim() === tipoCliente.toUpperCase());
+            if (precioEspecial) {
+                return { p: { n: precioEspecial.precio_neto, b: precioEspecial.precio_bruto }, t: precioEspecial.tipo_precio };
+            }
+        }
+        
+        // Asignar una "cantidad mínima" a cada tramo de precio para poder compararlos
+        const tramosConMinimo = preciosProducto.map(p => {
+            const tipo = (p.tipo_precio || '').toUpperCase();
+            const precio = p.precio_neto || 0;
+            let minCantidad = 0;
+            const matchNumero = tipo.match(/(\d+)/);
+
+            if (matchNumero) {
+                minCantidad = parseInt(matchNumero[1], 10);
+            } else if (tipo.includes('DETALLE')) {
+                minCantidad = 1; // 'DETALLE' es para 1 o más
+            } else if (tipo.includes('MAYOR')) {
+                minCantidad = 2; // 'MAYOR' genérico es para más de 1
+            }
+            
+            // Si un precio es 0 o nulo, lo hacemos inválido para que nunca se elija.
+            if (!precio || precio === 0) {
+                minCantidad = Infinity;
+            }
+
+            return { ...p, minCantidad: minCantidad };
+        });
+
+        // Filtrar solo los tramos que aplican a la cantidad de la categoría
+        const tramosAplicables = tramosConMinimo.filter(p => cantidadTotalCategoria >= p.minCantidad);
+        
+        if (tramosAplicables.length > 0) {
+            // De los que aplican, elegir el que tenga el requisito de cantidad MÁS ALTO (el mejor tramo)
+            const mejorTramo = tramosAplicables.reduce((mejor, actual) => {
+                return actual.minCantidad > mejor.minCantidad ? actual : mejor;
+            });
+            return { p: { n: mejorTramo.precio_neto, b: mejorTramo.precio_bruto }, t: mejorTramo.tipo_precio };
+        }
+
+        // Si no aplica ningún tramo (caso raro), devolver el primer precio disponible como fallback.
+        const primerPrecio = preciosProducto[0];
+        return { p: { n: primerPrecio.precio_neto, b: primerPrecio.precio_bruto }, t: primerPrecio.tipo_precio };
+    }
+    // ======================================================================================
+    // === FIN DEL CÓDIGO CORREGIDO =========================================================
+    // ======================================================================================
+    
+    function corregirUnItem(i,t,n,c, agrupar){ const r={...i},pr=catalogoCompleto.find(p=>p.sku===r.sku); r.descripcion=pr?pr.descripcion:"Desc. no encontrada"; const ca=getCategoriaPrecios(r.descripcion); const ct=agrupar?(c[ca]||r.cantidad):r.cantidad; const rp=obtenerMejorPrecio(r.sku,t,r.cantidad,ct); let e="",cl="",pc=null,d=null,dt=0,h=false; const colorClasses={ok:'bg-green-800 bg-opacity-20',aviso:'bg-orange-800 bg-opacity-20',error:'bg-red-800 bg-opacity-20',no_encontrado:'bg-yellow-800 bg-opacity-20'}; if(!rp.p){e=rp.t;cl=colorClasses.no_encontrado;}else{pc=n?rp.p.n:rp.p.b;if(!pc||pc<=0){e="PRECIO NO DISPONIBLE";cl=colorClasses.no_encontrado}else{d=r.v_unitario_usuario-pc;dt=d*r.cantidad;if(Math.abs(d)<1.5){e=`✅ OK`;cl=colorClasses.ok}else{h=true;e=d>0?`⚠️ AVISO`:`❌ ERROR`;cl=d>0?colorClasses.aviso:colorClasses.error}}}return{...r,estado:e,colorClass:cl,precioCorrecto:pc,diferencia:d,diferencia_total_linea:dt,highlight:h,categoria:ca,cantidadCategoria:ct,tipoAplicado:rp.t}}
+    function renderIntelligentResults(results) { const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }); let html = ''; if (Object.keys(results).length > 1) { html += `<button id="btn-copiar-todo-catalogo" class="w-full text-sm py-2 px-3 rounded mb-4" style="background-color: var(--accent-green);">Copiar Todos los Resultados</button>`; } html += '<div class="space-y-4">'; for (const sku in results) { const product = results[sku]; html += `<div class="internal-box p-3 rounded-lg"><p class="font-bold text-lg">${product.sku}</p><p class="text-base mb-2">${product.descripcion}</p><table class="w-full text-sm text-left"><thead><tr style="border-bottom: 1px solid var(--border-color);"><th class="py-1">Tipo</th><th class="py-1">Neto</th><th class="py-1">Bruto</th></tr></thead><tbody>`; product.prices.forEach(price => { html += `<tr style="border-bottom: 1px solid var(--border-color);" class="last:border-b-0"><td class="py-1 text-purple-400 font-medium">${price.tipo || 'N/A'}</td><td>${price.neto ? f.format(price.neto) : '---'}</td><td>${price.bruto ? f.format(price.bruto) : '---'}</td></tr>`; }); html += `</tbody></table><button data-sku-copia="${product.sku}" class="btn-copiar-catalogo mt-3 w-full text-sm py-1 px-3 rounded" style="background-color: var(--accent-blue);">Copiar Info de este Producto</button></div>`; } html += '</div>'; ui.intelligentSearchResults.innerHTML = html; }
+    function handleIntelligentSearch() { const term = ui.intelligentSearchInput.value.toLowerCase().trim(); if (term.length < 3) { lastSearchResults={}; ui.intelligentSearchResults.innerHTML = '<p class="text-base text-secondary">Escribe al menos 3 caracteres...</p>'; return; } lastSearchResults = catalogoCompleto.reduce((acc, p) => { if (p.sku.toLowerCase().includes(term) || p.descripcion.toLowerCase().includes(term)) { if (!acc[p.sku]) { acc[p.sku] = { sku: p.sku, descripcion: p.descripcion, prices: [] }; } acc[p.sku].prices.push({ tipo: p.tipo_precio, neto: p.precio_neto, bruto: p.precio_bruto }); } return acc; }, {}); renderIntelligentResults(lastSearchResults); }
+    const copiarDiferencias = () => { const diferencias = resultadosParaDescarga.filter(r => r.highlight === true); if (diferencias.length === 0) { alert("No hay diferencias para copiar."); return; } const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); const nv = ui.nvInput.value.trim() || 'Sin NV'; const totalDiferencia = diferencias.reduce((sum, item) => sum + (item.diferencia_total_linea || 0), 0); let texto = `*Resumen de Diferencias (NV: ${nv})*\n\n`; texto += diferencias.map(r => `SKU: ${r.sku} | Tu Precio: ${f.format(r.v_unitario_usuario)} | Correcto: ${f.format(r.precioCorrecto)} | Dif. Unitaria: ${f.format(r.diferencia)}`).join('\n'); texto += `\n\n*Diferencia Total General: ${f.format(totalDiferencia)}*`; navigator.clipboard.writeText(texto).then(() => { const btn = ui.btnCopiarDiferencias; const o = btn.textContent; btn.textContent = '¡Copiado!'; setTimeout(() => { btn.textContent = o; }, 2000); }, () => alert("Error al copiar.")); };
+    const capturarTabla = async () => { const panel = ui.resultadosContainer; if (!panel) return; const btnContainer = panel.querySelector('.flex.gap-2.flex-wrap'); btnContainer.style.display = 'none'; try { const panelStyle = window.getComputedStyle(panel); const panelBgColor = panelStyle.backgroundColor; const canvas = await html2canvas(panel, { scale: 2, backgroundColor: panelBgColor }); canvas.toBlob(async (blob) => { if (!blob) { alert('No se pudo generar la imagen para copiar.'); return; } try { if (!navigator.clipboard || !navigator.clipboard.write) { throw new Error('La API de portapapeles no es compatible o no tiene permisos en este navegador.'); } const clipboardItem = new ClipboardItem({ 'image/png': blob }); await navigator.clipboard.write([clipboardItem]); const btn = ui.btnCapturarTabla; const originalText = btn.textContent; btn.textContent = '✅ ¡Imagen Copiada!'; setTimeout(() => { btn.textContent = originalText; }, 2500); } catch (err) { alert(`No se pudo copiar la imagen al portapapeles. Causa: ${err.message}`); } }, 'image/png'); } catch (error) { alert('Hubo un problema al generar la captura de la tabla.'); } finally { btnContainer.style.display = 'flex'; } };
+    const showPriceModal = (sku) => { const allPricesForSku = catalogoCompleto.filter(p => p.sku === sku); const correctedItem = resultadosParaDescarga.find(r => r.sku === sku); if (allPricesForSku.length === 0) return; ui.priceModalTitle.textContent = `Precios para ${sku}`; const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); let contentHtml = '<ul class="list-none p-0 m-0 space-y-2">'; allPricesForSku.forEach(priceInfo => { const isApplied = correctedItem && correctedItem.tipoAplicado === priceInfo.tipo_precio; contentHtml += `<li style="padding: 8px; ${isApplied ? 'background-color: var(--accent-green); color: var(--bg-primary); border-radius: 4px;' : 'background-color: var(--bg-accent); border-radius: 4px;'}"><strong>${priceInfo.tipo_precio}</strong>: Neto ${f.format(priceInfo.precio_neto || 0)} / Bruto ${f.format(priceInfo.precio_bruto || 0)}${isApplied ? '<strong> (Aplicado)</strong>' : ''}</li>`; }); contentHtml += '</ul>'; ui.priceModalBody.innerHTML = contentHtml; ui.priceModal.style.display = 'flex'; };
+    const hidePriceModal = () => { ui.priceModal.style.display = 'none'; };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        Object.assign(ui, { priceModal: document.getElementById('price-modal'), priceModalClose: document.getElementById('price-modal-close'), priceModalTitle: document.getElementById('price-modal-title'), priceModalBody: document.getElementById('price-modal-body'), uploadInputs:document.getElementById('upload-inputs'),storageStatus:document.getElementById('storage-status'),mainInterface:document.getElementById('main-interface'),btnLimpiarStorage:document.getElementById('btn-limpiar-storage'),btnGuardarCatalogo:document.getElementById('btn-guardar-catalogo'),btnNormalizar:document.getElementById('btn-normalizar'),btnCorregir:document.getElementById('btn-corregir'),btnCopiarDiferencias:document.getElementById('btn-copiar-diferencias'),btnCapturarTabla:document.getElementById('btn-capturar-tabla'),resultadosContainer:document.getElementById('resultados-container'),resultadosCorreccion:document.getElementById('resultados-correccion'),resumenPedido:document.getElementById('resumen-pedido'),loader:document.getElementById('loader'),debugInfo:document.getElementById('debug-info'),fileCatalogo:document.getElementById('file-catalogo'),pedidoCrudo:document.getElementById('pedido-crudo'),nvInput:document.getElementById('nv-input'),datosNormalizados:document.getElementById('datos-normalizados'),filtroPedido:document.getElementById('filtro-pedido'),agruparCategorias:document.getElementById('agrupar-categorias'),intelligentSearchSection:document.getElementById('intelligent-search-section'),intelligentSearchInput:document.getElementById('intelligent-search-input'),intelligentSearchResults:document.getElementById('intelligent-search-results'), statusCatalogo:document.getElementById('status-catalogo') });
+        
+        ui.priceModalClose.addEventListener('click', hidePriceModal);
+        window.addEventListener('click', (event) => { if (event.target == ui.priceModal) { hidePriceModal(); } });
+        ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) { showPriceModal(e.target.dataset.sku); } });
+        
+        const cargarDesdeStorage = () => {
+            try {
+                const data = localStorage.getItem('catalogoCompletoData');
+                if (data) {
+                    catalogoCompleto = procesarCatalogo(JSON.parse(data));
+                    ui.uploadInputs.classList.add('hidden');
+                    ui.storageStatus.classList.remove('hidden');
+                    ui.mainInterface.classList.remove('disabled-section');
+                    ui.intelligentSearchSection.classList.remove('disabled-section');
+                    ui.debugInfo.innerHTML = `<p>Catálogo cargado: <strong>${catalogoCompleto.length}</strong> productos encontrados.</p>`;
+                }
+            } catch (e) {
+                console.error('Error cargando desde storage:', e);
+                localStorage.clear();
+            }
+        };
+
+        ui.btnLimpiarStorage.addEventListener('click', () => {
+            if (confirm("¿Seguro que quieres limpiar el catálogo guardado?")) {
+                localStorage.clear();
+                alert("Memoria limpiada.");
+                window.location.reload();
+            }
+        });
+
+        ui.fileCatalogo.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            ui.statusCatalogo.textContent = "Procesando archivo...";
+            ui.statusCatalogo.style.color = "#fbbf24";
+            
+            Papa.parse(file, {
+                delimiter: ";",
+                skipEmptyLines: true,
+                encoding: "UTF-8",
+                complete: (results) => {
+                    try {
+                        if (results.errors && results.errors.length > 0) {
+                            console.warn('Errores durante el parsing:', results.errors);
+                        }
+                        
+                        if (!results.data || results.data.length === 0) {
+                            throw new Error('El archivo está vacío o no se pudo leer correctamente');
+                        }
+                        
+                        // Guardar los datos temporalmente (sin la primera fila si es header)
+                        tempCatalogo = results.data.slice(1); // Asumiendo que la primera fila son headers
+                        
+                        ui.statusCatalogo.textContent = `✅ ${file.name} (${tempCatalogo.length} productos leídos)`;
+                        ui.statusCatalogo.style.color = "var(--accent-green)";
+                        ui.btnGuardarCatalogo.disabled = false;
+                        
+                        ui.debugInfo.innerHTML = `<p>Archivo CSV leído correctamente: <strong>${tempCatalogo.length}</strong> filas de datos.</p>`;
+                        
+                    } catch (error) {
+                        console.error('Error procesando CSV:', error);
+                        ui.statusCatalogo.textContent = `❌ Error: ${error.message}`;
+                        ui.statusCatalogo.style.color = "#ef4444";
+                        ui.btnGuardarCatalogo.disabled = true;
+                        tempCatalogo = null;
+                    }
+                },
+                error: (error) => {
+                    console.error('Error leyendo archivo:', error);
+                    ui.statusCatalogo.textContent = `❌ Error leyendo archivo: ${error.message}`;
+                    ui.statusCatalogo.style.color = "#ef4444";
+                    ui.btnGuardarCatalogo.disabled = true;
+                    tempCatalogo = null;
+                }
+            });
+        });
+
+        ui.btnGuardarCatalogo.addEventListener('click', () => {
+            if (!tempCatalogo || tempCatalogo.length === 0) {
+                alert("No hay datos para guardar.");
+                return;
+            }
+            
+            try {
+                // Procesar el catálogo antes de guardarlo
+                catalogoCompleto = procesarCatalogo(tempCatalogo);
+                
+                if (catalogoCompleto.length === 0) {
+                    alert("No se pudieron procesar los datos del catálogo. Verifica el formato del archivo.");
+                    return;
+                }
+                
+                // Guardar en localStorage
+                localStorage.setItem('catalogoCompletoData', JSON.stringify(tempCatalogo));
+                
+                // Actualizar interfaz
+                ui.uploadInputs.classList.add('hidden');
+                ui.storageStatus.classList.remove('hidden');
+                ui.mainInterface.classList.remove('disabled-section');
+                ui.intelligentSearchSection.classList.remove('disabled-section');
+                
+                ui.debugInfo.innerHTML = `<p>Catálogo guardado exitosamente: <strong>${catalogoCompleto.length}</strong> productos procesados.</p>`;
+                
+                alert(`Catálogo guardado con ${catalogoCompleto.length} productos.`);
+                tempCatalogo = null;
+                
+            } catch (error) {
+                console.error('Error guardando catálogo:', error);
+                alert("Error al guardar el catálogo: " + error.message);
+            }
+        });
+
+        ui.btnNormalizar.addEventListener('click', () => {
+            ui.filtroPedido.value = '';
+            const texto = ui.pedidoCrudo.value;
+            if (!texto.trim()) {
+                alert("Pegue el texto del pedido.");
+                return;
+            }
+            
+            pedidoNormalizado = parsearPedidoUnificado(texto);
+            renderPedidoEditable(pedidoNormalizado);
+            ui.btnCorregir.disabled = pedidoNormalizado.length === 0;
+        });
+
+        const renderPedidoEditable = (productos) => {
+            if (!productos || productos.length === 0) {
+                ui.datosNormalizados.innerHTML = `<p class="text-sm text-secondary p-4">No hay productos que coincidan.</p>`;
+                return;
+            }
+            
+            let html = `<table class="w-full text-sm"><thead><tr class="text-left"><th class="p-1">SKU</th><th class="p-1">Item</th><th class="p-1">Cant.</th><th class="p-1">Precio</th></tr></thead><tbody>`;
+            
+            productos.forEach((producto, index) => {
+                const formatoPrecio = producto.v_unitario_usuario.toLocaleString('es-CL', {style: 'currency', currency: 'CLP'});
+                html += `<tr><td class="p-1">${producto.sku}</td><td class="p-1">${producto.item}</td><td class="p-1 bg-blue-900 rounded" contenteditable="true" data-index="${index}">${producto.cantidad}</td><td class="p-1">${formatoPrecio}</td></tr>`;
+            });
+            
+            ui.datosNormalizados.innerHTML = html + '</tbody></table>';
+            
+            // Agregar event listeners para edición
+            ui.datosNormalizados.querySelectorAll('td[contenteditable="true"]').forEach(celda => {
+                celda.addEventListener('blur', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    if (isNaN(index) || !pedidoNormalizado[index]) return;
+                    
+                    const nuevaCantidad = parseInt(e.target.textContent, 10);
+                    if (!isNaN(nuevaCantidad) && nuevaCantidad > 0) {
+                        pedidoNormalizado[index].cantidad = nuevaCantidad;
+                    } else {
+                        e.target.textContent = pedidoNormalizado[index].cantidad;
+                    }
+                });
+            });
+        };
+
+        ui.filtroPedido.addEventListener('input', () => {
+            const termino = ui.filtroPedido.value.toLowerCase();
+            if (!termino) {
+                renderPedidoEditable(pedidoNormalizado);
+            } else {
+                const filtrados = pedidoNormalizado.filter(p => 
+                    p.sku.toLowerCase().includes(termino) || 
+                    p.item.toLowerCase().includes(termino)
+                );
+                renderPedidoEditable(filtrados);
+            }
+        });
+
+        ui.btnCorregir.addEventListener('click', () => {
+            if (pedidoNormalizado.length === 0) return;
+            
+            ui.resultadosContainer.classList.remove('hidden');
+            ui.loader.classList.remove('hidden');
+            ui.btnCopiarDiferencias.classList.add('hidden');
+            ui.btnCapturarTabla.classList.add('hidden');
+            
+            setTimeout(() => {
+                try {
+                    const esNeto = document.querySelector('input[name="tipo-precio"]:checked').value === 'neto';
+                    const tipoCliente = document.querySelector('input[name="tipo-cliente"]:checked').value;
+                    const agrupar = ui.agruparCategorias.checked;
+                    
+                    resultadosParaDescarga = pedidoNormalizado.map(item => 
+                        corregirUnItem(item, tipoCliente, esNeto, calcularCantidadesPorCategoria(pedidoNormalizado), agrupar)
+                    );
+                    
+                    renderResultados(resultadosParaDescarga);
+                    
+                    const diferenciaTotalGeneral = resultadosParaDescarga.reduce((sum, r) => sum + (r.diferencia_total_linea || 0), 0);
+                    renderResumen(
+                        pedidoNormalizado.length, 
+                        calcularCantidadesPorCategoria(pedidoNormalizado), 
+                        diferenciaTotalGeneral, 
+                        esNeto ? 'Netos (sin IVA)' : 'Brutos (con IVA)'
+                    );
+                    
+                    // Mostrar botones
+                    ui.btnCopiarDiferencias.classList.remove('hidden');
+                    ui.btnCapturarTabla.classList.remove('hidden');
+                    
+                } catch (e) {
+                    console.error(e);
+                    alert("Error inesperado al procesar: " + e.message);
+                } finally {
+                    ui.loader.classList.add('hidden');
+                }
+            }, 100);
+        });
+
+        const renderResultados = (resultados) => {
+            const formatter = new Intl.NumberFormat('es-CL', {style: 'currency', currency: 'CLP'});
+            
+            let html = `<table class="min-w-full"><thead style="background-color:rgba(45,55,72,0.5);"><tr>`;
+            ["SKU", "Item", "Cant.", "Categoría", "Tu Precio", "Estado", "Precio Correcto", "Tipo Aplicado", "Dif. Unitaria"].forEach(col => {
+                html += `<th class="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">${col}</th>`;
+            });
+            html += `</tr></thead><tbody style="border-top:1px solid var(--border-color);">`;
+            
+            resultados.forEach(producto => {
+                const diferencia = producto.diferencia !== null ? 
+                    (producto.diferencia > 0 ? '+' : '') + formatter.format(producto.diferencia) : 
+                    'N/A';
+                const categoria = producto.categoria ? 
+                    `${producto.categoria} (${producto.cantidadCategoria}u)` : 
+                    'N/A';
+                
+                html += `<tr class="${producto.colorClass}" style="border-bottom:1px solid var(--border-color);">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium sku-clickable" style="cursor: pointer; text-decoration: underline; color: var(--accent-blue);" data-sku="${producto.sku}">${producto.sku}</td>
+                    <td class="px-6 py-4">${producto.descripcion}</td>
+                    <td class="px-6 py-4">${producto.cantidad}</td>
+                    <td class="px-6 py-4 font-semibold" style="color:var(--accent-blue);">${categoria}</td>
+                    <td class="px-6 py-4">${formatter.format(producto.v_unitario_usuario)}</td>
+                    <td class="px-6 py-4 font-semibold">${producto.estado}</td>
+                    <td class="px-6 py-4 ${producto.highlight ? 'highlight-cell' : ''}">${producto.precioCorrecto ? formatter.format(producto.precioCorrecto) : 'N/A'}</td>
+                    <td class="px-6 py-4 text-xs text-purple-400 font-medium">${producto.tipoAplicado || 'N/A'}</td>
+                    <td class="px-6 py-4">${diferencia}</td>
+                </tr>`;
+            });
+            
+            ui.resultadosCorreccion.innerHTML = html + '</tbody></table>';
+        };
+
+        const renderResumen = (totalProductos, categorias, diferenciaTotalGeneral, tipoPrecios) => {
+            const formatter = new Intl.NumberFormat('es-CL', {style: 'currency', currency: 'CLP'});
+            
+            let html = `<h3 class="text-lg font-semibold mb-2">Resumen</h3>
+                <ul class="list-disc list-inside space-y-1">
+                    <li><strong>Productos:</strong> ${totalProductos}</li>
+                    <li><strong>Precios Verificados:</strong> ${tipoPrecios}</li>
+                    <li><strong>Categorías:</strong></li>`;
+            
+            for (const categoria in categorias) {
+                html += `<li class="ml-4"><strong>${categoria}:</strong> ${categorias[categoria]} u.</li>`;
+            }
+            
+            html += `</ul>`;
+            
+            if (Math.abs(diferenciaTotalGeneral) > 0) {
+                const colorClass = diferenciaTotalGeneral > 0 ? 'text-orange-400' : 'text-red-400';
+                html += `<div class="mt-4 font-semibold text-lg ${colorClass}">Diferencia Total: ${(diferenciaTotalGeneral > 0 ? '+' : '') + formatter.format(diferenciaTotalGeneral)}</div>`;
+            } else {
+                html += `<div class="mt-4 font-semibold text-lg" style="color:var(--accent-green);">Diferencia Total: ${formatter.format(0)}</div>`;
+            }
+            
+            ui.resumenPedido.innerHTML = html;
+        };
+
+        ui.btnCopiarDiferencias.addEventListener('click', copiarDiferencias);
+        ui.btnCapturarTabla.addEventListener('click', capturarTabla);
+        ui.intelligentSearchInput.addEventListener('input', handleIntelligentSearch);
+        
+        ui.intelligentSearchResults.addEventListener('click', (e) => {
+            const formatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+            
+            if (e.target && e.target.matches('#btn-copiar-todo-catalogo')) {
+                let texto = "Resultados de Búsqueda:\n\n";
+                for (const sku in lastSearchResults) {
+                    const producto = lastSearchResults[sku];
+                    texto += `*Producto:* ${producto.sku} - ${producto.descripcion}\n*Precios:*\n`;
+                    texto += producto.prices.map(price => 
+                        `- ${price.tipo}: Neto ${price.neto ? formatter.format(price.neto) : 'N/A'} / Bruto ${price.bruto ? formatter.format(price.bruto) : 'N/A'}`
+                    ).join('\n');
+                    texto += "\n---\n";
+                }
+                
+                navigator.clipboard.writeText(texto).then(() => {
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '¡Copiado!';
+                    setTimeout(() => { e.target.textContent = originalText; }, 2000);
+                });
+            }
+            
+            if (e.target && e.target.matches('.btn-copiar-catalogo')) {
+                const sku = e.target.dataset.skuCopia;
+                const productos = catalogoCompleto.filter(p => p.sku === sku);
+                
+                if (productos.length > 0) {
+                    let texto = `*Producto:* ${productos[0].sku} - ${productos[0].descripcion}\n\n*Lista de Precios:*\n`;
+                    texto += productos.map(p => 
+                        `- ${p.tipo_precio}: Neto ${p.precio_neto ? formatter.format(p.precio_neto) : 'N/A'} / Bruto ${p.precio_bruto ? formatter.format(p.precio_bruto) : 'N/A'}`
+                    ).join('\n');
+                    
+                    navigator.clipboard.writeText(texto).then(() => {
+                        const originalText = e.target.textContent;
+                        e.target.textContent = '¡Copiado!';
+                        setTimeout(() => { e.target.textContent = originalText; }, 2000);
+                    });
+                }
+            }
+        });
+
+        // Cargar catálogo desde storage al iniciar
+        cargarDesdeStorage();
+    });
+</script>
+</body>
+</html>
