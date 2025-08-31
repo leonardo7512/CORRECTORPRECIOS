@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector de Pedidos Pro v35.2 (API Fix)</title>
+    <title>Corrector de Pedidos Pro v35.3 (Debug Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/paparse.min.js"></script>
@@ -35,7 +35,7 @@
 </head>
 <body>
     <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35.2 - API Fix</p></header>
+        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35.3 - Debug Fix</p></header>
 
         <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
             <h2 class="text-xl font-semibold mb-4">Búsqueda Inteligente en Catálogo</h2>
@@ -100,9 +100,7 @@
     </div>
 
 <script>
-    // URLs para la carga de datos
     const CATALOG_URL = 'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv';
-    // NOVEDAD: URL de la API de GitHub para obtener la fecha del último cambio
     const API_URL = 'https://api.github.com/repos/leonardo7512/CORRECTORPRECIOS/commits?path=2708CATALOGO_ACTUALIZADO3.csv&per_page=1';
     
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
@@ -115,7 +113,6 @@
         statusEl.style.color = '#f59e0b';
         
         try {
-            // --- NOVEDAD: Obtener la fecha de actualización desde la API ---
             try {
                 const apiResponse = await fetch(API_URL);
                 if (!apiResponse.ok) throw new Error('No se pudo contactar la API de GitHub.');
@@ -131,9 +128,7 @@
                 console.error('Error fetching from GitHub API:', apiError);
                 versionEl.textContent = 'Error al verificar la versión del catálogo.';
             }
-            // --- Fin de la novedad ---
-
-            // Cargar el contenido del archivo CSV
+            
             const response = await fetch(`${CATALOG_URL}?v=${new Date().getTime()}`);
             if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
             
@@ -150,13 +145,11 @@
                     
                     if (catalogoCompleto.length === 0) throw new Error("No se pudo procesar ningún producto válido del catálogo.");
                     
-                    // --- NOVEDAD: Mejorar retroalimentación visual ---
                     statusEl.textContent = `✅ ¡Catálogo actualizado!`;
                     statusEl.style.color = 'var(--accent-green)';
                     setTimeout(() => {
                         statusEl.textContent = `Catálogo cargado con ${catalogoCompleto.length} productos.`;
-                    }, 2500); // Muestra el mensaje de éxito por 2.5 segundos
-                    // --- Fin de la novedad ---
+                    }, 2500);
                     
                     ui.mainInterface.classList.remove('disabled-section');
                     ui.intelligentSearchSection.classList.remove('disabled-section');
@@ -167,7 +160,8 @@
 
         } catch (error) {
             console.error("Fallo al cargar el catálogo:", error);
-            statusEl.innerText = `❌ Error fatal al cargar el catálogo.`;
+            // --- NOVEDAD: Mostrar el error específico en la pantalla ---
+            statusEl.innerText = `❌ Error fatal: ${error.message}`;
             statusEl.style.color = '#ef4444';
         } finally {
             ui.btnRefreshCatalog.classList.remove('hidden');
@@ -175,7 +169,7 @@
         }
     }
 
-    // --- Funciones de procesamiento (sin cambios) ---
+    // --- El resto de las funciones de procesamiento no tienen cambios ---
     function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
     function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
     function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
@@ -226,7 +220,7 @@
             let html = `<table class="w-full text-sm"><thead><tr class="text-left"><th class="p-1">SKU</th><th class="p-1">Item</th><th class="p-1">Cant.</th><th class="p-1">Precio</th></tr></thead><tbody>`;
             productos.forEach((producto, index) => {
                 const formatoPrecio = producto.v_unitario_usuario.toLocaleString('es-CL', {style: 'currency', currency: 'CLP'});
-                html += `<tr><td class="p-1">${producto.sku}</td><td class="p-1">${producto.item}</td><td class="p-1 bg-blue-900 rounded" contenteditable="true" data-index="${index}">${producto.cantidad}</td><td class="p-1">${formatoPrecio}</td></tr>`;
+                html += `<tr><td class="p-1">${producto.sku}</td><td class="p-1">${producto.item}</td><td class="p-1 bg-blue-900 rounded" contenteditable="true" data-index="${index}">${producto.cantidad}</td><td class="p-1">${formatorioPrecio}</td></tr>`;
             });
             ui.datosNormalizados.innerHTML = html + '</tbody></table>';
             ui.datosNormalizados.querySelectorAll('td[contenteditable="true"]').forEach(celda => {
