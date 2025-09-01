@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector de Pedidos Pro v35.1 (con Refresh)</title>
+    <title>Corrector de Pedidos Pro v35 (Carga desde Nube)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -25,7 +25,7 @@
         .input-field:focus { border-color: var(--accent-green); box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2); outline: none; }
         .loader { border-top-color: var(--accent-blue); animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .disabled-section, button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .disabled-section, button:disabled { opacity: 0.5; pointer-events: none; }
         .switch-group input[type="radio"] { display: none; }
         .switch-group label { cursor: pointer; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.375rem; transition: all 0.2s ease-in-out; }
         .switch-group input[type="radio"]:checked + label { background-color: var(--accent-blue); border-color: var(--accent-blue); }
@@ -35,7 +35,7 @@
 </head>
 <body>
     <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35.1 - con Refresh</p></header>
+        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35 - Carga desde Nube</p></header>
 
         <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
             <h2 class="text-xl font-semibold mb-4">Búsqueda Inteligente en Catálogo</h2>
@@ -52,9 +52,6 @@
             <div id="status-container">
                 <p id="loading-status" class="text-lg" style="color: #f59e0b;">🔄 Cargando catálogo desde GitHub...</p>
                 <p id="catalog-version" class="text-sm text-secondary mt-2"></p>
-                <button id="btn-refresh-catalog" class="hidden mt-4 bg-blue-600 text-white font-bold py-1 px-3 rounded-md hover:bg-blue-700 text-sm">
-                    Refrescar Catálogo
-                </button>
             </div>
         </div>
         <div id="main-interface" class="disabled-section">
@@ -99,17 +96,13 @@
     </div>
 
 <script>
+    // =========== INICIO DE LA LÓGICA DE CARGA DESDE GITHUB ===========
     const CATALOG_URL = 'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv';
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
 
     async function loadCatalogFromGitHub() {
-        // --- Cambios para el refresco ---
-        ui.btnRefreshCatalog.disabled = true;
         const statusEl = document.getElementById('loading-status');
         const versionEl = document.getElementById('catalog-version');
-        statusEl.textContent = '🔄 Refrescando catálogo desde GitHub...';
-        statusEl.style.color = '#f59e0b';
-        // --- Fin de cambios ---
         
         try {
             const urlWithCacheBuster = `${CATALOG_URL}?v=${new Date().getTime()}`;
@@ -117,6 +110,7 @@
 
             if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
 
+            // Obtener y mostrar la fecha de la última modificación
             const lastModifiedHeader = response.headers.get('Last-Modified');
             if (lastModifiedHeader) {
                 const lastModifiedDate = new Date(lastModifiedHeader);
@@ -126,18 +120,23 @@
                 versionEl.textContent = 'No se pudo determinar la versión del catálogo.';
             }
 
+            // Procesar el contenido del CSV
             const csvText = await response.text();
             Papa.parse(csvText, {
                 delimiter: ";",
                 skipEmptyLines: true,
                 encoding: "UTF-8",
                 complete: (results) => {
-                    if (!results.data || results.data.length < 2) throw new Error("El archivo CSV está vacío o tiene un formato incorrecto.");
+                    if (!results.data || results.data.length < 2) {
+                         throw new Error("El archivo CSV está vacío o tiene un formato incorrecto.");
+                    }
                     
                     const dataRows = results.data.slice(1);
                     catalogoCompleto = procesarCatalogo(dataRows);
                     
-                    if (catalogoCompleto.length === 0) throw new Error("No se pudo procesar ningún producto válido del catálogo.");
+                    if (catalogoCompleto.length === 0) {
+                        throw new Error("No se pudo procesar ningún producto válido del catálogo.");
+                    }
                     
                     statusEl.textContent = `✅ Catálogo cargado con ${catalogoCompleto.length} productos.`;
                     statusEl.style.color = 'var(--accent-green)';
@@ -153,13 +152,9 @@
             statusEl.innerText = `❌ Error fatal al cargar el catálogo. Revisa la URL o tu conexión.`;
             statusEl.style.color = '#ef4444';
             versionEl.textContent = error.message;
-        } finally {
-            // --- Cambios para el refresco ---
-            ui.btnRefreshCatalog.classList.remove('hidden');
-            ui.btnRefreshCatalog.disabled = false;
-            // --- Fin de cambios ---
         }
     }
+    // =========== FIN DE LA LÓGICA DE CARGA DESDE GITHUB ===========
 
     // --- Funciones de procesamiento (sin cambios) ---
     function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
@@ -177,7 +172,9 @@
     const showPriceModal = (sku) => { const allPricesForSku = catalogoCompleto.filter(p => p.sku === sku); const correctedItem = resultadosParaDescarga.find(r => r.sku === sku); if (allPricesForSku.length === 0) return; ui.priceModalTitle.textContent = `Precios para ${sku}`; const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); let contentHtml = '<ul class="list-none p-0 m-0 space-y-2">'; allPricesForSku.forEach(priceInfo => { const isApplied = correctedItem && correctedItem.tipoAplicado === priceInfo.tipo_precio; contentHtml += `<li style="padding: 8px; ${isApplied ? 'background-color: var(--accent-green); color: var(--bg-primary); border-radius: 4px;' : 'background-color: var(--bg-accent); border-radius: 4px;'}"><strong>${priceInfo.tipo_precio}</strong>: Neto ${f.format(priceInfo.precio_neto || 0)} / Bruto ${f.format(priceInfo.precio_bruto || 0)}${isApplied ? '<strong> (Aplicado)</strong>' : ''}</li>`; }); contentHtml += '</ul>'; ui.priceModalBody.innerHTML = contentHtml; ui.priceModal.style.display = 'flex'; };
     const hidePriceModal = () => { ui.priceModal.style.display = 'none'; };
 
+    // =========== EVENTO DE INICIO MODIFICADO ===========
     document.addEventListener('DOMContentLoaded', () => {
+        // Asigna todos los elementos de la UI a la variable global 'ui'
         Object.assign(ui, {
             priceModal: document.getElementById('price-modal'), priceModalClose: document.getElementById('price-modal-close'),
             priceModalTitle: document.getElementById('price-modal-title'), priceModalBody: document.getElementById('price-modal-body'),
@@ -189,17 +186,13 @@
             nvInput:document.getElementById('nv-input'), datosNormalizados:document.getElementById('datos-normalizados'),
             filtroPedido:document.getElementById('filtro-pedido'), agruparCategorias:document.getElementById('agrupar-categorias'),
             intelligentSearchSection:document.getElementById('intelligent-search-section'), intelligentSearchInput:document.getElementById('intelligent-search-input'),
-            intelligentSearchResults:document.getElementById('intelligent-search-results'),
-            // --- Se añade el nuevo botón a la UI ---
-            btnRefreshCatalog: document.getElementById('btn-refresh-catalog')
+            intelligentSearchResults:document.getElementById('intelligent-search-results')
         });
         
+        // --- Event Listeners para funcionalidades de la aplicación ---
         ui.priceModalClose.addEventListener('click', hidePriceModal);
         window.addEventListener('click', (event) => { if (event.target == ui.priceModal) { hidePriceModal(); } });
         ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) { showPriceModal(e.target.dataset.sku); } });
-        
-        // --- Se añade el listener para el nuevo botón ---
-        ui.btnRefreshCatalog.addEventListener('click', loadCatalogFromGitHub);
 
         ui.btnNormalizar.addEventListener('click', () => {
             ui.filtroPedido.value = '';
@@ -296,6 +289,7 @@
             if (e.target && e.target.matches('.btn-copiar-catalogo')) { const sku = e.target.dataset.skuCopia; const productos = catalogoCompleto.filter(p => p.sku === sku); if (productos.length > 0) { let texto = `*Producto:* ${productos[0].sku} - ${productos[0].descripcion}\n\n*Lista de Precios:*\n`; texto += productos.map(p => `- ${p.tipo_precio}: Neto ${p.precio_neto ? formatter.format(p.precio_neto) : 'N/A'} / Bruto ${p.precio_bruto ? formatter.format(p.precio_bruto) : 'N/A'}`).join('\n'); navigator.clipboard.writeText(texto).then(() => { const originalText = e.target.textContent; e.target.textContent = '¡Copiado!'; setTimeout(() => { e.target.textContent = originalText; }, 2000); }); } }
         });
 
+        // Iniciar la carga del catálogo automáticamente
         loadCatalogFromGitHub();
     });
 </script>
