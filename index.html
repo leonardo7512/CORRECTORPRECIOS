@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector de Pedidos Pro v35 (Carga desde Nube)</title>
+    <title>Corrector de Pedidos Pro v36 (Offline Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <script>
+        !function(e){"use strict";function t(t,r){if(r=r||{},r.worker&&S){var n=o();return n.userStep=r.step,n.userChunk=r.chunk,n.userComplete=r.complete,n.userError=r.error,r.step=i(r.step),r.chunk=i(r.chunk),r.complete=i(r.complete),r.error=i(r.error),delete r.worker,void S.postMessage({input:t,config:r,workerId:n.workerId})}var s=null;return"string"==typeof t?s=r.download?new f(r):new d(r):t instanceof File?s=new h(r):s=new p(r),s.parse(t)}function r(t,r){function n(t){if("object"!=typeof t)return t;var r=t instanceof Array?[]:{};for(var i in t)r[i]=n(t[i]);return r}function i(){if(!r||!r.dynamicTyping)return o;var t=RegExp("[-+]?(\\d*\\.\\d+|\\d+\\.\\d*)([eE][-+]?\\d+)?|[-+]?(\\d*\\.\\d+|\\d+\\.\\d+)|[-+]?(\\d+)");return function(r){for(var i in r){var s=r[i];if(r.hasOwnProperty(i)&&null!==s&&""!==s){var a=t.exec(s);a&&(r[i]=parseFloat(a[0]))}}return r}}function o(t){return t}var s=n(r);return s.dynamicTypingFunction=i(),t.streamer=new m(t,s),t.streamer.stream()}function i(e){return"function"==typeof e}function o(){var t=a++;return l[t]={userStep:null,userChunk:null,userComplete:null,userError:null,chunkSize:0},c(t),l[t]}function s(t,r,i,o){S.postMessage({workerId:t,parsedChunk:r,isLastChunk:i,config:o})}function a(t,r,i){S.postMessage({workerId:t,unparsedChunk:r,isLastChunk:i})}function u(t,r){S.postMessage({workerId:t,errors:r,aborted:!1})}function c(t){P[t]=!0}function f(t){this._config=t,this._config.chunkSize=this._config.chunkSize||g.chunkSize,this._config.step=this._config.step||g.step,this._config.header=void 0===this._config.header?g.header:this._config.header,this._config.dynamicTyping=void 0===this._config.dynamicTyping?g.dynamicTyping:this._config.dynamicTyping,this._config.preview=parseInt(this._config.preview||0),this._input=null,this._parser=null,this._paused=!1,this._activeStep=!1,this._needMoreData=!1,this._chunkLoaded=0,this._totalRows=0,this._rowCountInChunk=0,this._rowData=[],this._errors=[],this._goodbyes=0,this._config.finish=this._finishStep}function d(t){t=t||{},t.chunkSize=t.chunkSize||g.chunkSize,t.dynamicTyping=void 0===t.dynamicTyping?g.dynamicTyping:t.dynamicTyping,t.header=void 0===t.header?g.header:t.header,t.preview=parseInt(t.preview||0);var r=new f(t);return r.parse=function(t){var i=r._config.encoding||"UTF-8",o=r._config.errors;if(r._config.withCredentials&&(e.XMLHttpRequest.withCredentials=!0),!t)return r._config.complete({data:[],errors:[],meta:{}}),void 0;if(r._input=t,r._config.beforeParse){var s=r._config.beforeParse(r._input,r._config);if("object"==typeof s){t=s.data,delete s.data,r._config=n(r._config,s),i=r._config.encoding||i,o=r._config.errors}else"string"==typeof s&&(t=s)}if(r._input=t,r._config.step){var a=new XMLHttpRequest;a.open("GET",r._input,!0),a.setRequestHeader("Content-type","text/csv; charset="+i),a.onreadystatechange=function(){4==a.readyState&&(200==a.status?r._chunkLoaded=r._parse(a.responseText,0):r._config.error&&r._config.error(a,r._input))},a.send(null)}else r._parse(r._input)},r}function h(t){this._config=t,this._input=null,this._parser=null,this._paused=!1,this._activeStep=!1,this._totalRows=0,this._rowCountInChunk=0,this._rowData=[],this._errors=[],this._goodbyes=0}function p(t){t=t||{},t.chunkSize||(t.chunkSize=g.chunkSize),t.step||(t.step=g.step),t.header="undefined"==typeof t.header?g.header:t.header,t.dynamicTyping="undefined"==typeof t.dynamicTyping?g.dynamicTyping:t.dynamicTyping,t.preview=parseInt(t.preview||0);var r=new h(t);return r.parse=function(t){if(!t)return void(i(r._config.complete)&&r._config.complete({data:[],errors:[],meta:{}}));if(r._config.beforeParse){var o=r._config.beforeParse(t,r._config);"object"==typeof o?(t=o.data,delete o.data,r._config=n(r._config,o)):t=o}r._stream(t)},r}function m(t,i){this._input=t,this._config=i,this._config.chunkSize=this._config.chunkSize||g.chunkSize,this._config.header="undefined"==typeof this._config.header?g.header:this._config.header,this._config.dynamicTyping="undefined"==typeof this._config.dynamicTyping?g.dynamicTyping:this._config.dynamicTyping,this._config.preview=parseInt(this._config.preview||0),this._parser=new v(this._config),this._paused=!1,this._activeStep=!1,this._totalRows=0,this._rowCountInChunk=0,this._rowData=[],this._errors=[],this._aborted=!1,this._config.pause=!1}function v(e){this._config=e,this._config.newline=this._config.newline||"\n",this._config.delimiter=this._config.delimiter||",",this._config.quoteChar=this._config.quoteChar||'"',this._config.comments=this._config.comments||!1,this._state={row:0,col:-1,cursor:0,inQuote:!1},this._results={data:[],errors:[],meta:{}}}function y(t){var r={};for(var i in t)r[i]="function"!=typeof t[i]?t[i]:t[i];return r}var g={chunkSize:10240,header:!1,dynamicTyping:!1,preview:0,step:null,encoding:"",worker:!1,comments:!1,complete:null,error:null,download:!1,delimiter:"",newline:"",quoteChar:'"',skipEmptyLines:!1},b=e.console||{},C="undefined"!=typeof module&&module.exports,w="undefined"!=typeof require,T="undefined"!=typeof File,x=e.document,k={},S=e.Worker;if(C){var E;w&&(E=require("fs")),e.Papa=t,e.Papa.parse=t,e.Papa.unparse=r,e.Papa.RECORD_SEP=String.fromCharCode(30),e.Papa.UNIT_SEP=String.fromCharCode(31),e.Papa.Parser=v,e.Papa.ParserHandle=function(){this.paused=!1,this.resume=function(){},this.pause=function(){},this.abort=function(){}},e.Papa.NetworkStreamer=f,e.Papa.StringStreamer=d,e.Papa.FileStreamer=h,e.Papa.LocalChunkStreamer=p,module.exports=e.Papa}else e.Papa=t,e.Papa.parse=t,e.Papa.unparse=r,e.Papa.RECORD_SEP=String.fromCharCode(30),e.Papa.UNIT_SEP=String.fromCharCode(31);if("undefined"!=typeof S){var P={},l={};S.onmessage=function(e){var t=e.data;if(i(t.chunkSize)&&!k[t.workerId])k[t.workerId]=t.chunkSize;else if(t.parsedChunk)l[t.workerId].userStep(t.parsedChunk,s,t.isLastChunk);else if(t.unparsedChunk)l[t.workerId].userChunk(t.unparsedChunk,a,t.isLastChunk);else if(t.errors){if(P[t.workerId])return;l[t.workerId].userError(t.errors,t.file)}else t.finished&&l[t.workerId].userComplete()}}m.prototype.stream=function(){var e=this._input;if("string"==typeof e){var t,r,n=e.length,o=this._config.chunkSize;for(r=0;n>r;r+=o)t=Math.min(r+o,n),this._chunk(e.substring(r,t),r+o>=n)}else if(e instanceof Array){for(r=0;r<e.length;r++)this._chunk(e[r],r==e.length-1);this._finished()}else this._config.error&&this._config.error({code:"UnsupportedInput",message:"Invalid input",row:-1})},m.prototype._chunk=function(e,t){this._activeStep||this._paused||this._aborted||(this._totalRows+=this._parser.parse(e,t).rowCount,this._config.step&&this._stepped(),this._config.chunk&&this._chunked()),this._config.pause&&this.pause()},m.prototype._chunked=function(){this._config.chunk(this._parser.getCharIndex())},m.prototype._stepped=function(){var e=this;if(this._parser.getErrors().length>0&&(this._errors=this._errors.concat(this._parser.getErrors())),this._parser.resetErrors(),this._parser.getResults().data.length>0){this._activeStep=!0;var t=function(t){for(var r=0;r<t.data.length;r++)e._rowCountInChunk++,e._config.preview>0&&e._totalRows-e._rowCountInChunk>=e._config.preview||e._config.step({data:t.data[r],errors:t.errors,meta:t.meta},e);e.data.splice(0,e.data.length),e.errors.splice(0,e.errors.length),e._activeStep=!1,t.meta.aborted||t.meta.paused||e._needMoreData||e._finished()};this._parser.getResults().meta.paused=!1;var r=this._parser.getResults();r.meta.cursor=this._parser.getCharIndex(),this._config.step?t(r):t({data:[r.data],errors:r.errors,meta:r.meta})}},m.prototype._finished=function(){this._config.step&&this._parser.getResults().data.length>0&&this._stepped(),this._config.complete&&!this._aborted&&this._config.complete(this._parser.getResults()),this._errors.length>0&&this._config.error&&!this._aborted&&this._config.error(this._errors)},m.prototype.pause=function(){this._paused=!0,this._parser.pause(),b.log("Pausing parsing...")},m.prototype.resume=function(){this._paused=!1,this._parser.resume(),b.log("Resuming parsing...")},m.prototype.abort=function(){this._aborted=!0,this._parser.abort(),b.log("Aborting parsing..."),this._config.complete&&this._config.complete(this._parser.getResults())},v.prototype.parse=function(e,t){var r,n,i,o=this,s=o._config,a=s.delimiter,u=s.newline,c=s.quoteChar,f=s.comments,d=a.length,h=c.length,p=0,m=0;if(e){var v=e.length;o._state.inQuote&&o._state.lineStart!==o._state.cursor&&(e=o._lineEnding+e,o._state.cursor++),o._state.lineStart=o._state.cursor;for(var g=o._state.cursor;v>g;g++){if(o._state.aborted)return o._abortNotice();if(s.preview>0&&o._state.row>=s.preview)return o._results.meta.aborted=!0,o._results.meta.rows=o._state.row,o._state.cursor=g,o;if(o._state.paused)return o._results.meta.paused=!0,o._results.meta.rows=o._state.row,o._state.cursor=g,o;i=e[g];var b=g>0?e[g-1]:"";o._state.inQuote||f&&i==f?(g=o._skip லைன்ஸ்(e,g,f),o._state.lineStart=g+1):o._state.inQuote&&i==c?g+1<v&&e[g+1]==c?(o._chunk(g+1,1),g++):o._state.inQuote=!1:!o._state.inQuote&&i==c?o._state.inQuote=!0:!o._state.inQuote&&d>1&&e.substr(g,d)===a?(n=e.substr(o._state.cursor,g-o._state.cursor),o._add(n),o._state.cursor=g+d,o._state.col++,p++):o._state.inQuote||1!=d||i!=a?(n=e.substr(g,u.length),!o._state.inQuote&&n==u?(o._state.rowEnd=g,r=e.substr(o._state.cursor,o._state.rowEnd-o._state.cursor),o._add(r),o._chunk(o._state.rowEnd,u.length),o._state.cursor=g+u.length,o._state.lineStart=o._state.cursor,o._state.row++,o._state.col=-1,m++):o._state.inQuote||n!=u||"\r"==i||(o._state.rowEnd=g,r=e.substr(o._state.cursor,o._state.rowEnd-o._state.cursor),o._add(r),o._chunk(o._state.rowEnd,u.length),o._state.cursor=g+u.length,o._state.lineStart=o._state.cursor,o._state.row++,o._state.col=-1,m++)):(n=e.substr(o._state.cursor,g-o._state.cursor),o._add(n),o._state.cursor=g+h,o._state.col++,p++)}o._lineEnding=e.substr(v-u.length,u.length)}return t&&!o._state.inQuote?(n=e.substr(o._state.cursor),o._add(n),o._state.row++,o._state.col=-1):o._state.cursor=g,{rowCount:m,colCount:p}},v.prototype.getResults=function(){return this._results},v.prototype.getErrors=function(){return this._results.errors},v.prototype.resetErrors=function(){this._results.errors=[]},v.prototype.pause=function(){this._state.paused=!0},v.prototype.resume=function(){this._state.paused=!1},v.prototype.abort=function(){this._state.aborted=!0},v.prototype._chunk=function(e,t){this._results.data[this._state.row]||(this._results.data[this._state.row]=[]),this._config.header&&1==this._state.row?this._results.data.splice(0,1):this._results.data[this._state.row].splice(this._state.col,0,e)},v.prototype._add=function(e){if(this._state.col>-1){this._results.data[this._state.row]||(this._results.data[this._state.row]=[]),this._results.data[this._state.row][this._state.col]=e;var t=this._config.header&&1==this._state.row;if(!t&&this._config.skipEmptyLines){var r=!0;for(var i in this._results.data[this._state.row])""!=this._results.data[this._state.row][i]&&(r=!1);r&&this._results.data.splice(this._state.row,1)}}},v.prototype._skipLines=function(e,t,r){for(var n;e[t]==r;)t++;for(var i=t;i<e.length;i++){if(i==e.length-1)return i;if(n=e[i]+e[i+1],"\r\n"==n||"\n\r"==n||"\n"==e[i]||"\r"==e[i])return i}return t},v.prototype._abortNotice=function(){return this._results.meta.aborted=!0,this._results.meta.rows=this._state.row,this._state.cursor};var _=function(t,r){var n,i=r.header?"object":"array",o=0;if(r.header){n=[];for(var s in t[0])n.push(s)}else n=t[0];var a=n.length;if("array"===i)return u(t);if("object"===i){if(!n)return"";var u=function(t){var i="";t=t||[];for(var s=0;s<a;s++){if(s>0)i+=r.delimiter;var u=n[s];i+=c(t[u],s)}return i};o=n?1:0}var c=function(t,n){if("undefined"==typeof t||null===t)return"";t=t.toString();var i=RegExp('["'+r.delimiter+"\n\r"+']');return i.test(t)?('"'+t.replace(/"/g,'""')+'"'):t};return function(t){var i=u(t[0]);for(s=o;s<t.length;s++)i+="\n"+u(t[s]);return i}},N=function(t,r){var n,i=r.header?"object":"array",o=0;if(r.header){n=[];for(var s in t[0])n.push(s)}else n=t[0];var a=n.length,u=function(t,s){var u="";for("object"==i?n||(n=t,o=1):t=t,s=s||0;s<a;s++)u+=c(t[s],s);return u},c=function(t,s){var u=s<a-1?r.delimiter:r.newline;if("undefined"==typeof t||null===t)return u;t=t.toString();var c=RegExp('["'+r.delimiter+"\n\r"+']');return c.test(t)?u='"'+t.replace(/"/g,'""')+'"'+u:u=t+u};return function(t){return u(t)}}(e)}(this);
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -25,7 +28,7 @@
         .input-field:focus { border-color: var(--accent-green); box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2); outline: none; }
         .loader { border-top-color: var(--accent-blue); animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .disabled-section, button:disabled { opacity: 0.5; pointer-events: none; }
+        .disabled-section, button:disabled { opacity: 0.5; cursor: not-allowed; }
         .switch-group input[type="radio"] { display: none; }
         .switch-group label { cursor: pointer; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.375rem; transition: all 0.2s ease-in-out; }
         .switch-group input[type="radio"]:checked + label { background-color: var(--accent-blue); border-color: var(--accent-blue); }
@@ -35,7 +38,7 @@
 </head>
 <body>
     <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35 - Carga desde Nube</p></header>
+        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 36 - Offline Fix</p></header>
 
         <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
             <h2 class="text-xl font-semibold mb-4">Búsqueda Inteligente en Catálogo</h2>
@@ -52,8 +55,12 @@
             <div id="status-container">
                 <p id="loading-status" class="text-lg" style="color: #f59e0b;">🔄 Cargando catálogo desde GitHub...</p>
                 <p id="catalog-version" class="text-sm text-secondary mt-2"></p>
+                <button id="btn-refresh-catalog" class="hidden mt-4 bg-blue-600 text-white font-bold py-1 px-3 rounded-md hover:bg-blue-700 text-sm">
+                    Refrescar Catálogo
+                </button>
             </div>
         </div>
+
         <div id="main-interface" class="disabled-section">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="panel p-6 rounded-lg shadow-md">
@@ -96,50 +103,57 @@
     </div>
 
 <script>
-    // =========== INICIO DE LA LÓGICA DE CARGA DESDE GITHUB ===========
     const CATALOG_URL = 'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv';
+    const API_URL = 'https://api.github.com/repos/leonardo7512/CORRECTORPRECIOS/commits?path=2708CATALOGO_ACTUALIZADO3.csv&per_page=1';
+    
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
 
     async function loadCatalogFromGitHub() {
+        ui.btnRefreshCatalog.disabled = true;
         const statusEl = document.getElementById('loading-status');
         const versionEl = document.getElementById('catalog-version');
+        statusEl.textContent = '🔄 Actualizando catálogo desde GitHub...';
+        statusEl.style.color = '#f59e0b';
         
         try {
-            const urlWithCacheBuster = `${CATALOG_URL}?v=${new Date().getTime()}`;
-            const response = await fetch(urlWithCacheBuster);
-
-            if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
-
-            // Obtener y mostrar la fecha de la última modificación
-            const lastModifiedHeader = response.headers.get('Last-Modified');
-            if (lastModifiedHeader) {
-                const lastModifiedDate = new Date(lastModifiedHeader);
-                const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-                versionEl.textContent = `🗓️ Versión del Catálogo: ${lastModifiedDate.toLocaleString('es-CL', options)}`;
-            } else {
-                versionEl.textContent = 'No se pudo determinar la versión del catálogo.';
+            try {
+                const apiResponse = await fetch(API_URL);
+                if (!apiResponse.ok) throw new Error('No se pudo contactar la API de GitHub.');
+                const data = await apiResponse.json();
+                if (data && data.length > 0 && data[0].commit.committer.date) {
+                    const lastModifiedDate = new Date(data[0].commit.committer.date);
+                    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+                    versionEl.textContent = `🗓️ Versión del Catálogo: ${lastModifiedDate.toLocaleString('es-CL', options)}`;
+                } else {
+                    versionEl.textContent = 'No se pudo determinar la versión del catálogo.';
+                }
+            } catch (apiError) {
+                console.error('Error fetching from GitHub API:', apiError);
+                versionEl.textContent = 'Error al verificar la versión del catálogo.';
             }
-
-            // Procesar el contenido del CSV
+            
+            const response = await fetch(`${CATALOG_URL}?v=${new Date().getTime()}`);
+            if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
+            
             const csvText = await response.text();
             Papa.parse(csvText, {
                 delimiter: ";",
                 skipEmptyLines: true,
                 encoding: "UTF-8",
                 complete: (results) => {
-                    if (!results.data || results.data.length < 2) {
-                         throw new Error("El archivo CSV está vacío o tiene un formato incorrecto.");
-                    }
+                    if (!results.data || results.data.length < 2) throw new Error("El archivo CSV está vacío o tiene formato incorrecto.");
                     
                     const dataRows = results.data.slice(1);
                     catalogoCompleto = procesarCatalogo(dataRows);
                     
-                    if (catalogoCompleto.length === 0) {
-                        throw new Error("No se pudo procesar ningún producto válido del catálogo.");
-                    }
+                    if (catalogoCompleto.length === 0) throw new Error("No se pudo procesar ningún producto válido del catálogo.");
                     
-                    statusEl.textContent = `✅ Catálogo cargado con ${catalogoCompleto.length} productos.`;
+                    statusEl.textContent = `✅ ¡Catálogo actualizado!`;
                     statusEl.style.color = 'var(--accent-green)';
+                    setTimeout(() => {
+                        statusEl.textContent = `Catálogo cargado con ${catalogoCompleto.length} productos.`;
+                    }, 2500);
+                    
                     ui.mainInterface.classList.remove('disabled-section');
                     ui.intelligentSearchSection.classList.remove('disabled-section');
                     ui.debugInfo.innerHTML = `<p>Catálogo cargado correctamente desde GitHub.</p>`;
@@ -149,14 +163,15 @@
 
         } catch (error) {
             console.error("Fallo al cargar el catálogo:", error);
-            statusEl.innerText = `❌ Error fatal al cargar el catálogo. Revisa la URL o tu conexión.`;
+            statusEl.innerText = `❌ Error fatal: ${error.message}`;
             statusEl.style.color = '#ef4444';
-            versionEl.textContent = error.message;
+        } finally {
+            ui.btnRefreshCatalog.classList.remove('hidden');
+            ui.btnRefreshCatalog.disabled = false;
         }
     }
-    // =========== FIN DE LA LÓGICA DE CARGA DESDE GITHUB ===========
 
-    // --- Funciones de procesamiento (sin cambios) ---
+    // --- El resto de las funciones de procesamiento no tienen cambios ---
     function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
     function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
     function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
@@ -172,9 +187,7 @@
     const showPriceModal = (sku) => { const allPricesForSku = catalogoCompleto.filter(p => p.sku === sku); const correctedItem = resultadosParaDescarga.find(r => r.sku === sku); if (allPricesForSku.length === 0) return; ui.priceModalTitle.textContent = `Precios para ${sku}`; const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); let contentHtml = '<ul class="list-none p-0 m-0 space-y-2">'; allPricesForSku.forEach(priceInfo => { const isApplied = correctedItem && correctedItem.tipoAplicado === priceInfo.tipo_precio; contentHtml += `<li style="padding: 8px; ${isApplied ? 'background-color: var(--accent-green); color: var(--bg-primary); border-radius: 4px;' : 'background-color: var(--bg-accent); border-radius: 4px;'}"><strong>${priceInfo.tipo_precio}</strong>: Neto ${f.format(priceInfo.precio_neto || 0)} / Bruto ${f.format(priceInfo.precio_bruto || 0)}${isApplied ? '<strong> (Aplicado)</strong>' : ''}</li>`; }); contentHtml += '</ul>'; ui.priceModalBody.innerHTML = contentHtml; ui.priceModal.style.display = 'flex'; };
     const hidePriceModal = () => { ui.priceModal.style.display = 'none'; };
 
-    // =========== EVENTO DE INICIO MODIFICADO ===========
     document.addEventListener('DOMContentLoaded', () => {
-        // Asigna todos los elementos de la UI a la variable global 'ui'
         Object.assign(ui, {
             priceModal: document.getElementById('price-modal'), priceModalClose: document.getElementById('price-modal-close'),
             priceModalTitle: document.getElementById('price-modal-title'), priceModalBody: document.getElementById('price-modal-body'),
@@ -186,13 +199,14 @@
             nvInput:document.getElementById('nv-input'), datosNormalizados:document.getElementById('datos-normalizados'),
             filtroPedido:document.getElementById('filtro-pedido'), agruparCategorias:document.getElementById('agrupar-categorias'),
             intelligentSearchSection:document.getElementById('intelligent-search-section'), intelligentSearchInput:document.getElementById('intelligent-search-input'),
-            intelligentSearchResults:document.getElementById('intelligent-search-results')
+            intelligentSearchResults:document.getElementById('intelligent-search-results'),
+            btnRefreshCatalog: document.getElementById('btn-refresh-catalog')
         });
         
-        // --- Event Listeners para funcionalidades de la aplicación ---
         ui.priceModalClose.addEventListener('click', hidePriceModal);
         window.addEventListener('click', (event) => { if (event.target == ui.priceModal) { hidePriceModal(); } });
         ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) { showPriceModal(e.target.dataset.sku); } });
+        ui.btnRefreshCatalog.addEventListener('click', loadCatalogFromGitHub);
 
         ui.btnNormalizar.addEventListener('click', () => {
             ui.filtroPedido.value = '';
@@ -289,7 +303,6 @@
             if (e.target && e.target.matches('.btn-copiar-catalogo')) { const sku = e.target.dataset.skuCopia; const productos = catalogoCompleto.filter(p => p.sku === sku); if (productos.length > 0) { let texto = `*Producto:* ${productos[0].sku} - ${productos[0].descripcion}\n\n*Lista de Precios:*\n`; texto += productos.map(p => `- ${p.tipo_precio}: Neto ${p.precio_neto ? formatter.format(p.precio_neto) : 'N/A'} / Bruto ${p.precio_bruto ? formatter.format(p.precio_bruto) : 'N/A'}`).join('\n'); navigator.clipboard.writeText(texto).then(() => { const originalText = e.target.textContent; e.target.textContent = '¡Copiado!'; setTimeout(() => { e.target.textContent = originalText; }, 2000); }); } }
         });
 
-        // Iniciar la carga del catálogo automáticamente
         loadCatalogFromGitHub();
     });
 </script>
