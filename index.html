@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector de Pedidos Pro v35.2 (Multi-Formato)</title>
+    <title>Corrector de Pedidos Pro v35.3 (Orden Corregido)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -35,7 +35,7 @@
 </head>
 <body>
     <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35.2 - Multi-Formato</p></header>
+        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35.3 - Orden Corregido</p></header>
 
         <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
             <h2 class="text-xl font-semibold mb-4">Búsqueda Inteligente en Catálogo</h2>
@@ -161,31 +161,30 @@
     function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
     function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
     
-    // --- MODIFICACIÓN IMPORTANTE ---
-    // Esta función ahora detecta múltiples formatos de pedido.
+    // --- FUNCIÓN CORREGIDA ---
     function parsearPedidoUnificado(texto) {
-        // Normaliza espacios, tabs y saltos de línea para un análisis consistente
         const textoNormalizado = texto.replace(/[\n\t]/g, ' ').replace(/\s{2,}/g, ' ');
         let bestMatchData = [];
 
-        // Define los diferentes formatos a través de expresiones regulares y sus 'mapeadores'
-        // para estandarizar la salida.
+        // --- ORDEN CORREGIDO ---
+        // Se priorizan los formatos más específicos para evitar falsos positivos.
         const formatos = [
-            { // Formato Original: SKU DESC QTY PRICE($)
-                regex: /(FC[0-9A-Z-]+)(.*?)\s*(\d+)\s*(\$[\s\d.,]+)/gi,
-                mapper: m => ({ sku: m[1], item: m[2], cantidad: m[3], v_unitario_usuario: m[4] })
-            },
-            { // Nuevo Formato 1: QTY SKU DESC PRICE($) DISCOUNT SUBTOTAL
+            {   // 1. (EL MÁS ESPECÍFICO): QTY SKU DESC PRICE($) DISCOUNT SUBTOTAL
+                // Este es el formato que estaba fallando, ahora se comprueba primero.
                 regex: /(\d+)\s+(FC[0-9A-Z-]+)\s+(.*?)\s+(\$[\s\d.,]+)\s+\$[\s\d.,]+\s+\$[\s\d.,]+/gi,
                 mapper: m => ({ sku: m[2], item: m[3], cantidad: m[1], v_unitario_usuario: m[4] })
             },
-            { // Nuevo Formato 2: QTY DESC SKU PRICE(sin $)
+            {   // 2. (ESPECÍFICO): QTY DESC SKU PRICE(sin $)
                 regex: /(\d+)\s+(.*?)\s+(FC[0-9A-Z-]+)\s+(\d+)/gi,
                 mapper: m => ({ sku: m[3], item: m[2], cantidad: m[1], v_unitario_usuario: m[4] })
+            },
+            {   // 3. (EL MÁS GENERAL): Formato Original: SKU DESC QTY PRICE($)
+                // Se deja al final porque su parte (.*?) puede capturar texto de más.
+                regex: /(FC[0-9A-Z-]+)(.*?)\s*(\d+)\s*(\$[\s\d.,]+)/gi,
+                mapper: m => ({ sku: m[1], item: m[2], cantidad: m[3], v_unitario_usuario: m[4] })
             }
         ];
 
-        // Itera sobre cada formato y se queda con el que produzca más resultados
         for (const formato of formatos) {
             const currentMatches = [...textoNormalizado.matchAll(formato.regex)];
             if (currentMatches.length > bestMatchData.length) {
@@ -193,7 +192,6 @@
             }
         }
         
-        // Procesa los datos del mejor formato encontrado para limpiar y validar
         const productos = bestMatchData.map(p => {
             const sku = normalizarSKU(p.sku);
             const item = p.item.replace(/SKU|ITEM|CANTIDAD|V\. UNITARIO|Descuento|SUBTOTAL/gi, '').trim();
@@ -204,7 +202,7 @@
                 return { sku, item, cantidad, v_unitario_usuario: precio };
             }
             return null;
-        }).filter(Boolean); // Filtra cualquier resultado nulo
+        }).filter(Boolean);
 
         if (productos.length > 0) {
             ui.debugInfo.innerHTML = `<p>Análisis completado. Se detectó un formato compatible y se normalizaron <strong>${productos.length}</strong> productos.</p>`;
