@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector de Pedidos Pro v35.4 (Detección Mejorada)</title>
+    <title>Corrector de Pedidos Pro v35.1 (con Refresh)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -35,7 +35,7 @@
 </head>
 <body>
     <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35.4 - Detección Mejorada</p></header>
+        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35.1 - con Refresh</p></header>
 
         <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
             <h2 class="text-xl font-semibold mb-4">Búsqueda Inteligente en Catálogo</h2>
@@ -103,11 +103,13 @@
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
 
     async function loadCatalogFromGitHub() {
+        // --- Cambios para el refresco ---
         ui.btnRefreshCatalog.disabled = true;
         const statusEl = document.getElementById('loading-status');
         const versionEl = document.getElementById('catalog-version');
         statusEl.textContent = '🔄 Refrescando catálogo desde GitHub...';
         statusEl.style.color = '#f59e0b';
+        // --- Fin de cambios ---
         
         try {
             const urlWithCacheBuster = `${CATALOG_URL}?v=${new Date().getTime()}`;
@@ -152,68 +154,20 @@
             statusEl.style.color = '#ef4444';
             versionEl.textContent = error.message;
         } finally {
+            // --- Cambios para el refresco ---
             ui.btnRefreshCatalog.classList.remove('hidden');
             ui.btnRefreshCatalog.disabled = false;
+            // --- Fin de cambios ---
         }
     }
 
+    // --- Funciones de procesamiento (sin cambios) ---
     function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
     function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
     function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
-    
-    // --- FUNCIÓN CON CORRECCIÓN DEFINITIVA ---
-    function parsearPedidoUnificado(texto) {
-        let bestMatchData = [];
-
-        const formatos = [
-            {   // 1. (EL MÁS ESPECÍFICO): QTY SKU DESC PRICE($) DISCOUNT SUBTOTAL
-                regex: /(\d+)\s+(FC[0-9A-Z-]+)\s+(.*?)\s+(\$[\s\d.,]+)\s+\$[\s\d.,]+\s+\$[\s\d.,]+/gi,
-                mapper: m => ({ sku: m[2], item: m[3], cantidad: m[1], v_unitario_usuario: m[4] })
-            },
-            {   // 2. (ESPECÍFICO): QTY DESC SKU PRICE(sin $)
-                regex: /(\d+)\s+(.*?)\s+(FC[0-9A-Z-]+)\s+(\d+)/gi,
-                mapper: m => ({ sku: m[3], item: m[2], cantidad: m[1], v_unitario_usuario: m[4] })
-            },
-            {   // 3. (EL MÁS GENERAL, AHORA CORREGIDO): Formato Original: SKU DESC QTY PRICE($)
-                // --- CAMBIO CLAVE ---
-                // Se agregó (?!.*\$.*) al final. Esto es un "negative lookahead".
-                // Significa: "coincide con este patrón SÓLO SI NO hay otro signo $ más adelante en la línea".
-                // Esto evita que esta regla capture por error el formato de "descuento y subtotal".
-                regex: /(FC[0-9A-Z-]+)(.*?)\s*(\d+)\s*(\$[\s\d.,]+)(?!.*\$.*)/gi,
-                mapper: m => ({ sku: m[1], item: m[2], cantidad: m[3], v_unitario_usuario: m[4] })
-            }
-        ];
-
-        for (const formato of formatos) {
-            // Usamos el texto original sin normalizar para el matchAll, para que el lookahead funcione por línea.
-            const currentMatches = [...texto.matchAll(formato.regex)];
-            if (currentMatches.length > bestMatchData.length) {
-                bestMatchData = currentMatches.map(formato.mapper);
-            }
-        }
-        
-        const productos = bestMatchData.map(p => {
-            const sku = normalizarSKU(p.sku);
-            const item = p.item.replace(/SKU|ITEM|CANTIDAD|V\. UNITARIO|Descuento|SUBTOTAL/gi, '').trim();
-            const cantidad = parseInt(p.cantidad, 10);
-            const precio = limpiarValor(p.v_unitario_usuario);
-            
-            if (sku && item && cantidad > 0 && precio !== null) {
-                return { sku, item, cantidad, v_unitario_usuario: precio };
-            }
-            return null;
-        }).filter(Boolean);
-
-        if (productos.length > 0) {
-            ui.debugInfo.innerHTML = `<p>Análisis completado. Se detectó un formato compatible y se normalizaron <strong>${productos.length}</strong> productos.</p>`;
-        } else {
-            ui.debugInfo.innerHTML = `<p class="text-red-500">No se pudo extraer ningún producto válido con los formatos conocidos. Verifique el texto pegado.</p>`;
-        }
-        return productos;
-    }
-
+    function parsearPedidoUnificado(texto) { const textoNormalizado = texto.replace(/[\n\t]/g, ' ').replace(/\s{2,}/g, ' '); const productos = []; const regex = /(FC[0-9A-Z-]+)(.*?)\s*(\d+)\s*(\$[\s\d.,]+)/gi; let match; while ((match = regex.exec(textoNormalizado)) !== null) { let sku = normalizarSKU(match[1]); let item = match[2].replace(/SKU|ITEM|CANTIDAD|V\. UNITARIO|Descuento|SUBTOTAL/gi, '').trim(); let cantidad = parseInt(match[3], 10); let precio = limpiarValor(match[4]); if (item && cantidad > 0 && precio !== null) { productos.push({ sku: sku, item: item, cantidad: cantidad, v_unitario_usuario: precio }); } } if (productos.length > 0) { ui.debugInfo.innerHTML = `<p>Análisis completado. Se normalizaron <strong>${productos.length}</strong> productos.</p>`; } else { ui.debugInfo.innerHTML = `<p class="text-red-500">No se pudo extraer ningún producto válido.</p>`; } return productos; }
     function getCategoriaPrecios(d) { const match = String(d).trim().match(/(.*?)\s*-\s*/); return (match && match[1]) ? match[1].trim() : "General"; }
-    function calcularCantidadesPorCategoria(p){ const c={}; p.forEach(i=>{ const pr=catalogoCompleto.find(p=>p.sku===i.sku); const d=pr?pr.descripcion:i.item||""; c[getCETEGORIAprecios(d)]=(c[getCATEGORIAprecios(d)]||0)+i.cantidad }); return c }
+    function calcularCantidadesPorCategoria(p){ const c={}; p.forEach(i=>{ const pr=catalogoCompleto.find(p=>p.sku===i.sku); const d=pr?pr.descripcion:i.item||""; c[getCategoriaPrecios(d)]=(c[getCategoriaPrecios(d)]||0)+i.cantidad }); return c }
     function obtenerMejorPrecio(sku, tipoCliente, _, cantidadTotalCategoria) { const preciosProducto = catalogoCompleto.filter(p => p.sku === sku); if (preciosProducto.length === 0) return { p: null, t: "SKU NO ENCONTRADO" }; if (preciosProducto.length === 1) { const precioUnico = preciosProducto[0]; return { p: { n: precioUnico.precio_neto, b: precioUnico.precio_bruto }, t: precioUnico.tipo_precio }; } if (tipoCliente !== 'normal') { const precioEspecial = preciosProducto.find(p => p.tipo_precio.toUpperCase().trim() === tipoCliente.toUpperCase()); if (precioEspecial) { return { p: { n: precioEspecial.precio_neto, b: precioEspecial.precio_bruto }, t: precioEspecial.tipo_precio }; } } const tramosConMinimo = preciosProducto.map(p => { const tipo = (p.tipo_precio || '').toUpperCase(); const precio = p.precio_neto || 0; let minCantidad = 0; const matchNumero = tipo.match(/(\d+)/); if (matchNumero) { minCantidad = parseInt(matchNumero[1], 10); } else if (tipo.includes('DETALLE')) { minCantidad = 1; } else if (tipo.includes('MAYOR')) { minCantidad = 2; } if (!precio || precio === 0) { minCantidad = Infinity; } return { ...p, minCantidad: minCantidad }; }); const tramosAplicables = tramosConMinimo.filter(p => cantidadTotalCategoria >= p.minCantidad); if (tramosAplicables.length > 0) { const mejorTramo = tramosAplicables.reduce((mejor, actual) => { return actual.minCantidad > mejor.minCantidad ? actual : mejor; }); return { p: { n: mejorTramo.precio_neto, b: mejorTramo.precio_bruto }, t: mejorTramo.tipo_precio }; } const primerPrecio = preciosProducto[0]; return { p: { n: primerPrecio.precio_neto, b: primerPrecio.precio_bruto }, t: primerPrecio.tipo_precio }; }
     function corregirUnItem(i,t,n,c, agrupar){ const r={...i},pr=catalogoCompleto.find(p=>p.sku===r.sku); r.descripcion=pr?pr.descripcion:"Desc. no encontrada"; const ca=getCategoriaPrecios(r.descripcion); const ct=agrupar?(c[ca]||r.cantidad):r.cantidad; const rp=obtenerMejorPrecio(r.sku,t,r.cantidad,ct); let e="",cl="",pc=null,d=null,dt=0,h=false; const colorClasses={ok:'bg-green-800 bg-opacity-20',aviso:'bg-orange-800 bg-opacity-20',error:'bg-red-800 bg-opacity-20',no_encontrado:'bg-yellow-800 bg-opacity-20'}; if(!rp.p){e=rp.t;cl=colorClasses.no_encontrado;}else{pc=n?rp.p.n:rp.p.b;if(!pc||pc<=0){e="PRECIO NO DISPONIBLE";cl=colorClasses.no_encontrado}else{d=r.v_unitario_usuario-pc;dt=d*r.cantidad;if(Math.abs(d)<1.5){e=`✅ OK`;cl=colorClasses.ok}else{h=true;e=d>0?`⚠️ AVISO`:`❌ ERROR`;cl=d>0?colorClasses.aviso:colorClasses.error}}}return{...r,estado:e,colorClass:cl,precioCorrecto:pc,diferencia:d,diferencia_total_linea:dt,highlight:h,categoria:ca,cantidadCategoria:ct,tipoAplicado:rp.t}}
     function renderIntelligentResults(results) { const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }); let html = ''; if (Object.keys(results).length > 1) { html += `<button id="btn-copiar-todo-catalogo" class="w-full text-sm py-2 px-3 rounded mb-4" style="background-color: var(--accent-green);">Copiar Todos los Resultados</button>`; } html += '<div class="space-y-4">'; for (const sku in results) { const product = results[sku]; html += `<div class="internal-box p-3 rounded-lg"><p class="font-bold text-lg">${product.sku}</p><p class="text-base mb-2">${product.descripcion}</p><table class="w-full text-sm text-left"><thead><tr style="border-bottom: 1px solid var(--border-color);"><th class="py-1">Tipo</th><th class="py-1">Neto</th><th class="py-1">Bruto</th></tr></thead><tbody>`; product.prices.forEach(price => { html += `<tr style="border-bottom: 1px solid var(--border-color);" class="last:border-b-0"><td class="py-1 text-purple-400 font-medium">${price.tipo || 'N/A'}</td><td>${price.neto ? f.format(price.neto) : '---'}</td><td>${price.bruto ? f.format(price.bruto) : '---'}</td></tr>`; }); html += `</tbody></table><button data-sku-copia="${product.sku}" class="btn-copiar-catalogo mt-3 w-full text-sm py-1 px-3 rounded" style="background-color: var(--accent-blue);">Copiar Info de este Producto</button></div>`; } html += '</div>'; ui.intelligentSearchResults.innerHTML = html; }
@@ -236,6 +190,7 @@
             filtroPedido:document.getElementById('filtro-pedido'), agruparCategorias:document.getElementById('agrupar-categorias'),
             intelligentSearchSection:document.getElementById('intelligent-search-section'), intelligentSearchInput:document.getElementById('intelligent-search-input'),
             intelligentSearchResults:document.getElementById('intelligent-search-results'),
+            // --- Se añade el nuevo botón a la UI ---
             btnRefreshCatalog: document.getElementById('btn-refresh-catalog')
         });
         
@@ -243,6 +198,7 @@
         window.addEventListener('click', (event) => { if (event.target == ui.priceModal) { hidePriceModal(); } });
         ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) { showPriceModal(e.target.dataset.sku); } });
         
+        // --- Se añade el listener para el nuevo botón ---
         ui.btnRefreshCatalog.addEventListener('click', loadCatalogFromGitHub);
 
         ui.btnNormalizar.addEventListener('click', () => {
