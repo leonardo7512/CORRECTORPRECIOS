@@ -52,9 +52,15 @@
             <div id="status-container">
                 <p id="loading-status" class="text-lg" style="color: #f59e0b;">🔄 Cargando catálogo desde GitHub...</p>
                 <p id="catalog-version" class="text-sm text-secondary mt-2"></p>
-                <button id="btn-refresh-catalog" class="hidden mt-4 bg-blue-600 text-white font-bold py-1 px-3 rounded-md hover:bg-blue-700 text-sm">
-                    Refrescar Catálogo
-                </button>
+                <div class="mt-4 flex gap-2 flex-wrap">
+                    <button id="btn-refresh-catalog" class="hidden bg-blue-600 text-white font-bold py-1 px-3 rounded-md hover:bg-blue-700 text-sm">
+                        Refrescar Catálogo
+                    </button>
+                    <button id="btn-manual-catalog" class="hidden bg-yellow-600 text-white font-bold py-1 px-3 rounded-md hover:bg-yellow-700 text-sm">
+                        Cargar Catálogo Manualmente
+                    </button>
+                </div>
+                <input type="file" id="file-input-catalog" accept=".csv" style="display: none;">
             </div>
         </div>
         <div id="main-interface" class="disabled-section">
@@ -100,6 +106,12 @@
 
 <script>
     const CATALOG_URL = 'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv';
+    // URLs alternativas en caso de rate limiting
+    const CATALOG_ALTERNATIVES = [
+        'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv',
+        'https://cdn.jsdelivr.net/gh/leonardo7512/CORRECTORPRECIOS@main/2708CATALOGO_ACTUALIZADO3.csv',
+        'https://gitcdn.xyz/repo/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv'
+    ];
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
 
     // ========== FUNCIÓN CORREGIDA CON CACHE Y MANEJO DE RATE LIMITS ==========
@@ -144,11 +156,33 @@
         statusEl.style.color = '#f59e0b';
         
         try {
-            // Fetch con retry para manejar rate limits
-            const response = await fetchWithRetry(CATALOG_URL, 3);
+            // Intentar con todas las URLs alternativas
+            let response = null;
+            let lastError = null;
             
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            for (let urlIndex = 0; urlIndex < CATALOG_ALTERNATIVES.length; urlIndex++) {
+                const currentUrl = CATALOG_ALTERNATIVES[urlIndex];
+                console.log(`Intentando cargar desde: ${currentUrl}`);
+                
+                try {
+                    response = await fetchWithRetry(currentUrl, 2); // Solo 2 intentos por URL
+                    if (response && response.ok) {
+                        console.log(`✅ Catálogo cargado exitosamente desde: ${currentUrl}`);
+                        break;
+                    }
+                } catch (error) {
+                    lastError = error;
+                    console.log(`❌ Falló ${currentUrl}:`, error.message);
+                    
+                    if (urlIndex < CATALOG_ALTERNATIVES.length - 1) {
+                        console.log(`Intentando siguiente URL alternativa...`);
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+            }
+            
+            if (!response || !response.ok) {
+                throw lastError || new Error('Todas las URLs de catálogo fallaron');
             }
 
             const lastModifiedHeader = response.headers.get('Last-Modified');
@@ -215,7 +249,10 @@
             } else {
                 statusEl.textContent = `❌ Error: ${error.message}`;
                 statusEl.style.color = '#ef4444';
-                versionEl.textContent = 'No se pudo cargar el catálogo. Verifica tu conexión.';
+                versionEl.textContent = 'No se pudo cargar el catálogo. Puedes intentar cargarlo manualmente.';
+                
+                // Mostrar botón de carga manual
+                ui.btnManualCatalog.classList.remove('hidden');
             }
         } finally {
             ui.btnRefreshCatalog.classList.remove('hidden');
@@ -223,28 +260,118 @@
         }
     }
 
+    // Función para cargar catálogo manualmente
+    function loadManualCatalog() {
+        ui.fileInputCatalog.click();
+    }
+
+    function handleManualFileLoad(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            alert('Por favor selecciona un archivo CSV válido.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const csvText = e.target.result;
+                
+                Papa.parse(csvText, {
+                    delimiter: ";",
+                    skipEmptyLines: true,
+                    encoding: "UTF-8",
+                    complete: (results) => {
+                        try {
+                            if (!results.data || results.data.length < 2) {
+                                throw new Error("El archivo CSV está vacío o tiene un formato incorrecto.");
+                            }
+                            
+                            const dataRows = results.data.slice(1);
+                            catalogoCompleto = procesarCatalogo(dataRows);
+                            
+                            if (catalogoCompleto.length === 0) {
+                                throw new Error("No se pudo procesar ningún producto válido del catálogo.");
+                            }
+                            
+                            // Guardar en cache
+                            localStorage.setItem('catalogoCache', csvText);
+                            localStorage.setItem('catalogoCacheTime', Date.now().toString());
+                            
+                            const statusEl = document.getElementById('loading-status');
+                            const versionEl = document.getElementById('catalog-version');
+                            
+                            statusEl.textContent = `✅ Catálogo cargado manualmente: ${catalogoCompleto.length} productos.`;
+                            statusEl.style.color = 'var(--accent-green)';
+                            versionEl.textContent = `📁 Archivo local: ${file.name}`;
+                            
+                            ui.mainInterface.classList.remove('disabled-section');
+                            ui.intelligentSearchSection.classList.remove('disabled-section');
+                            ui.debugInfo.innerHTML = `<p>Catálogo cargado manualmente desde archivo local.</p>`;
+                            ui.btnManualCatalog.classList.add('hidden');
+                            
+                        } catch (error) {
+                            alert(`Error al procesar el archivo: ${error.message}`);
+                        }
+                    },
+                    error: (err) => {
+                        alert(`Error al leer el archivo CSV: ${err.message}`);
+                    }
+                });
+                
+            } catch (error) {
+                alert(`Error al cargar el archivo: ${error.message}`);
+            }
+        };
+        
+        reader.onerror = function() {
+            alert('Error al leer el archivo seleccionado.');
+        };
+        
+        reader.readAsText(file, 'UTF-8');
+        
+        // Limpiar input
+        event.target.value = '';
+    }
+
     // Función auxiliar para retry con backoff
     async function fetchWithRetry(url, maxRetries = 3) {
+        let lastError = null;
+        
         for (let i = 0; i < maxRetries; i++) {
             try {
                 const response = await fetch(url);
                 
                 if (response.status === 429) {
-                    const delay = Math.pow(2, i) * 1000; // 1s, 2s, 4s
+                    const delay = Math.pow(2, i + 1) * 2000; // 4s, 8s, 16s (más tiempo)
                     console.log(`Rate limited, esperando ${delay}ms antes del retry ${i + 1}/${maxRetries}`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    continue;
+                    
+                    if (i < maxRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    } else {
+                        throw new Error(`Rate limit persistente después de ${maxRetries} intentos`);
+                    }
                 }
                 
                 return response;
             } catch (error) {
-                if (i === maxRetries - 1) throw error;
+                lastError = error;
+                console.log(`Error en intento ${i + 1}/${maxRetries}:`, error.message);
                 
-                const delay = 1000 * (i + 1);
-                console.log(`Error de red, reintentando en ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
+                if (i < maxRetries - 1) {
+                    const delay = 2000 * (i + 1); // 2s, 4s
+                    console.log(`Reintentando en ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    throw lastError || new Error('Falló después de todos los intentos');
+                }
             }
         }
+        
+        throw lastError || new Error('Error desconocido en fetchWithRetry');
     }
 
     // ========== TODAS LAS FUNCIONES ORIGINALES INTACTAS ==========
@@ -361,7 +488,9 @@
             filtroPedido:document.getElementById('filtro-pedido'), agruparCategorias:document.getElementById('agrupar-categorias'),
             intelligentSearchSection:document.getElementById('intelligent-search-section'), intelligentSearchInput:document.getElementById('intelligent-search-input'),
             intelligentSearchResults:document.getElementById('intelligent-search-results'),
-            btnRefreshCatalog: document.getElementById('btn-refresh-catalog')
+            btnRefreshCatalog: document.getElementById('btn-refresh-catalog'),
+            btnManualCatalog: document.getElementById('btn-manual-catalog'),
+            fileInputCatalog: document.getElementById('file-input-catalog')
         });
         
         ui.priceModalClose.addEventListener('click', hidePriceModal);
@@ -369,6 +498,8 @@
         ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) { showPriceModal(e.target.dataset.sku); } });
         
         ui.btnRefreshCatalog.addEventListener('click', loadCatalogFromGitHub);
+        ui.btnManualCatalog.addEventListener('click', loadManualCatalog);
+        ui.fileInputCatalog.addEventListener('change', handleManualFileLoad);
 
         ui.btnNormalizar.addEventListener('click', () => {
             ui.filtroPedido.value = '';
