@@ -99,12 +99,13 @@
     </div>
 
 <script>
-    // URLs automáticas de múltiples CDNs
+    // URLs automáticas con GitHub Pages como fuente principal (sin rate limits)
     const CATALOG_ALTERNATIVES = [
+        'https://leonardo7512.github.io/CORRECTORPRECIOS/2708CATALOGO_ACTUALIZADO3.csv', // ⭐ PRINCIPAL - Sin rate limits
         'https://cdn.jsdelivr.net/gh/leonardo7512/CORRECTORPRECIOS@main/2708CATALOGO_ACTUALIZADO3.csv',
         'https://gitcdn.xyz/repo/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv',
         'https://raw.githack.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv',
-        'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv'
+        'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv' // Último recurso
     ];
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
 
@@ -121,7 +122,7 @@
         
         // Si hay cache válido, usarlo
         if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION) {
-            statusEl.textContent = '✅ Catálogo desde cache (evitando rate limits)';
+            statusEl.textContent = '✅ Catálogo desde cache local (sin descargas)';
             statusEl.style.color = 'var(--accent-green)';
             
             Papa.parse(cachedData, {
@@ -142,7 +143,7 @@
         
         // Si hay cache expirado, usarlo mientras intentamos actualizar
         if (cachedData) {
-            statusEl.textContent = '⚠️ Usando cache, intentando actualizar desde CDNs...';
+            statusEl.textContent = '⚠️ Usando cache, actualizando desde GitHub Pages...';
             statusEl.style.color = '#f59e0b';
             Papa.parse(cachedData, {
                 delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
@@ -212,10 +213,11 @@
                     statusEl.textContent = `✅ Catálogo actualizado: ${catalogoCompleto.length} productos`;
                     statusEl.style.color = 'var(--accent-green)';
                     
-                    const cdnName = successUrl.includes('jsdelivr') ? 'jsDelivr' : 
+                    const cdnName = successUrl.includes('leonardo7512.github.io') ? 'GitHub Pages (principal)' :
+                                   successUrl.includes('jsdelivr') ? 'jsDelivr CDN' : 
                                    successUrl.includes('gitcdn') ? 'GitCDN' : 
-                                   successUrl.includes('githack') ? 'GitHack' : 'GitHub';
-                    versionEl.textContent = `🌐 Actualizado desde CDN: ${cdnName}`;
+                                   successUrl.includes('githack') ? 'GitHack' : 'GitHub Raw';
+                    versionEl.textContent = `🌐 Fuente activa: ${cdnName}`;
                     
                     ui.mainInterface.classList.remove('disabled-section');
                     ui.intelligentSearchSection.classList.remove('disabled-section');
