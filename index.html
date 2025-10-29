@@ -102,61 +102,152 @@
     const CATALOG_URL = 'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv';
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
 
+    // ========== FUNCIÓN CORREGIDA CON CACHE Y MANEJO DE RATE LIMITS ==========
     async function loadCatalogFromGitHub() {
         ui.btnRefreshCatalog.disabled = true;
         const statusEl = document.getElementById('loading-status');
         const versionEl = document.getElementById('catalog-version');
-        statusEl.textContent = '🔄 Refrescando catálogo desde GitHub...';
+        
+        // Verificar cache local
+        const cachedData = localStorage.getItem('catalogoCache');
+        const cacheTime = localStorage.getItem('catalogoCacheTime');
+        const CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
+        
+        // Si hay cache válido, usarlo
+        if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION) {
+            statusEl.textContent = '✅ Catálogo cargado desde cache local.';
+            statusEl.style.color = 'var(--accent-green)';
+            
+            Papa.parse(cachedData, {
+                delimiter: ";",
+                skipEmptyLines: true,
+                encoding: "UTF-8",
+                complete: (results) => {
+                    const dataRows = results.data.slice(1);
+                    catalogoCompleto = procesarCatalogo(dataRows);
+                    
+                    ui.mainInterface.classList.remove('disabled-section');
+                    ui.intelligentSearchSection.classList.remove('disabled-section');
+                    ui.debugInfo.innerHTML = `<p>Catálogo cargado desde cache (${catalogoCompleto.length} productos).</p>`;
+                    
+                    versionEl.textContent = `📦 Cache válido por ${Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000)} minutos más`;
+                }
+            });
+            
+            ui.btnRefreshCatalog.classList.remove('hidden');
+            ui.btnRefreshCatalog.disabled = false;
+            return;
+        }
+        
+        // Intentar descargar nuevo catálogo
+        statusEl.textContent = '🔄 Descargando catálogo desde GitHub...';
         statusEl.style.color = '#f59e0b';
         
         try {
-            const urlWithCacheBuster = `${CATALOG_URL}?v=${new Date().getTime()}`;
-            const response = await fetch(urlWithCacheBuster);
-
-            if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
+            // Fetch con retry para manejar rate limits
+            const response = await fetchWithRetry(CATALOG_URL, 3);
+            
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
 
             const lastModifiedHeader = response.headers.get('Last-Modified');
             if (lastModifiedHeader) {
                 const lastModifiedDate = new Date(lastModifiedHeader);
                 const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
                 versionEl.textContent = `🗓️ Versión del Catálogo: ${lastModifiedDate.toLocaleString('es-CL', options)}`;
-            } else {
-                versionEl.textContent = 'No se pudo determinar la versión del catálogo.';
             }
 
             const csvText = await response.text();
+            
+            // Guardar en cache
+            localStorage.setItem('catalogoCache', csvText);
+            localStorage.setItem('catalogoCacheTime', Date.now().toString());
+            
             Papa.parse(csvText, {
                 delimiter: ";",
                 skipEmptyLines: true,
                 encoding: "UTF-8",
                 complete: (results) => {
-                    if (!results.data || results.data.length < 2) throw new Error("El archivo CSV está vacío o tiene un formato incorrecto.");
+                    if (!results.data || results.data.length < 2) {
+                        throw new Error("El archivo CSV está vacío o tiene un formato incorrecto.");
+                    }
                     
                     const dataRows = results.data.slice(1);
                     catalogoCompleto = procesarCatalogo(dataRows);
                     
-                    if (catalogoCompleto.length === 0) throw new Error("No se pudo procesar ningún producto válido del catálogo.");
+                    if (catalogoCompleto.length === 0) {
+                        throw new Error("No se pudo procesar ningún producto válido del catálogo.");
+                    }
                     
-                    statusEl.textContent = `✅ Catálogo cargado con ${catalogoCompleto.length} productos.`;
+                    statusEl.textContent = `✅ Catálogo actualizado: ${catalogoCompleto.length} productos.`;
                     statusEl.style.color = 'var(--accent-green)';
                     ui.mainInterface.classList.remove('disabled-section');
                     ui.intelligentSearchSection.classList.remove('disabled-section');
-                    ui.debugInfo.innerHTML = `<p>Catálogo cargado correctamente desde GitHub.</p>`;
+                    ui.debugInfo.innerHTML = `<p>Catálogo descargado y actualizado desde GitHub.</p>`;
                 },
-                error: (err) => { throw new Error(`Error al procesar CSV: ${err.message}`); }
+                error: (err) => { 
+                    throw new Error(`Error al procesar CSV: ${err.message}`); 
+                }
             });
 
         } catch (error) {
-            console.error("Fallo al cargar el catálogo:", error);
-            statusEl.innerText = `❌ Error fatal al cargar el catálogo. Revisa la URL o tu conexión.`;
-            statusEl.style.color = '#ef4444';
-            versionEl.textContent = error.message;
+            console.error("Error al cargar catálogo:", error);
+            
+            // Intentar usar cache expirado como fallback
+            if (cachedData) {
+                statusEl.textContent = '⚠️ Usando catálogo en cache (sin conexión).';
+                statusEl.style.color = '#f59e0b';
+                versionEl.textContent = 'Modo offline - usando última versión disponible';
+                
+                Papa.parse(cachedData, {
+                    delimiter: ";",
+                    skipEmptyLines: true,
+                    encoding: "UTF-8",
+                    complete: (results) => {
+                        const dataRows = results.data.slice(1);
+                        catalogoCompleto = procesarCatalogo(dataRows);
+                        ui.mainInterface.classList.remove('disabled-section');
+                        ui.intelligentSearchSection.classList.remove('disabled-section');
+                        ui.debugInfo.innerHTML = `<p>Usando catálogo en cache (modo offline).</p>`;
+                    }
+                });
+            } else {
+                statusEl.textContent = `❌ Error: ${error.message}`;
+                statusEl.style.color = '#ef4444';
+                versionEl.textContent = 'No se pudo cargar el catálogo. Verifica tu conexión.';
+            }
         } finally {
             ui.btnRefreshCatalog.classList.remove('hidden');
             ui.btnRefreshCatalog.disabled = false;
         }
     }
 
+    // Función auxiliar para retry con backoff
+    async function fetchWithRetry(url, maxRetries = 3) {
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const response = await fetch(url);
+                
+                if (response.status === 429) {
+                    const delay = Math.pow(2, i) * 1000; // 1s, 2s, 4s
+                    console.log(`Rate limited, esperando ${delay}ms antes del retry ${i + 1}/${maxRetries}`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    continue;
+                }
+                
+                return response;
+            } catch (error) {
+                if (i === maxRetries - 1) throw error;
+                
+                const delay = 1000 * (i + 1);
+                console.log(`Error de red, reintentando en ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+
+    // ========== TODAS LAS FUNCIONES ORIGINALES INTACTAS ==========
     function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
     function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
     function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
