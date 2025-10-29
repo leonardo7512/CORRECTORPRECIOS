@@ -110,9 +110,15 @@
 
     // ========== FUNCIÓN COMPLETAMENTE AUTOMÁTICA ==========
     async function loadCatalogFromGitHub() {
-        ui.btnRefreshCatalog.disabled = true;
         const statusEl = document.getElementById('loading-status');
         const versionEl = document.getElementById('catalog-version');
+        
+        // Feedback visual inmediato
+        ui.btnRefreshCatalog.disabled = true;
+        ui.btnRefreshCatalog.textContent = '🔄 Actualizando...';
+        ui.btnRefreshCatalog.style.opacity = '0.5';
+        
+        console.log('🔄 Iniciando actualización del catálogo...');
         
         // Cache extendido para evitar rate limits
         const cachedData = localStorage.getItem('catalogoCache');
@@ -135,8 +141,12 @@
                     versionEl.textContent = `📦 Cache válido por ${Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000)} minutos más`;
                 }
             });
-            ui.btnRefreshCatalog.classList.remove('hidden');
+            
+            // Restaurar botón
             ui.btnRefreshCatalog.disabled = false;
+            ui.btnRefreshCatalog.textContent = 'Refrescar Catálogo';
+            ui.btnRefreshCatalog.style.opacity = '1';
+            console.log('✅ Usando cache válido - no es necesario actualizar');
             return;
         }
         
@@ -164,7 +174,7 @@
             // Intentar cada CDN automáticamente
             for (let urlIndex = 0; urlIndex < CATALOG_ALTERNATIVES.length; urlIndex++) {
                 const currentUrl = CATALOG_ALTERNATIVES[urlIndex];
-                console.log(`🔄 Intentando fuente ${urlIndex + 1}/${CATALOG_ALTERNATIVES.length}`);
+                console.log(`🔄 Intentando fuente ${urlIndex + 1}/${CATALOG_ALTERNATIVES.length}: ${currentUrl}`);
                 
                 try {
                     // Fetch simple sin headers CORS problemáticos
@@ -184,10 +194,13 @@
             }
             
             if (!response || !response.ok) {
-                throw new Error('Todos los CDNs temporalmente no disponibles');
+                throw new Error('Todas las fuentes temporalmente no disponibles');
             }
 
             const csvText = await response.text();
+            
+            // Verificar si realmente cambió
+            const isNewVersion = csvText !== cachedData;
             
             // Actualizar cache
             localStorage.setItem('catalogoCache', csvText);
@@ -207,7 +220,9 @@
                         throw new Error("No hay productos válidos");
                     }
                     
-                    statusEl.textContent = `✅ Catálogo actualizado: ${catalogoCompleto.length} productos`;
+                    statusEl.textContent = isNewVersion ? 
+                        `✅ Catálogo actualizado: ${catalogoCompleto.length} productos` :
+                        `✅ Catálogo verificado: ${catalogoCompleto.length} productos (sin cambios)`;
                     statusEl.style.color = 'var(--accent-green)';
                     
                     const sourceName = successUrl.includes('leonardo7512.github.io') ? 'GitHub Pages (principal)' :
@@ -218,7 +233,9 @@
                     
                     ui.mainInterface.classList.remove('disabled-section');
                     ui.intelligentSearchSection.classList.remove('disabled-section');
-                    ui.debugInfo.innerHTML = `<p>Catálogo cargado desde: ${sourceName}.</p>`;
+                    ui.debugInfo.innerHTML = `<p>Catálogo ${isNewVersion ? 'actualizado' : 'verificado'} desde: ${sourceName}.</p>`;
+                    
+                    console.log(`✅ Catálogo ${isNewVersion ? 'actualizado' : 'verificado (sin cambios)'} desde ${sourceName}`);
                 },
                 error: (err) => { throw new Error(`Error CSV: ${err.message}`); }
             });
@@ -228,7 +245,7 @@
             
             // Si falló la actualización pero tenemos cache, mantener funcionando
             if (cachedData) {
-                statusEl.textContent = '⚠️ CDNs temporalmente no disponibles - funcionando con cache';
+                statusEl.textContent = '⚠️ Fuentes temporalmente no disponibles - funcionando con cache';
                 statusEl.style.color = '#f59e0b';
                 versionEl.textContent = 'Modo cache - funcionando con última versión disponible';
                 
@@ -244,13 +261,16 @@
                     });
                 }
             } else {
-                statusEl.textContent = '❌ No se pudo cargar el catálogo desde ningún CDN';
+                statusEl.textContent = '❌ No se pudo cargar el catálogo desde ninguna fuente';
                 statusEl.style.color = '#ef4444';
                 versionEl.textContent = 'Error: Sin conexión y sin cache disponible. Reintenta en unos minutos.';
             }
         } finally {
-            ui.btnRefreshCatalog.classList.remove('hidden');
+            // Restaurar botón siempre
             ui.btnRefreshCatalog.disabled = false;
+            ui.btnRefreshCatalog.textContent = 'Refrescar Catálogo';
+            ui.btnRefreshCatalog.style.opacity = '1';
+            console.log('🏁 Proceso de actualización completado');
         }
     }
 
