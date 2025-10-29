@@ -99,13 +99,12 @@
     </div>
 
 <script>
-    // URLs automáticas con GitHub Pages como fuente principal (sin rate limits)
+    // URLs con GitHub Pages como fuente principal (mismo dominio, sin CORS)
     const CATALOG_ALTERNATIVES = [
-        'https://leonardo7512.github.io/CORRECTORPRECIOS/2708CATALOGO_ACTUALIZADO3.csv', // ⭐ PRINCIPAL - Sin rate limits
+        'https://leonardo7512.github.io/CORRECTORPRECIOS/2708CATALOGO_ACTUALIZADO3.csv', // ⭐ PRINCIPAL - Mismo dominio
+        './2708CATALOGO_ACTUALIZADO3.csv', // Relativa si está en la misma carpeta
         'https://cdn.jsdelivr.net/gh/leonardo7512/CORRECTORPRECIOS@main/2708CATALOGO_ACTUALIZADO3.csv',
-        'https://gitcdn.xyz/repo/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv',
-        'https://raw.githack.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv',
-        'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv' // Último recurso
+        'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv'
     ];
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
 
@@ -165,23 +164,21 @@
             // Intentar cada CDN automáticamente
             for (let urlIndex = 0; urlIndex < CATALOG_ALTERNATIVES.length; urlIndex++) {
                 const currentUrl = CATALOG_ALTERNATIVES[urlIndex];
-                console.log(`🔄 Intentando CDN ${urlIndex + 1}/${CATALOG_ALTERNATIVES.length}`);
+                console.log(`🔄 Intentando fuente ${urlIndex + 1}/${CATALOG_ALTERNATIVES.length}`);
                 
                 try {
-                    response = await fetch(currentUrl, {
-                        method: 'GET',
-                        headers: { 'Cache-Control': 'no-cache' }
-                    });
+                    // Fetch simple sin headers CORS problemáticos
+                    response = await fetch(currentUrl);
                     
                     if (response && response.ok) {
                         successUrl = currentUrl;
-                        console.log(`✅ Éxito con CDN ${urlIndex + 1}`);
+                        console.log(`✅ Éxito con fuente ${urlIndex + 1}`);
                         break;
                     }
                 } catch (error) {
-                    console.log(`❌ CDN ${urlIndex + 1} falló: ${error.message}`);
+                    console.log(`❌ Fuente ${urlIndex + 1} falló: ${error.message}`);
                     if (urlIndex < CATALOG_ALTERNATIVES.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 2000)); // 2s entre CDNs
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 1s entre intentos
                     }
                 }
             }
@@ -213,15 +210,15 @@
                     statusEl.textContent = `✅ Catálogo actualizado: ${catalogoCompleto.length} productos`;
                     statusEl.style.color = 'var(--accent-green)';
                     
-                    const cdnName = successUrl.includes('leonardo7512.github.io') ? 'GitHub Pages (principal)' :
-                                   successUrl.includes('jsdelivr') ? 'jsDelivr CDN' : 
-                                   successUrl.includes('gitcdn') ? 'GitCDN' : 
-                                   successUrl.includes('githack') ? 'GitHack' : 'GitHub Raw';
-                    versionEl.textContent = `🌐 Fuente activa: ${cdnName}`;
+                    const sourceName = successUrl.includes('leonardo7512.github.io') ? 'GitHub Pages (principal)' :
+                                      successUrl.startsWith('./') ? 'Archivo local (relativo)' :
+                                      successUrl.includes('jsdelivr') ? 'jsDelivr CDN' : 
+                                      successUrl.includes('raw.githubusercontent') ? 'GitHub Raw' : 'Fuente externa';
+                    versionEl.textContent = `🌐 Fuente activa: ${sourceName}`;
                     
                     ui.mainInterface.classList.remove('disabled-section');
                     ui.intelligentSearchSection.classList.remove('disabled-section');
-                    ui.debugInfo.innerHTML = `<p>Catálogo actualizado desde ${cdnName}.</p>`;
+                    ui.debugInfo.innerHTML = `<p>Catálogo cargado desde: ${sourceName}.</p>`;
                 },
                 error: (err) => { throw new Error(`Error CSV: ${err.message}`); }
             });
