@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector de Pedidos Pro v35.2 (Multiformat)</title>
+    <title>Corrector de Pedidos Pro v35.3 (Multiformat + Selector Manual)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -31,11 +31,12 @@
         .switch-group input[type="radio"]:checked + label { background-color: var(--accent-blue); border-color: var(--accent-blue); }
         .highlight-cell { border: 2px solid #f59e0b !important; font-weight: 700; }
         #price-modal-close:hover, #price-modal-close:focus { color: var(--text-primary); text-decoration: none; }
+        .selector-manual-enabled { border-color: var(--accent-green) !important; background-color: rgba(72, 187, 120, 0.1) !important; }
     </style>
 </head>
 <body>
     <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35.2 - Multiformat Parser</p></header>
+        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35.3 - Multiformat Parser + Selector Manual de Listas</p></header>
 
         <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
             <h2 class="text-xl font-semibold mb-4">Búsqueda Inteligente en Catálogo</h2>
@@ -65,6 +66,19 @@
                     <div class="mt-4"><label for="nv-input" class="block text-sm font-medium mb-2">Nº Nota de Venta (Opcional):</label><input type="text" id="nv-input" class="input-field w-full p-2 rounded-md" placeholder="Ej: 12345"></div>
                     <div class="mt-4"><label class="block text-sm font-medium mb-2">Tipo de Cliente:</label><div class="flex space-x-2 switch-group"><input type="radio" id="cliente-normal" name="tipo-cliente" value="normal" checked><label for="cliente-normal">Normal</label><input type="radio" id="cliente-vip" name="tipo-cliente" value="VIP"><label for="cliente-vip">VIP</label><input type="radio" id="cliente-webalia" name="tipo-cliente" value="PRECIOS WEBALIA"><label for="cliente-webalia">Webalia</label></div></div>
                     <div class="mt-4"><label class="block text-sm font-medium mb-2">Precios del pedido son:</label><div class="flex space-x-2 switch-group"><input type="radio" id="precio-bruto" name="tipo-precio" value="bruto" checked><label for="precio-bruto">Brutos</label><input type="radio" id="precio-neto" name="tipo-precio" value="neto"><label for="precio-neto">Netos</label></div></div>
+                    
+                    <!-- 🆕 NUEVA SECCIÓN: SELECTOR MANUAL DE LISTA DE PRECIOS -->
+                    <div class="mt-4 p-3 rounded-lg" style="border: 1px solid var(--border-color); background-color: rgba(66, 153, 225, 0.05);">
+                        <label class="flex items-center text-sm font-medium mb-2">
+                            <input type="checkbox" id="forzar-lista-precio" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2">🎯 Forzar Lista de Precio Específica</span>
+                        </label>
+                        <select id="selector-lista-precio" class="input-field w-full p-2 rounded-md mt-2" disabled>
+                            <option value="">Seleccionar lista de precio...</option>
+                        </select>
+                        <p class="text-xs text-secondary mt-1">Marca esta opción para usar una lista específica independiente de cantidades/cliente</p>
+                    </div>
+                    
                     <div class="mt-4"><label class="flex items-center text-sm font-medium"><input type="checkbox" id="agrupar-categorias" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked><span class="ml-2">Agrupar Cantidades por Categoría</span></label></div>
                     <button id="btn-normalizar" class="mt-6 w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-md hover:bg-gray-700">2. Normalizar Pedido</button>
                 </div>
@@ -139,6 +153,8 @@
                     ui.intelligentSearchSection.classList.remove('disabled-section');
                     ui.debugInfo.innerHTML = `<p>Catálogo desde cache (${catalogoCompleto.length} productos).</p>`;
                     versionEl.textContent = `📦 Cache válido por ${Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000)} minutos más`;
+                    // 🆕 Llenar selector de listas de precio
+                    llenarSelectorListasPrecio();
                 }
             });
             
@@ -162,6 +178,8 @@
                     ui.mainInterface.classList.remove('disabled-section');
                     ui.intelligentSearchSection.classList.remove('disabled-section');
                     ui.debugInfo.innerHTML = `<p>Cache expirado activo (${catalogoCompleto.length} productos).</p>`;
+                    // 🆕 Llenar selector de listas de precio
+                    llenarSelectorListasPrecio();
                 }
             });
         }
@@ -235,6 +253,9 @@
                     ui.intelligentSearchSection.classList.remove('disabled-section');
                     ui.debugInfo.innerHTML = `<p>Catálogo ${isNewVersion ? 'actualizado' : 'verificado'} desde: ${sourceName}.</p>`;
                     
+                    // 🆕 Llenar selector de listas de precio
+                    llenarSelectorListasPrecio();
+                    
                     console.log(`✅ Catálogo ${isNewVersion ? 'actualizado' : 'verificado (sin cambios)'} desde ${sourceName}`);
                 },
                 error: (err) => { throw new Error(`Error CSV: ${err.message}`); }
@@ -257,6 +278,8 @@
                             catalogoCompleto = procesarCatalogo(dataRows);
                             ui.mainInterface.classList.remove('disabled-section');
                             ui.intelligentSearchSection.classList.remove('disabled-section');
+                            // 🆕 Llenar selector de listas de precio
+                            llenarSelectorListasPrecio();
                         }
                     });
                 }
@@ -272,6 +295,21 @@
             ui.btnRefreshCatalog.style.opacity = '1';
             console.log('🏁 Proceso de actualización completado');
         }
+    }
+
+    // 🆕 NUEVA FUNCIÓN: Llenar selector de listas de precio
+    function llenarSelectorListasPrecio() {
+        const listasPrecio = [...new Set(catalogoCompleto.map(p => p.tipo_precio))].sort();
+        const selector = document.getElementById('selector-lista-precio');
+        
+        selector.innerHTML = '<option value="">Seleccionar lista de precio...</option>';
+        listasPrecio.forEach(lista => {
+            if (lista && lista.trim()) {
+                selector.innerHTML += `<option value="${lista}">${lista}</option>`;
+            }
+        });
+        
+        console.log(`✅ Selector de listas llenado con ${listasPrecio.length} opciones`);
     }
 
     // ========== TODAS LAS FUNCIONES ORIGINALES INTACTAS ==========
@@ -360,8 +398,84 @@
     
     function getCategoriaPrecios(d) { const match = String(d).trim().match(/(.*?)\s*-\s*/); return (match && match[1]) ? match[1].trim() : "General"; }
     function calcularCantidadesPorCategoria(p){ const c={}; p.forEach(i=>{ const pr=catalogoCompleto.find(p=>p.sku===i.sku); const d=pr?pr.descripcion:i.item||""; c[getCategoriaPrecios(d)]=(c[getCategoriaPrecios(d)]||0)+i.cantidad }); return c }
-    function obtenerMejorPrecio(sku, tipoCliente, _, cantidadTotalCategoria) { const preciosProducto = catalogoCompleto.filter(p => p.sku === sku); if (preciosProducto.length === 0) return { p: null, t: "SKU NO ENCONTRADO" }; if (preciosProducto.length === 1) { const precioUnico = preciosProducto[0]; return { p: { n: precioUnico.precio_neto, b: precioUnico.precio_bruto }, t: precioUnico.tipo_precio }; } if (tipoCliente !== 'normal') { const precioEspecial = preciosProducto.find(p => p.tipo_precio.toUpperCase().trim() === tipoCliente.toUpperCase()); if (precioEspecial) { return { p: { n: precioEspecial.precio_neto, b: precioEspecial.precio_bruto }, t: precioEspecial.tipo_precio }; } } const tramosConMinimo = preciosProducto.map(p => { const tipo = (p.tipo_precio || '').toUpperCase(); const precio = p.precio_neto || 0; let minCantidad = 0; const matchNumero = tipo.match(/(\d+)/); if (matchNumero) { minCantidad = parseInt(matchNumero[1], 10); } else if (tipo.includes('DETALLE')) { minCantidad = 1; } else if (tipo.includes('MAYOR')) { minCantidad = 2; } if (!precio || precio === 0) { minCantidad = Infinity; } return { ...p, minCantidad: minCantidad }; }); const tramosAplicables = tramosConMinimo.filter(p => cantidadTotalCategoria >= p.minCantidad); if (tramosAplicables.length > 0) { const mejorTramo = tramosAplicables.reduce((mejor, actual) => { return actual.minCantidad > mejor.minCantidad ? actual : mejor; }); return { p: { n: mejorTramo.precio_neto, b: mejorTramo.precio_bruto }, t: mejorTramo.tipo_precio }; } const primerPrecio = preciosProducto[0]; return { p: { n: primerPrecio.precio_neto, b: primerPrecio.precio_bruto }, t: primerPrecio.tipo_precio }; }
-    function corregirUnItem(i,t,n,c, agrupar){ const r={...i},pr=catalogoCompleto.find(p=>p.sku===r.sku); r.descripcion=pr?pr.descripcion:"Desc. no encontrada"; const ca=getCategoriaPrecios(r.descripcion); const ct=agrupar?(c[ca]||r.cantidad):r.cantidad; const rp=obtenerMejorPrecio(r.sku,t,r.cantidad,ct); let e="",cl="",pc=null,d=null,dt=0,h=false; const colorClasses={ok:'bg-green-800 bg-opacity-20',aviso:'bg-orange-800 bg-opacity-20',error:'bg-red-800 bg-opacity-20',no_encontrado:'bg-yellow-800 bg-opacity-20'}; if(!rp.p){e=rp.t;cl=colorClasses.no_encontrado;}else{pc=n?rp.p.n:rp.p.b;if(!pc||pc<=0){e="PRECIO NO DISPONIBLE";cl=colorClasses.no_encontrado}else{d=r.v_unitario_usuario-pc;dt=d*r.cantidad;if(Math.abs(d)<1.5){e=`✅ OK`;cl=colorClasses.ok}else{h=true;e=d>0?`⚠️ AVISO`:`❌ ERROR`;cl=d>0?colorClasses.aviso:colorClasses.error}}}return{...r,estado:e,colorClass:cl,precioCorrecto:pc,diferencia:d,diferencia_total_linea:dt,highlight:h,categoria:ca,cantidadCategoria:ct,tipoAplicado:rp.t}}
+    
+    // 🆕 FUNCIÓN MODIFICADA: obtenerMejorPrecio ahora acepta lista forzada
+    function obtenerMejorPrecio(sku, tipoCliente, _, cantidadTotalCategoria, listaForzada = null) { 
+        const preciosProducto = catalogoCompleto.filter(p => p.sku === sku); 
+        if (preciosProducto.length === 0) return { p: null, t: "SKU NO ENCONTRADO" }; 
+        
+        // 🆕 NUEVA LÓGICA: Si hay lista forzada, usarla directamente
+        if (listaForzada) {
+            const precioForzado = preciosProducto.find(p => p.tipo_precio === listaForzada);
+            if (precioForzado) {
+                return { 
+                    p: { n: precioForzado.precio_neto, b: precioForzado.precio_bruto }, 
+                    t: `${precioForzado.tipo_precio} (FORZADO)` 
+                };
+            } else {
+                return { p: null, t: `LISTA "${listaForzada}" NO DISPONIBLE` };
+            }
+        }
+        
+        // Resto de la lógica original sin cambios...
+        if (preciosProducto.length === 1) { 
+            const precioUnico = preciosProducto[0]; 
+            return { p: { n: precioUnico.precio_neto, b: precioUnico.precio_bruto }, t: precioUnico.tipo_precio }; 
+        } 
+        
+        if (tipoCliente !== 'normal') { 
+            const precioEspecial = preciosProducto.find(p => p.tipo_precio.toUpperCase().trim() === tipoCliente.toUpperCase()); 
+            if (precioEspecial) { 
+                return { p: { n: precioEspecial.precio_neto, b: precioEspecial.precio_bruto }, t: precioEspecial.tipo_precio }; 
+            } 
+        } 
+        
+        const tramosConMinimo = preciosProducto.map(p => { 
+            const tipo = (p.tipo_precio || '').toUpperCase(); 
+            const precio = p.precio_neto || 0; 
+            let minCantidad = 0; 
+            const matchNumero = tipo.match(/(\d+)/); 
+            if (matchNumero) { 
+                minCantidad = parseInt(matchNumero[1], 10); 
+            } else if (tipo.includes('DETALLE')) { 
+                minCantidad = 1; 
+            } else if (tipo.includes('MAYOR')) { 
+                minCantidad = 2; 
+            } 
+            if (!precio || precio === 0) { 
+                minCantidad = Infinity; 
+            } 
+            return { ...p, minCantidad: minCantidad }; 
+        }); 
+        
+        const tramosAplicables = tramosConMinimo.filter(p => cantidadTotalCategoria >= p.minCantidad); 
+        if (tramosAplicables.length > 0) { 
+            const mejorTramo = tramosAplicables.reduce((mejor, actual) => { 
+                return actual.minCantidad > mejor.minCantidad ? actual : mejor; 
+            }); 
+            return { p: { n: mejorTramo.precio_neto, b: mejorTramo.precio_bruto }, t: mejorTramo.tipo_precio }; 
+        } 
+        
+        const primerPrecio = preciosProducto[0]; 
+        return { p: { n: primerPrecio.precio_neto, b: primerPrecio.precio_bruto }, t: primerPrecio.tipo_precio }; 
+    }
+    
+    // 🆕 FUNCIÓN MODIFICADA: corregirUnItem ahora acepta lista forzada
+    function corregirUnItem(i,t,n,c, agrupar, listaForzada = null){ 
+        const r={...i},pr=catalogoCompleto.find(p=>p.sku===r.sku); 
+        r.descripcion=pr?pr.descripcion:"Desc. no encontrada"; 
+        const ca=getCategoriaPrecios(r.descripcion); 
+        const ct=agrupar?(c[ca]||r.cantidad):r.cantidad; 
+        
+        // 🆕 Pasar lista forzada a obtenerMejorPrecio
+        const rp=obtenerMejorPrecio(r.sku,t,r.cantidad,ct, listaForzada); 
+        
+        let e="",cl="",pc=null,d=null,dt=0,h=false; 
+        const colorClasses={ok:'bg-green-800 bg-opacity-20',aviso:'bg-orange-800 bg-opacity-20',error:'bg-red-800 bg-opacity-20',no_encontrado:'bg-yellow-800 bg-opacity-20'}; 
+        if(!rp.p){e=rp.t;cl=colorClasses.no_encontrado;}else{pc=n?rp.p.n:rp.p.b;if(!pc||pc<=0){e="PRECIO NO DISPONIBLE";cl=colorClasses.no_encontrado}else{d=r.v_unitario_usuario-pc;dt=d*r.cantidad;if(Math.abs(d)<1.5){e=`✅ OK`;cl=colorClasses.ok}else{h=true;e=d>0?`⚠️ AVISO`:`❌ ERROR`;cl=d>0?colorClasses.aviso:colorClasses.error}}}
+        return{...r,estado:e,colorClass:cl,precioCorrecto:pc,diferencia:d,diferencia_total_linea:dt,highlight:h,categoria:ca,cantidadCategoria:ct,tipoAplicado:rp.t}
+    }
+    
     function renderIntelligentResults(results) { const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }); let html = ''; if (Object.keys(results).length > 1) { html += `<button id="btn-copiar-todo-catalogo" class="w-full text-sm py-2 px-3 rounded mb-4" style="background-color: var(--accent-green);">Copiar Todos los Resultados</button>`; } html += '<div class="space-y-4">'; for (const sku in results) { const product = results[sku]; html += `<div class="internal-box p-3 rounded-lg"><p class="font-bold text-lg">${product.sku}</p><p class="text-base mb-2">${product.descripcion}</p><table class="w-full text-sm text-left"><thead><tr style="border-bottom: 1px solid var(--border-color);"><th class="py-1">Tipo</th><th class="py-1">Neto</th><th class="py-1">Bruto</th></tr></thead><tbody>`; product.prices.forEach(price => { html += `<tr style="border-bottom: 1px solid var(--border-color);" class="last:border-b-0"><td class="py-1 text-purple-400 font-medium">${price.tipo || 'N/A'}</td><td>${price.neto ? f.format(price.neto) : '---'}</td><td>${price.bruto ? f.format(price.bruto) : '---'}</td></tr>`; }); html += `</tbody></table><button data-sku-copia="${product.sku}" class="btn-copiar-catalogo mt-3 w-full text-sm py-1 px-3 rounded" style="background-color: var(--accent-blue);">Copiar Info de este Producto</button></div>`; } html += '</div>'; ui.intelligentSearchResults.innerHTML = html; }
     function handleIntelligentSearch() { const term = ui.intelligentSearchInput.value.toLowerCase().trim(); if (term.length < 3) { lastSearchResults={}; ui.intelligentSearchResults.innerHTML = '<p class="text-base text-secondary">Escribe al menos 3 caracteres...</p>'; return; } lastSearchResults = catalogoCompleto.reduce((acc, p) => { if (p.sku.toLowerCase().includes(term) || p.descripcion.toLowerCase().includes(term)) { if (!acc[p.sku]) { acc[p.sku] = { sku: p.sku, descripcion: p.descripcion, prices: [] }; } acc[p.sku].prices.push({ tipo: p.tipo_precio, neto: p.precio_neto, bruto: p.precio_bruto }); } return acc; }, {}); renderIntelligentResults(lastSearchResults); }
     const copiarDiferencias = () => { const diferencias = resultadosParaDescarga.filter(r => r.highlight === true); if (diferencias.length === 0) { alert("No hay diferencias para copiar."); return; } const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); const nv = ui.nvInput.value.trim() || 'Sin NV'; const totalDiferencia = diferencias.reduce((sum, item) => sum + (item.diferencia_total_linea || 0), 0); let texto = `*Resumen de Diferencias (NV: ${nv})*\n\n`; texto += diferencias.map(r => `SKU: ${r.sku} | Tu Precio: ${f.format(r.v_unitario_usuario)} | Correcto: ${f.format(r.precioCorrecto)} | Dif. Unitaria: ${f.format(r.diferencia)}`).join('\n'); texto += `\n\n*Diferencia Total General: ${f.format(totalDiferencia)}*`; navigator.clipboard.writeText(texto).then(() => { const btn = ui.btnCopiarDiferencias; const o = btn.textContent; btn.textContent = '¡Copiado!'; setTimeout(() => { btn.textContent = o; }, 2000); }, () => alert("Error al copiar.")); };
@@ -382,7 +496,10 @@
             filtroPedido:document.getElementById('filtro-pedido'), agruparCategorias:document.getElementById('agrupar-categorias'),
             intelligentSearchSection:document.getElementById('intelligent-search-section'), intelligentSearchInput:document.getElementById('intelligent-search-input'),
             intelligentSearchResults:document.getElementById('intelligent-search-results'),
-            btnRefreshCatalog: document.getElementById('btn-refresh-catalog')
+            btnRefreshCatalog: document.getElementById('btn-refresh-catalog'),
+            // 🆕 Nuevos elementos UI
+            forzarListaPrecio: document.getElementById('forzar-lista-precio'),
+            selectorListaPrecio: document.getElementById('selector-lista-precio')
         });
         
         ui.priceModalClose.addEventListener('click', hidePriceModal);
@@ -390,6 +507,19 @@
         ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) { showPriceModal(e.target.dataset.sku); } });
         
         ui.btnRefreshCatalog.addEventListener('click', loadCatalogFromGitHub);
+
+        // 🆕 NUEVO EVENT LISTENER: Control del selector manual
+        ui.forzarListaPrecio.addEventListener('change', function() {
+            const selector = ui.selectorListaPrecio;
+            selector.disabled = !this.checked;
+            
+            if (this.checked) {
+                selector.classList.add('selector-manual-enabled');
+            } else {
+                selector.classList.remove('selector-manual-enabled');
+                selector.value = '';
+            }
+        });
 
         ui.btnNormalizar.addEventListener('click', () => {
             ui.filtroPedido.value = '';
@@ -425,24 +555,51 @@
             if (!termino) { renderPedidoEditable(pedidoNormalizado); } else { const filtrados = pedidoNormalizado.filter(p => p.sku.toLowerCase().includes(termino) || p.item.toLowerCase().includes(termino)); renderPedidoEditable(filtrados); }
         });
 
+        // 🆕 BOTÓN CORREGIR MODIFICADO: Ahora incluye lógica de lista forzada
         ui.btnCorregir.addEventListener('click', () => {
             if (pedidoNormalizado.length === 0) return;
+            
+            // 🆕 Validar lista forzada si está activada
+            const forzarLista = ui.forzarListaPrecio.checked;
+            const listaForzada = forzarLista ? ui.selectorListaPrecio.value : null;
+            
+            if (forzarLista && !listaForzada) {
+                alert('Selecciona una lista de precio específica o desmarca la opción.');
+                return;
+            }
+            
             ui.resultadosContainer.classList.remove('hidden');
             ui.loader.classList.remove('hidden');
             ui.btnCopiarDiferencias.classList.add('hidden');
             ui.btnCapturarTabla.classList.add('hidden');
+            
             setTimeout(() => {
                 try {
                     const esNeto = document.querySelector('input[name="tipo-precio"]:checked').value === 'neto';
                     const tipoCliente = document.querySelector('input[name="tipo-cliente"]:checked').value;
                     const agrupar = ui.agruparCategorias.checked;
-                    resultadosParaDescarga = pedidoNormalizado.map(item => corregirUnItem(item, tipoCliente, esNeto, calcularCantidadesPorCategoria(pedidoNormalizado), agrupar));
+                    
+                    // 🆕 Pasar lista forzada a corregirUnItem
+                    resultadosParaDescarga = pedidoNormalizado.map(item => 
+                        corregirUnItem(item, tipoCliente, esNeto, calcularCantidadesPorCategoria(pedidoNormalizado), agrupar, listaForzada)
+                    );
+                    
                     renderResultados(resultadosParaDescarga);
                     const diferenciaTotalGeneral = resultadosParaDescarga.reduce((sum, r) => sum + (r.diferencia_total_linea || 0), 0);
-                    renderResumen(pedidoNormalizado.length, calcularCantidadesPorCategoria(pedidoNormalizado), diferenciaTotalGeneral, esNeto ? 'Netos (sin IVA)' : 'Brutos (con IVA)');
+                    
+                    // 🆕 Incluir info de lista forzada en el resumen
+                    const infoPrecios = esNeto ? 'Netos (sin IVA)' : 'Brutos (con IVA)';
+                    const infoListaForzada = listaForzada ? ` | Lista Forzada: ${listaForzada}` : '';
+                    
+                    renderResumen(pedidoNormalizado.length, calcularCantidadesPorCategoria(pedidoNormalizado), diferenciaTotalGeneral, infoPrecios + infoListaForzada);
                     ui.btnCopiarDiferencias.classList.remove('hidden');
                     ui.btnCapturarTabla.classList.remove('hidden');
-                } catch (e) { console.error(e); alert("Error inesperado al procesar: " + e.message); } finally { ui.loader.classList.add('hidden'); }
+                } catch (e) { 
+                    console.error(e); 
+                    alert("Error inesperado al procesar: " + e.message); 
+                } finally { 
+                    ui.loader.classList.add('hidden'); 
+                }
             }, 100);
         });
 
