@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AROMAKER - Herramientas de Gestión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #1a1d23;
+            --bg-secondary: #242832;
+            --bg-accent: #2d3748;
+            --text-primary: #e2e8f0;
+            --text-secondary: #a0aec0;
+            --accent-green: #48bb78;
+            --accent-blue: #4299e1;
+            --accent-purple: #9f7aea;
+            --border-color: #4a5568;
+        }
+        
+        body {
+            font-family: 'Courier Prime', monospace;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #0f1419 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        .card-tool {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-tool::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .card-tool:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .card-tool:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border-color: var(--accent-blue);
+        }
+        
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: var(--bg-accent);
+            transition: all 0.3s ease;
+        }
+        
+        .card-tool:hover .icon-wrapper {
+            transform: rotate(10deg) scale(1.1);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .badge-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+        
+        .badge-success {
+            background: var(--accent-green);
+            color: white;
+        }
+        
+        .badge-new {
+            background: var(--accent-purple);
+            color: white;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), #2b6cb0);
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
+            text-decoration: none;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(66, 153, 225, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-5xl md:text-6xl font-bold mb-4">
+                <span class="gradient-text">AROMAKER</span>
+            </h1>
+            <p class="text-xl text-secondary mb-2">Suite de Herramientas de Gestión</p>
+            <p class="text-sm text-secondary">Versión 2.0 | Actualizado Enero 2026</p>
+        </header>
+
+        <!-- Herramientas Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            
+            <!-- Corrector de Pedidos -->
+            <div class="card-tool rounded-xl p-8">
+                <div class="flex flex-col items-center text-center">
+                    <div class="icon-wrapper" style="background: linear-gradient(135deg, var(--accent-blue), #2b6cb0);">
+                        🔧
+                    </div>
+                    <h2 class="text-2xl font-bold mb-3">Corrector de Pedidos</h2>
+                    <span class="badge badge-primary mb-4">Principal</span>
+                    
+                    <p class="text-secondary mb-6">
+                        Valida y corrige pedidos automáticamente comparando con el catálogo oficial. 
+                        Detecta errores de precio y genera reportes detallados.
+                    </p>
+                    
+                    <ul class="feature-list text-left w-full mb-6 text-sm">
+                        <li>Validación automática de precios</li>
+                        <li>Detección de listas (Detalle/Mayor)</li>
+                        <li>Agrupación por categorías</li>
+                        <li>Exportación de reportes</li>
+                        <li>Búsqueda inteligente en catálogo</li>
+                    </ul>
+                    
+                    <a href="corrector.html" class="btn-primary w-full text-center">
+                        Abrir Corrector →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Sincronizador de Catálogo -->
+            <div class="card-tool rounded-xl p-8">
+                <div class="flex flex-col items-center text-center">
+                    <div class="icon-wrapper" style="background: linear-gradient(135deg, var(--accent-green), #2f855a);">
+                        🔄
+                    </div>
+                    <h2 class="text-2xl font-bold mb-3">Sincronizador de Catálogo</h2>
+                    <span class="badge badge-new mb-4">Nuevo</span>
+                    
+                    <p class="text-secondary mb-6">
+                        Actualiza el catálogo Git desde Drive manteniendo la estructura intacta. 
+                        Detecta productos nuevos y cambios de precio automáticamente.
+                    </p>
+                    
+                    <ul class="feature-list text-left w-full mb-6 text-sm">
+                        <li>Estructura Git inmutable</li>
+                        <li>Detección de precios pendientes</li>
+                        <li>Comparación Drive ↔ Git</li>
+                        <li>Vista previa de cambios</li>
+                        <li>Generación CSV lista para Git</li>
+                    </ul>
+                    
+                    <a href="sincronizador.html" class="btn-primary w-full text-center" 
+                       style="background: linear-gradient(135deg, var(--accent-green), #2f855a);">
+                        Abrir Sincronizador →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flujo de Trabajo -->
+        <div class="card-tool rounded-xl p-8 mb-8">
+            <h3 class="text-2xl font-bold mb-6 text-center">📋 Flujo de Trabajo Recomendado</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                <div>
+                    <div class="text-4xl mb-3">1️⃣</div>
+                    <h4 class="font-bold mb-2 text-blue-400">Actualizar Catálogo</h4>
+                    <p class="text-sm text-secondary">
+                        Usa el <strong>Sincronizador</strong> para actualizar precios desde Drive a Git
+                    </p>
+                </div>
+                
+                <div>
+                    <div class="text-4xl mb-3">2️⃣</div>
+                    <h4 class="font-bold mb-2 text-green-400">Subir a GitHub</h4>
+                    <p class="text-sm text-secondary">
+                        Sube el CSV generado a tu repositorio para publicar los cambios
+                    </p>
+                </div>
+                
+                <div>
+                    <div class="text-4xl mb-3">3️⃣</div>
+                    <h4 class="font-bold mb-2 text-purple-400">Corregir Pedidos</h4>
+                    <p class="text-sm text-secondary">
+                        Usa el <strong>Corrector</strong> con el catálogo actualizado para validar pedidos
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información Técnica -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card-tool rounded-lg p-6">
+                <h4 class="font-bold mb-3 text-blue-400">📦 Catálogo Actual</h4>
+                <p class="text-sm text-secondary mb-2">
+                    <strong>Archivo:</strong> 2708CATALOGO_ACTUALIZADO3.csv
+                </p>
+                <p class="text-sm text-secondary mb-2">
+                    <strong>Formato:</strong> SKU;DESCRIPCION;TIPO_PRECIO;PRECIO_NETO;PRECIO_BRUTO
+                </p>
+                <p class="text-sm text-secondary">
+                    <strong>Fuente:</strong> GitHub Pages (Auto-actualización cada 4 horas)
+                </p>
+            </div>
+            
+            <div class="card-tool rounded-lg p-6">
+                <h4 class="font-bold mb-3 text-green-400">🔗 Enlaces Rápidos</h4>
+                <ul class="text-sm space-y-2">
+                    <li>
+                        <a href="https://github.com/leonardo7512/CORRECTORPRECIOS" 
+                           target="_blank" 
+                           class="text-blue-400 hover:underline">
+                            📁 Repositorio GitHub
+                        </a>
+                    </li>
+                    <li>
+                        <a href="2708CATALOGO_ACTUALIZADO3.csv" 
+                           download 
+                           class="text-blue-400 hover:underline">
+                            📥 Descargar Catálogo CSV
+                        </a>
+                    </li>
+                    <li class="text-secondary">
+                        💾 Cache Local: 4 horas
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 pt-8 border-t border-gray-700">
+            <p class="text-sm text-secondary">
+                AROMAKER - Sociedad de Inversiones Fucas SPA<br>
+                Sistema de Gestión de Catálogo y Pedidos v2.0
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Animación de entrada
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.card-tool');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+
+            // Log de acceso
+            console.log('%c🚀 AROMAKER Suite v2.0', 'color: #4299e1; font-size: 20px; font-weight: bold;');
+            console.log('%cHerramientas cargadas correctamente', 'color: #48bb78; font-size: 14px;');
+        });
+    </script>
+</body>
+</html>

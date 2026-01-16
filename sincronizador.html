@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sincronizador de Catálogo Drive ↔ Git - AROMAKER</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #1a1d23;
+            --bg-secondary: #242832;
+            --bg-accent: #2d3748;
+            --text-primary: #e2e8f0;
+            --text-secondary: #a0aec0;
+            --accent-green: #48bb78;
+            --accent-blue: #4299e1;
+            --accent-orange: #ed8936;
+            --accent-red: #f56565;
+            --border-color: #4a5568;
+        }
+        body {
+            font-family: 'Courier Prime', monospace;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .panel {
+            background-color: var(--bg-secondary);
+        }
+        .input-field {
+            background-color: var(--bg-accent);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .badge-nuevo { background-color: var(--accent-green); }
+        .badge-actualizado { background-color: var(--accent-blue); }
+        .badge-sin-cambios { background-color: var(--bg-accent); }
+        .badge-advertencia { background-color: var(--accent-orange); }
+        .badge-error { background-color: var(--accent-red); }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container mx-auto max-w-7xl">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-2">🔄 Sincronizador de Catálogo</h1>
+            <p class="text-secondary">Drive → Git | Estructura Inmutable</p>
+        </header>
+
+        <!-- Paso 1: Cargar Archivos -->
+        <div class="panel p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-2xl font-semibold mb-4">📁 Paso 1: Cargar Archivos</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">
+                        Catálogo Git (Actual - Estructura Base):
+                    </label>
+                    <input type="file" id="file-git" accept=".csv" 
+                           class="input-field w-full p-2 rounded-md text-sm">
+                    <p class="text-xs text-secondary mt-1">GIT2708CATALOGO_ACTUALIZADO3.csv</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">
+                        Catálogo Drive (Fuente de Actualización):
+                    </label>
+                    <input type="file" id="file-drive" accept=".csv" 
+                           class="input-field w-full p-2 rounded-md text-sm">
+                    <p class="text-xs text-secondary mt-1">DRIVECATALAGO_AROMAKER.csv</p>
+                </div>
+            </div>
+            <button id="btn-analizar" disabled
+                    class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed">
+                🔍 Analizar Diferencias
+            </button>
+        </div>
+
+        <!-- Paso 2: Vista Previa de Cambios -->
+        <div id="panel-analisis" class="panel p-6 rounded-lg shadow-md mb-6 hidden">
+            <h2 class="text-2xl font-semibold mb-4">📊 Paso 2: Revisión de Cambios</h2>
+            
+            <!-- Resumen -->
+            <div id="resumen-cambios" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
+
+            <!-- Filtros -->
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <button class="filtro-btn px-3 py-1 rounded text-sm font-semibold" data-tipo="todos">
+                    Todos
+                </button>
+                <button class="filtro-btn px-3 py-1 rounded text-sm" data-tipo="nuevos">
+                    Nuevos
+                </button>
+                <button class="filtro-btn px-3 py-1 rounded text-sm" data-tipo="actualizados">
+                    Actualizados
+                </button>
+                <button class="filtro-btn px-3 py-1 rounded text-sm" data-tipo="advertencias">
+                    Advertencias
+                </button>
+                <button class="filtro-btn px-3 py-1 rounded text-sm" data-tipo="errores">
+                    Errores
+                </button>
+            </div>
+
+            <!-- Búsqueda -->
+            <input type="text" id="buscar-cambios" placeholder="🔍 Buscar por SKU o descripción..."
+                   class="input-field w-full p-2 rounded-md mb-4">
+
+            <!-- Lista de Cambios -->
+            <div id="lista-cambios" class="max-h-96 overflow-y-auto">
+                <p class="text-secondary">Los cambios aparecerán aquí...</p>
+            </div>
+        </div>
+
+        <!-- Paso 3: Generar Catálogo -->
+        <div id="panel-generar" class="panel p-6 rounded-lg shadow-md hidden">
+            <h2 class="text-2xl font-semibold mb-4">💾 Paso 3: Generar Catálogo Actualizado</h2>
+            <div class="bg-accent p-4 rounded-lg mb-4">
+                <h3 class="font-semibold mb-2">⚠️ Verificación Final:</h3>
+                <ul class="text-sm space-y-1 list-disc list-inside">
+                    <li>La estructura del Git se mantendrá intacta</li>
+                    <li>Los prefijos de familia se respetarán</li>
+                    <li>Solo se actualizarán precios y se agregarán productos nuevos</li>
+                    <li>Los productos con precios pendientes se agregarán con precio 0</li>
+                </ul>
+            </div>
+            <button id="btn-generar" 
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md">
+                ✅ Generar CSV Actualizado para Git
+            </button>
+        </div>
+
+        <!-- Log de Proceso -->
+        <div class="panel p-4 rounded-lg shadow-md mt-6">
+            <h3 class="text-lg font-semibold mb-2">📝 Log de Proceso</h3>
+            <div id="log-proceso" class="text-sm max-h-40 overflow-y-auto bg-accent p-3 rounded">
+                <p class="text-secondary">El log aparecerá aquí...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let catalogoGit = [];
+        let catalogoDrive = [];
+        let cambiosDetectados = [];
+        let filtroActivo = 'todos';
+
+        const ui = {
+            fileGit: document.getElementById('file-git'),
+            fileDrive: document.getElementById('file-drive'),
+            btnAnalizar: document.getElementById('btn-analizar'),
+            btnGenerar: document.getElementById('btn-generar'),
+            panelAnalisis: document.getElementById('panel-analisis'),
+            panelGenerar: document.getElementById('panel-generar'),
+            resumenCambios: document.getElementById('resumen-cambios'),
+            listaCambios: document.getElementById('lista-cambios'),
+            buscarCambios: document.getElementById('buscar-cambios'),
+            logProceso: document.getElementById('log-proceso')
+        };
+
+        // ========== UTILIDADES ==========
+        function log(mensaje, tipo = 'info') {
+            const colores = {
+                info: 'text-blue-400',
+                success: 'text-green-400',
+                warning: 'text-orange-400',
+                error: 'text-red-400'
+            };
+            const timestamp = new Date().toLocaleTimeString();
+            ui.logProceso.innerHTML += `<p class="${colores[tipo]}">[${timestamp}] ${mensaje}</p>`;
+            ui.logProceso.scrollTop = ui.logProceso.scrollHeight;
+        }
+
+        function normalizarSKU(sku) {
+            if (!sku) return '';
+            return String(sku).toUpperCase().trim().replace(/\s+/g, '');
+        }
+
+        function limpiarPrecio(precio) {
+            if (typeof precio === 'number') return precio;
+            if (!precio || precio === '') return 0;
+            
+            const str = String(precio).trim();
+            
+            // Detectar casos especiales
+            if (str.includes('Inf a MM') || 
+                str.includes('#VALUE!') || 
+                str.includes('PRECIOS VARIABLES') ||
+                str.includes('ML') ||
+                str.startsWith('🔹') ||
+                str.includes('Caja') ||
+                isNaN(parseFloat(str.replace(/[^0-9.,]/g, '')))) {
+                return 0; // Precio pendiente
+            }
+
+            // Limpiar y convertir
+            try {
+                let cleanStr = str.replace(/[$\s]/g, '');
+                const lastDot = cleanStr.lastIndexOf('.');
+                const lastComma = cleanStr.lastIndexOf(',');
+                
+                if (lastComma > lastDot) {
+                    return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.'));
+                }
+                if (lastDot > lastComma) {
+                    const parts = cleanStr.split('.');
+                    if (parts.length > 1 && parts[parts.length - 1].length !== 3) {
+                        return parseFloat(cleanStr);
+                    }
+                    return parseFloat(cleanStr.replace(/\./g, ''));
+                }
+                return parseFloat(cleanStr);
+            } catch (e) {
+                return 0;
+            }
+        }
+
+        // ========== PROCESADORES CSV ==========
+        function procesarCatalogoGit(data) {
+            log('Procesando catálogo Git...', 'info');
+            const productos = [];
+            
+            data.forEach((row, index) => {
+                if (index === 0 || row.length < 5) return; // Skip header
+                
+                const sku = normalizarSKU(row[0]);
+                if (!sku) return;
+
+                productos.push({
+                    sku: sku,
+                    descripcion: row[1] ? String(row[1]).trim() : '',
+                    tipo_precio: row[2] ? String(row[2]).trim() : '',
+                    precio_neto: limpiarPrecio(row[3]),
+                    precio_bruto: limpiarPrecio(row[4]),
+                    linea_original: row // Para preservar estructura exacta
+                });
+            });
+
+            log(`✅ Git: ${productos.length} registros cargados`, 'success');
+            return productos;
+        }
+
+        function procesarCatalogoDrive(data) {
+            log('Procesando catálogo Drive...', 'info');
+            const productos = [];
+            
+            data.forEach((row, index) => {
+                if (index === 0 || row.length < 6) return; // Skip header
+                
+                const sku = normalizarSKU(row[1]); // Columna B
+                if (!sku || sku === 'NA') return;
+
+                const descripcion = row[0] ? String(row[0]).trim() : '';
+                const precioDetalleBruto = limpiarPrecio(row[2]);
+                const precioDetalleNeto = limpiarPrecio(row[3]);
+                const precioMayorBruto = limpiarPrecio(row[4]);
+                const precioMayorNeto = limpiarPrecio(row[5]);
+                const observaciones = row[6] ? String(row[6]).trim() : '';
+
+                // Detectar tipo de lista desde observaciones
+                let tipoMayor = 'MAYOR 6 UN.';
+                if (observaciones.includes('MAYOR DESDE 3')) {
+                    tipoMayor = 'MAYOR 3 UN.';
+                } else if (observaciones.includes('MAYOR DESDE 2')) {
+                    tipoMayor = 'MAYOR 2 UN.';
+                }
+
+                productos.push({
+                    sku: sku,
+                    descripcion: descripcion,
+                    precios: [
+                        {
+                            tipo: 'DETALLE',
+                            neto: precioDetalleNeto,
+                            bruto: precioDetalleBruto
+                        },
+                        {
+                            tipo: tipoMayor,
+                            neto: precioMayorNeto,
+                            bruto: precioMayorBruto
+                        }
+                    ],
+                    observaciones: observaciones,
+                    tiene_precio_unico: observaciones.includes('PRECIO UNICO')
+                });
+            });
+
+            log(`✅ Drive: ${productos.length} productos cargados`, 'success');
+            return productos;
+        }
+
+        // ========== COMPARADOR ==========
+        function analizarDiferencias() {
+            log('Analizando diferencias...', 'info');
+            const cambios = [];
+            const skusGit = new Set(catalogoGit.map(p => p.sku));
+            const skusDrive = new Set(catalogoDrive.map(p => p.sku));
+
+            // Productos nuevos (en Drive pero no en Git)
+            catalogoDrive.forEach(prodDrive => {
+                if (!skusGit.has(prodDrive.sku)) {
+                    const tienePrecios = prodDrive.precios.some(p => p.neto > 0 || p.bruto > 0);
+                    
+                    cambios.push({
+                        tipo: 'nuevo',
+                        sku: prodDrive.sku,
+                        descripcion: prodDrive.descripcion,
+                        preciosPendientes: !tienePrecios,
+                        detalle: tienePrecios ? 
+                            'Producto nuevo con precios' : 
+                            'Producto nuevo SIN precios (se agregará con $0)',
+                        drive: prodDrive
+                    });
+                }
+            });
+
+            // Productos existentes (comparar precios)
+            catalogoDrive.forEach(prodDrive => {
+                if (skusGit.has(prodDrive.sku)) {
+                    const registrosGit = catalogoGit.filter(p => p.sku === prodDrive.sku);
+                    let hayActualizacion = false;
+                    let detalles = [];
+
+                    prodDrive.precios.forEach(precioDrive => {
+                        const registroGit = registrosGit.find(r => 
+                            r.tipo_precio === precioDrive.tipo || 
+                            (precioDrive.tipo.includes('MAYOR') && r.tipo_precio.includes('MAYOR'))
+                        );
+
+                        if (registroGit) {
+                            const cambioNeto = Math.abs(registroGit.precio_neto - precioDrive.neto) > 1;
+                            const cambioBruto = Math.abs(registroGit.precio_bruto - precioDrive.bruto) > 1;
+
+                            if (cambioNeto || cambioBruto) {
+                                hayActualizacion = true;
+                                detalles.push({
+                                    lista: precioDrive.tipo,
+                                    netoAntes: registroGit.precio_neto,
+                                    netoDespues: precioDrive.neto,
+                                    brutoAntes: registroGit.precio_bruto,
+                                    brutoDespues: precioDrive.bruto
+                                });
+                            }
+                        }
+                    });
+
+                    if (hayActualizacion) {
+                        cambios.push({
+                            tipo: 'actualizado',
+                            sku: prodDrive.sku,
+                            descripcion: prodDrive.descripcion,
+                            detalle: `${detalles.length} precio(s) actualizados`,
+                            cambiosPrecios: detalles,
+                            drive: prodDrive
+                        });
+                    }
+                }
+            });
+
+            log(`✅ Análisis completado: ${cambios.length} cambios detectados`, 'success');
+            log(`  - Nuevos: ${cambios.filter(c => c.tipo === 'nuevo').length}`, 'info');
+            log(`  - Actualizados: ${cambios.filter(c => c.tipo === 'actualizado').length}`, 'info');
+            
+            return cambios;
+        }
+
+        // ========== RENDERIZADO ==========
+        function renderResumen() {
+            const nuevos = cambiosDetectados.filter(c => c.tipo === 'nuevo').length;
+            const actualizados = cambiosDetectados.filter(c => c.tipo === 'actualizado').length;
+            const advertencias = cambiosDetectados.filter(c => c.preciosPendientes).length;
+
+            ui.resumenCambios.innerHTML = `
+                <div class="badge-nuevo text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${nuevos}</div>
+                    <div class="text-sm">Nuevos</div>
+                </div>
+                <div class="badge-actualizado text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${actualizados}</div>
+                    <div class="text-sm">Actualizados</div>
+                </div>
+                <div class="badge-advertencia text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${advertencias}</div>
+                    <div class="text-sm">Sin Precios</div>
+                </div>
+                <div class="badge-sin-cambios text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${catalogoGit.length}</div>
+                    <div class="text-sm">Total Git</div>
+                </div>
+                <div class="badge-sin-cambios text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${catalogoDrive.length}</div>
+                    <div class="text-sm">Total Drive</div>
+                </div>
+            `;
+        }
+
+        function renderCambios(filtro = 'todos', busqueda = '') {
+            let cambiosFiltrados = cambiosDetectados;
+
+            // Filtro por tipo
+            if (filtro !== 'todos') {
+                if (filtro === 'nuevos') {
+                    cambiosFiltrados = cambiosFiltrados.filter(c => c.tipo === 'nuevo');
+                } else if (filtro === 'actualizados') {
+                    cambiosFiltrados = cambiosFiltrados.filter(c => c.tipo === 'actualizado');
+                } else if (filtro === 'advertencias') {
+                    cambiosFiltrados = cambiosFiltrados.filter(c => c.preciosPendientes);
+                }
+            }
+
+            // Filtro por búsqueda
+            if (busqueda) {
+                const termino = busqueda.toLowerCase();
+                cambiosFiltrados = cambiosFiltrados.filter(c => 
+                    c.sku.toLowerCase().includes(termino) || 
+                    c.descripcion.toLowerCase().includes(termino)
+                );
+            }
+
+            const formatter = new Intl.NumberFormat('es-CL', {
+                style: 'currency',
+                currency: 'CLP',
+                maximumFractionDigits: 0
+            });
+
+            let html = '<div class="space-y-3">';
+            cambiosFiltrados.forEach(cambio => {
+                const badgeClass = cambio.tipo === 'nuevo' ? 'badge-nuevo' : 'badge-actualizado';
+                const iconoAdvertencia = cambio.preciosPendientes ? ' ⚠️' : '';
+
+                html += `
+                    <div class="bg-accent p-4 rounded-lg border-l-4 ${cambio.tipo === 'nuevo' ? 'border-green-500' : 'border-blue-500'}">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <span class="${badgeClass} text-white text-xs px-2 py-1 rounded font-semibold">
+                                    ${cambio.tipo.toUpperCase()}${iconoAdvertencia}
+                                </span>
+                                <span class="ml-2 font-bold text-blue-300">${cambio.sku}</span>
+                            </div>
+                        </div>
+                        <p class="text-sm mb-2">${cambio.descripcion}</p>
+                        <p class="text-xs text-secondary">${cambio.detalle}</p>
+                `;
+
+                if (cambio.cambiosPrecios && cambio.cambiosPrecios.length > 0) {
+                    html += '<div class="mt-2 text-xs space-y-1">';
+                    cambio.cambiosPrecios.forEach(cp => {
+                        html += `
+                            <div class="bg-primary p-2 rounded">
+                                <strong class="text-purple-400">${cp.lista}:</strong><br>
+                                Neto: ${formatter.format(cp.netoAntes)} → ${formatter.format(cp.netoDespues)}<br>
+                                Bruto: ${formatter.format(cp.brutoAntes)} → ${formatter.format(cp.brutoDespues)}
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+
+                html += '</div>';
+            });
+            html += '</div>';
+
+            ui.listaCambios.innerHTML = cambiosFiltrados.length > 0 ? 
+                html : 
+                '<p class="text-secondary text-center py-8">No hay cambios que mostrar con este filtro</p>';
+        }
+
+        // ========== GENERADOR CSV ==========
+        function generarCSVActualizado() {
+            log('Generando catálogo actualizado...', 'info');
+            
+            // Clonar catálogo Git
+            let csvFinal = [...catalogoGit];
+            const skusExistentes = new Set(catalogoGit.map(p => p.sku));
+
+            // Actualizar precios existentes
+            cambiosDetectados.forEach(cambio => {
+                if (cambio.tipo === 'actualizado') {
+                    cambio.drive.precios.forEach(precioDrive => {
+                        const index = csvFinal.findIndex(p => 
+                            p.sku === cambio.sku && 
+                            (p.tipo_precio === precioDrive.tipo || 
+                             (precioDrive.tipo.includes('MAYOR') && p.tipo_precio.includes('MAYOR')))
+                        );
+
+                        if (index !== -1) {
+                            csvFinal[index].precio_neto = precioDrive.neto;
+                            csvFinal[index].precio_bruto = precioDrive.bruto;
+                            log(`Actualizado: ${cambio.sku} - ${precioDrive.tipo}`, 'success');
+                        }
+                    });
+                }
+            });
+
+            // Agregar productos nuevos
+            cambiosDetectados.forEach(cambio => {
+                if (cambio.tipo === 'nuevo') {
+                    cambio.drive.precios.forEach(precio => {
+                        csvFinal.push({
+                            sku: cambio.sku,
+                            descripcion: cambio.descripcion,
+                            tipo_precio: precio.tipo,
+                            precio_neto: precio.neto,
+                            precio_bruto: precio.bruto
+                        });
+                        log(`Agregado: ${cambio.sku} - ${precio.tipo}`, 'success');
+                    });
+                }
+            });
+
+            // Generar CSV con estructura Git
+            let csvTexto = 'SKU;DESCRIPCION;TIPO_PRECIO;PRECIO_NETO;PRECIO_BRUTO\n';
+            csvFinal.forEach(producto => {
+                const linea = [
+                    producto.sku,
+                    `"${producto.descripcion.replace(/"/g, '""')}"`, // Escapar comillas
+                    producto.tipo_precio,
+                    producto.precio_neto || 0,
+                    producto.precio_bruto || 0
+                ].join(';');
+                csvTexto += linea + '\n';
+            });
+
+            // Descargar archivo
+            const blob = new Blob([csvTexto], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const fecha = new Date().toISOString().split('T')[0].replace(/-/g, '');
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `GIT${fecha}CATALOGO_ACTUALIZADO.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            log(`✅ CSV generado: GIT${fecha}CATALOGO_ACTUALIZADO.csv`, 'success');
+            log(`Total de productos en nuevo catálogo: ${csvFinal.length}`, 'info');
+        }
+
+        // ========== EVENT LISTENERS ==========
+        ui.fileGit.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                Papa.parse(file, {
+                    delimiter: ';',
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        catalogoGit = procesarCatalogoGit(results.data);
+                        verificarHabilitarAnalisis();
+                    }
+                });
+            }
+        });
+
+        ui.fileDrive.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                Papa.parse(file, {
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        catalogoDrive = procesarCatalogoDrive(results.data);
+                        verificarHabilitarAnalisis();
+                    }
+                });
+            }
+        });
+
+        function verificarHabilitarAnalisis() {
+            if (catalogoGit.length > 0 && catalogoDrive.length > 0) {
+                ui.btnAnalizar.disabled = false;
+            }
+        }
+
+        ui.btnAnalizar.addEventListener('click', () => {
+            cambiosDetectados = analizarDiferencias();
+            renderResumen();
+            renderCambios(filtroActivo);
+            ui.panelAnalisis.classList.remove('hidden');
+            ui.panelGenerar.classList.remove('hidden');
+        });
+
+        ui.btnGenerar.addEventListener('click', generarCSVActualizado);
+
+        // Filtros
+        document.querySelectorAll('.filtro-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filtro-btn').forEach(b => {
+                    b.classList.remove('font-semibold', 'bg-blue-600');
+                });
+                e.target.classList.add('font-semibold', 'bg-blue-600');
+                
+                filtroActivo = e.target.dataset.tipo;
+                renderCambios(filtroActivo, ui.buscarCambios.value);
+            });
+        });
+
+        ui.buscarCambios.addEventListener('input', (e) => {
+            renderCambios(filtroActivo, e.target.value);
+        });
+
+        // Inicialización
+        log('Sistema de sincronización listo', 'success');
+        log('Carga ambos archivos para comenzar', 'info');
+    </script>
+</body>
+</html>
