@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector de Pedidos Pro v35.3 (Multiformat + Selector Manual)</title>
+    <title>Corrector de Pedidos Pro v36.0 (Con Selector de Fuente)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -36,7 +36,10 @@
 </head>
 <body>
     <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1><p class="text-secondary mt-2">Versión 35.3 - Multiformat Parser + Selector Manual de Listas</p></header>
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1>
+            <p class="text-secondary mt-2">Versión 36.0 - Multiformat + Selector de Fuente</p>
+        </header>
 
         <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
             <h2 class="text-xl font-semibold mb-4">Búsqueda Inteligente en Catálogo</h2>
@@ -46,18 +49,43 @@
             </div>
         </div>
 
-        <div id="debug-section" class="p-4 rounded-lg shadow-md mb-8"><h3 class="text-lg font-semibold mb-2">🔧 Log de Procesamiento</h3><div id="debug-info" class="text-sm max-h-40 overflow-y-auto"><p>El análisis del pedido aparecerá aquí...</p></div></div>
+        <div id="debug-section" class="p-4 rounded-lg shadow-md mb-8">
+            <h3 class="text-lg font-semibold mb-2">🔧 Log de Procesamiento</h3>
+            <div id="debug-info" class="text-sm max-h-40 overflow-y-auto">
+                <p>El análisis del pedido aparecerá aquí...</p>
+            </div>
+        </div>
 
         <div id="upload-section" class="panel p-6 rounded-lg shadow-md mb-8">
             <h2 class="text-xl font-semibold mb-4">Estado del Catálogo</h2>
+            
+            <!-- 🆕 SELECTOR DE FUENTE -->
+            <div class="mb-4 p-3 rounded-lg" style="border: 1px solid var(--border-color); background-color: rgba(66, 153, 225, 0.05);">
+                <label class="block text-sm font-medium mb-2">🌐 Fuente del Catálogo:</label>
+                <div class="flex space-x-2 switch-group flex-wrap">
+                    <input type="radio" id="fuente-cache" name="fuente-catalogo" value="cache" checked>
+                    <label for="fuente-cache">💾 Cache</label>
+                    
+                    <input type="radio" id="fuente-auto" name="fuente-catalogo" value="auto">
+                    <label for="fuente-auto">🔄 Auto</label>
+                    
+                    <input type="radio" id="fuente-git" name="fuente-catalogo" value="git">
+                    <label for="fuente-git">☁️ Git</label>
+                </div>
+                <p class="text-xs text-secondary mt-2" id="fuente-descripcion">
+                    💾 Cache: Más rápido, usa versión guardada (4h de validez)
+                </p>
+            </div>
+            
             <div id="status-container">
-                <p id="loading-status" class="text-lg" style="color: #f59e0b;">🔄 Cargando catálogo automáticamente...</p>
+                <p id="loading-status" class="text-lg" style="color: #f59e0b;">🔄 Cargando catálogo...</p>
                 <p id="catalog-version" class="text-sm text-secondary mt-2"></p>
-                <button id="btn-refresh-catalog" class="hidden mt-4 bg-blue-600 text-white font-bold py-1 px-3 rounded-md hover:bg-blue-700 text-sm">
-                    Refrescar Catálogo
+                <button id="btn-refresh-catalog" class="mt-4 bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 text-sm">
+                    🔄 Actualizar Catálogo
                 </button>
             </div>
         </div>
+
         <div id="main-interface" class="disabled-section">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="panel p-6 rounded-lg shadow-md">
@@ -67,7 +95,6 @@
                     <div class="mt-4"><label class="block text-sm font-medium mb-2">Tipo de Cliente:</label><div class="flex space-x-2 switch-group"><input type="radio" id="cliente-normal" name="tipo-cliente" value="normal" checked><label for="cliente-normal">Normal</label><input type="radio" id="cliente-vip" name="tipo-cliente" value="VIP"><label for="cliente-vip">VIP</label><input type="radio" id="cliente-webalia" name="tipo-cliente" value="PRECIOS WEBALIA"><label for="cliente-webalia">Webalia</label></div></div>
                     <div class="mt-4"><label class="block text-sm font-medium mb-2">Precios del pedido son:</label><div class="flex space-x-2 switch-group"><input type="radio" id="precio-bruto" name="tipo-precio" value="bruto" checked><label for="precio-bruto">Brutos</label><input type="radio" id="precio-neto" name="tipo-precio" value="neto"><label for="precio-neto">Netos</label></div></div>
                     
-                    <!-- 🆕 NUEVA SECCIÓN: SELECTOR MANUAL DE LISTA DE PRECIOS -->
                     <div class="mt-4 p-3 rounded-lg" style="border: 1px solid var(--border-color); background-color: rgba(66, 153, 225, 0.05);">
                         <label class="flex items-center text-sm font-medium mb-2">
                             <input type="checkbox" id="forzar-lista-precio" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
@@ -113,35 +140,69 @@
     </div>
 
 <script>
-    // URLs con GitHub Pages como fuente principal (mismo dominio, sin CORS)
     const CATALOG_ALTERNATIVES = [
-        'https://leonardo7512.github.io/CORRECTORPRECIOS/2708CATALOGO_ACTUALIZADO3.csv', // ⭐ PRINCIPAL - Mismo dominio
-        './2708CATALOGO_ACTUALIZADO3.csv', // Relativa si está en la misma carpeta
+        'https://leonardo7512.github.io/CORRECTORPRECIOS/2708CATALOGO_ACTUALIZADO3.csv',
+        './2708CATALOGO_ACTUALIZADO3.csv',
         'https://cdn.jsdelivr.net/gh/leonardo7512/CORRECTORPRECIOS@main/2708CATALOGO_ACTUALIZADO3.csv',
         'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv'
     ];
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
+    const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 horas
 
-    // ========== FUNCIÓN COMPLETAMENTE AUTOMÁTICA ==========
-    async function loadCatalogFromGitHub() {
+    // 🆕 FUNCIÓN MEJORADA: Cargar catálogo según fuente seleccionada
+    async function loadCatalogFromGitHub(forzarFuente = null) {
         const statusEl = document.getElementById('loading-status');
         const versionEl = document.getElementById('catalog-version');
         
-        // Feedback visual inmediato
+        // Determinar fuente
+        const fuenteSeleccionada = forzarFuente || document.querySelector('input[name="fuente-catalogo"]:checked').value;
+        
         ui.btnRefreshCatalog.disabled = true;
-        ui.btnRefreshCatalog.textContent = '🔄 Actualizando...';
-        ui.btnRefreshCatalog.style.opacity = '0.5';
+        ui.btnRefreshCatalog.innerHTML = '🔄 Actualizando...';
         
-        console.log('🔄 Iniciando actualización del catálogo...');
+        console.log(`🔄 Cargando catálogo - Fuente: ${fuenteSeleccionada}`);
         
-        // Cache extendido para evitar rate limits
         const cachedData = localStorage.getItem('catalogoCache');
         const cacheTime = localStorage.getItem('catalogoCacheTime');
-        const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 horas para evitar rate limits
+        const cacheValid = cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION;
         
-        // Si hay cache válido, usarlo
-        if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION) {
-            statusEl.textContent = '✅ Catálogo desde cache local (sin descargas)';
+        // MODO CACHE: Solo usar cache local
+        if (fuenteSeleccionada === 'cache') {
+            if (cachedData) {
+                statusEl.textContent = cacheValid ? 
+                    '✅ Catálogo desde cache local (válido)' : 
+                    '⚠️ Cache expirado (>4h) pero funcional';
+                statusEl.style.color = cacheValid ? 'var(--accent-green)' : '#f59e0b';
+                
+                Papa.parse(cachedData, {
+                    delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
+                    complete: (results) => {
+                        const dataRows = results.data.slice(1);
+                        catalogoCompleto = procesarCatalogo(dataRows);
+                        habilitarInterfaz();
+                        
+                        const minutos = cacheValid ? 
+                            Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000) : 
+                            'expirado';
+                        versionEl.textContent = `💾 Cache: ${catalogoCompleto.length} productos | Válido: ${minutos !== 'expirado' ? minutos + ' min' : 'expirado'}`;
+                        llenarSelectorListasPrecio();
+                    }
+                });
+                
+                ui.btnRefreshCatalog.disabled = false;
+                ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
+                console.log('✅ Usando solo cache');
+                return;
+            } else {
+                statusEl.textContent = '⚠️ No hay cache, descargando desde Git...';
+                statusEl.style.color = '#f59e0b';
+                // Continuar con descarga
+            }
+        }
+        
+        // MODO AUTO: Usar cache si es válido, sino descargar
+        if (fuenteSeleccionada === 'auto' && cacheValid) {
+            statusEl.textContent = '✅ Cache válido - sin descargas necesarias';
             statusEl.style.color = 'var(--accent-green)';
             
             Papa.parse(cachedData, {
@@ -149,55 +210,52 @@
                 complete: (results) => {
                     const dataRows = results.data.slice(1);
                     catalogoCompleto = procesarCatalogo(dataRows);
-                    ui.mainInterface.classList.remove('disabled-section');
-                    ui.intelligentSearchSection.classList.remove('disabled-section');
-                    ui.debugInfo.innerHTML = `<p>Catálogo desde cache (${catalogoCompleto.length} productos).</p>`;
-                    versionEl.textContent = `📦 Cache válido por ${Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000)} minutos más`;
-                    // 🆕 Llenar selector de listas de precio
+                    habilitarInterfaz();
+                    
+                    const minutos = Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000);
+                    versionEl.textContent = `🔄 Auto (cache): ${catalogoCompleto.length} productos | ${minutos} min restantes`;
                     llenarSelectorListasPrecio();
                 }
             });
             
-            // Restaurar botón
             ui.btnRefreshCatalog.disabled = false;
-            ui.btnRefreshCatalog.textContent = 'Refrescar Catálogo';
-            ui.btnRefreshCatalog.style.opacity = '1';
-            console.log('✅ Usando cache válido - no es necesario actualizar');
+            ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
+            console.log('✅ Modo auto: cache válido');
             return;
         }
         
-        // Si hay cache expirado, usarlo mientras intentamos actualizar
-        if (cachedData) {
-            statusEl.textContent = '⚠️ Usando cache, actualizando desde GitHub Pages...';
+        // MODO GIT o AUTO sin cache: Descargar desde GitHub
+        if (fuenteSeleccionada === 'git') {
+            statusEl.textContent = '☁️ Descargando desde Git (puede tardar)...';
             statusEl.style.color = '#f59e0b';
+        } else {
+            statusEl.textContent = '🔄 Actualizando desde Git...';
+            statusEl.style.color = '#f59e0b';
+        }
+        
+        // Si hay cache, usarlo mientras descargamos
+        if (cachedData) {
             Papa.parse(cachedData, {
                 delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
                 complete: (results) => {
                     const dataRows = results.data.slice(1);
                     catalogoCompleto = procesarCatalogo(dataRows);
-                    ui.mainInterface.classList.remove('disabled-section');
-                    ui.intelligentSearchSection.classList.remove('disabled-section');
-                    ui.debugInfo.innerHTML = `<p>Cache expirado activo (${catalogoCompleto.length} productos).</p>`;
-                    // 🆕 Llenar selector de listas de precio
+                    habilitarInterfaz();
                     llenarSelectorListasPrecio();
                 }
             });
         }
         
-        // Intentar actualizar desde CDNs automáticamente
         try {
             let response = null;
             let successUrl = null;
             
-            // Intentar cada CDN automáticamente
             for (let urlIndex = 0; urlIndex < CATALOG_ALTERNATIVES.length; urlIndex++) {
                 const currentUrl = CATALOG_ALTERNATIVES[urlIndex];
-                console.log(`🔄 Intentando fuente ${urlIndex + 1}/${CATALOG_ALTERNATIVES.length}: ${currentUrl}`);
+                console.log(`🔄 Intentando fuente ${urlIndex + 1}/${CATALOG_ALTERNATIVES.length}`);
                 
                 try {
-                    // Fetch simple sin headers CORS problemáticos
                     response = await fetch(currentUrl);
-                    
                     if (response && response.ok) {
                         successUrl = currentUrl;
                         console.log(`✅ Éxito con fuente ${urlIndex + 1}`);
@@ -206,7 +264,7 @@
                 } catch (error) {
                     console.log(`❌ Fuente ${urlIndex + 1} falló: ${error.message}`);
                     if (urlIndex < CATALOG_ALTERNATIVES.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 1000)); // 1s entre intentos
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                 }
             }
@@ -216,11 +274,8 @@
             }
 
             const csvText = await response.text();
-            
-            // Verificar si realmente cambió
             const isNewVersion = csvText !== cachedData;
             
-            // Actualizar cache
             localStorage.setItem('catalogoCache', csvText);
             localStorage.setItem('catalogoCacheTime', Date.now().toString());
             
@@ -240,35 +295,30 @@
                     
                     statusEl.textContent = isNewVersion ? 
                         `✅ Catálogo actualizado: ${catalogoCompleto.length} productos` :
-                        `✅ Catálogo verificado: ${catalogoCompleto.length} productos (sin cambios)`;
+                        `✅ Verificado: ${catalogoCompleto.length} productos (sin cambios)`;
                     statusEl.style.color = 'var(--accent-green)';
                     
-                    const sourceName = successUrl.includes('leonardo7512.github.io') ? 'GitHub Pages (principal)' :
-                                      successUrl.startsWith('./') ? 'Archivo local (relativo)' :
-                                      successUrl.includes('jsdelivr') ? 'jsDelivr CDN' : 
-                                      successUrl.includes('raw.githubusercontent') ? 'GitHub Raw' : 'Fuente externa';
-                    versionEl.textContent = `🌐 Fuente activa: ${sourceName}`;
+                    const sourceName = successUrl.includes('leonardo7512.github.io') ? 'GitHub Pages' :
+                                      successUrl.startsWith('./') ? 'Local' :
+                                      successUrl.includes('jsdelivr') ? 'jsDelivr' : 
+                                      successUrl.includes('raw.githubusercontent') ? 'GitHub Raw' : 'Externo';
+                    versionEl.textContent = `☁️ Descargado: ${sourceName} | ${catalogoCompleto.length} productos`;
                     
-                    ui.mainInterface.classList.remove('disabled-section');
-                    ui.intelligentSearchSection.classList.remove('disabled-section');
-                    ui.debugInfo.innerHTML = `<p>Catálogo ${isNewVersion ? 'actualizado' : 'verificado'} desde: ${sourceName}.</p>`;
-                    
-                    // 🆕 Llenar selector de listas de precio
+                    habilitarInterfaz();
                     llenarSelectorListasPrecio();
                     
-                    console.log(`✅ Catálogo ${isNewVersion ? 'actualizado' : 'verificado (sin cambios)'} desde ${sourceName}`);
+                    console.log(`✅ Descarga completada desde ${sourceName}`);
                 },
                 error: (err) => { throw new Error(`Error CSV: ${err.message}`); }
             });
 
         } catch (error) {
-            console.error("Error al actualizar:", error);
+            console.error("Error al descargar:", error);
             
-            // Si falló la actualización pero tenemos cache, mantener funcionando
             if (cachedData) {
-                statusEl.textContent = '⚠️ Fuentes temporalmente no disponibles - funcionando con cache';
+                statusEl.textContent = '⚠️ Error de descarga - usando cache';
                 statusEl.style.color = '#f59e0b';
-                versionEl.textContent = 'Modo cache - funcionando con última versión disponible';
+                versionEl.textContent = 'Modo fallback: funcionando con cache disponible';
                 
                 if (catalogoCompleto.length === 0) {
                     Papa.parse(cachedData, {
@@ -276,28 +326,29 @@
                         complete: (results) => {
                             const dataRows = results.data.slice(1);
                             catalogoCompleto = procesarCatalogo(dataRows);
-                            ui.mainInterface.classList.remove('disabled-section');
-                            ui.intelligentSearchSection.classList.remove('disabled-section');
-                            // 🆕 Llenar selector de listas de precio
+                            habilitarInterfaz();
                             llenarSelectorListasPrecio();
                         }
                     });
                 }
             } else {
-                statusEl.textContent = '❌ No se pudo cargar el catálogo desde ninguna fuente';
+                statusEl.textContent = '❌ Error: Sin cache y sin conexión';
                 statusEl.style.color = '#ef4444';
-                versionEl.textContent = 'Error: Sin conexión y sin cache disponible. Reintenta en unos minutos.';
+                versionEl.textContent = 'Reintenta cambiando la fuente o espera unos minutos';
             }
         } finally {
-            // Restaurar botón siempre
             ui.btnRefreshCatalog.disabled = false;
-            ui.btnRefreshCatalog.textContent = 'Refrescar Catálogo';
-            ui.btnRefreshCatalog.style.opacity = '1';
-            console.log('🏁 Proceso de actualización completado');
+            ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
+            console.log('🏁 Carga completada');
         }
     }
 
-    // 🆕 NUEVA FUNCIÓN: Llenar selector de listas de precio
+    function habilitarInterfaz() {
+        ui.mainInterface.classList.remove('disabled-section');
+        ui.intelligentSearchSection.classList.remove('disabled-section');
+        ui.debugInfo.innerHTML = `<p>Catálogo cargado: ${catalogoCompleto.length} productos.</p>`;
+    }
+
     function llenarSelectorListasPrecio() {
         const listasPrecio = [...new Set(catalogoCompleto.map(p => p.tipo_precio))].sort();
         const selector = document.getElementById('selector-lista-precio');
@@ -309,56 +360,40 @@
             }
         });
         
-        console.log(`✅ Selector de listas llenado con ${listasPrecio.length} opciones`);
+        console.log(`✅ Selector llenado: ${listasPrecio.length} listas`);
     }
 
-    // ========== TODAS LAS FUNCIONES ORIGINALES INTACTAS ==========
+    // ========== FUNCIONES ORIGINALES (sin cambios) ==========
     function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
     function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
     function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
     
-    // ========== Parser para formato de tabla ==========
     function parsearPedidoTabla(texto) {
         const lineas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         const productos = [];
-        
         let startIndex = 0;
         for (let i = 0; i < lineas.length; i++) {
             const lineaNormalizada = lineas[i].toLowerCase().replace(/\s+/g, '');
-            if (lineaNormalizada.includes('cantidad') && 
-                lineaNormalizada.includes('producto') && 
-                lineaNormalizada.includes('sku') && 
-                lineaNormalizada.includes('valor')) {
-                startIndex = i + 1;
-                break;
+            if (lineaNormalizada.includes('cantidad') && lineaNormalizada.includes('producto') && lineaNormalizada.includes('sku') && lineaNormalizada.includes('valor')) {
+                startIndex = i + 1; break;
             }
         }
-        
         for (let i = startIndex; i < lineas.length; i++) {
             const linea = lineas[i];
             const match = linea.match(/^(\d+)\s+(.+?)\s+(FC[0-9A-Z-]+)\s+(\d+)$/i);
-            
             if (match) {
                 const cantidad = parseInt(match[1], 10);
                 const descripcion = match[2].trim();
                 const sku = normalizarSKU(match[3]);
                 const precio = limpiarValor(match[4]);
-                
                 if (cantidad > 0 && precio !== null && sku) {
-                    productos.push({
-                        sku: sku,
-                        item: descripcion,
-                        cantidad: cantidad,
-                        v_unitario_usuario: precio
-                    });
+                    productos.push({ sku: sku, item: descripcion, cantidad: cantidad, v_unitario_usuario: precio });
                 }
             }
         }
-        
         return productos;
     }
     
-    // ========== Parser original ==========
     function parsearPedidoUnificado(texto) { 
         const textoNormalizado = texto.replace(/[\n\t]/g, ' ').replace(/\s{2,}/g, ' '); 
         const productos = []; 
@@ -376,48 +411,37 @@
         return productos;
     }
     
-    // ========== Parser inteligente ==========
     function parsearPedidoInteligente(texto) {
         const productosTabla = parsearPedidoTabla(texto);
-        
         if (productosTabla.length > 0) {
-            ui.debugInfo.innerHTML = `<p>✅ Formato de tabla detectado. Se normalizaron <strong>${productosTabla.length}</strong> productos.</p>`;
+            ui.debugInfo.innerHTML = `<p>✅ Formato tabla: ${productosTabla.length} productos.</p>`;
             return productosTabla;
         }
-        
         const productosOriginal = parsearPedidoUnificado(texto);
-        
         if (productosOriginal.length > 0) {
-            ui.debugInfo.innerHTML = `<p>✅ Formato original detectado. Se normalizaron <strong>${productosOriginal.length}</strong> productos.</p>`;
+            ui.debugInfo.innerHTML = `<p>✅ Formato original: ${productosOriginal.length} productos.</p>`;
             return productosOriginal;
         }
-        
-        ui.debugInfo.innerHTML = `<p class="text-red-500">❌ No se pudo detectar ningún formato válido. Verifica el pedido pegado.</p>`;
+        ui.debugInfo.innerHTML = `<p class="text-red-500">❌ Formato no válido.</p>`;
         return [];
     }
     
     function getCategoriaPrecios(d) { const match = String(d).trim().match(/(.*?)\s*-\s*/); return (match && match[1]) ? match[1].trim() : "General"; }
     function calcularCantidadesPorCategoria(p){ const c={}; p.forEach(i=>{ const pr=catalogoCompleto.find(p=>p.sku===i.sku); const d=pr?pr.descripcion:i.item||""; c[getCategoriaPrecios(d)]=(c[getCategoriaPrecios(d)]||0)+i.cantidad }); return c }
     
-    // 🆕 FUNCIÓN MODIFICADA: obtenerMejorPrecio ahora acepta lista forzada
     function obtenerMejorPrecio(sku, tipoCliente, _, cantidadTotalCategoria, listaForzada = null) { 
         const preciosProducto = catalogoCompleto.filter(p => p.sku === sku); 
         if (preciosProducto.length === 0) return { p: null, t: "SKU NO ENCONTRADO" }; 
         
-        // 🆕 NUEVA LÓGICA: Si hay lista forzada, usarla directamente
         if (listaForzada) {
             const precioForzado = preciosProducto.find(p => p.tipo_precio === listaForzada);
             if (precioForzado) {
-                return { 
-                    p: { n: precioForzado.precio_neto, b: precioForzado.precio_bruto }, 
-                    t: `${precioForzado.tipo_precio} (FORZADO)` 
-                };
+                return { p: { n: precioForzado.precio_neto, b: precioForzado.precio_bruto }, t: `${precioForzado.tipo_precio} (FORZADO)` };
             } else {
                 return { p: null, t: `LISTA "${listaForzada}" NO DISPONIBLE` };
             }
         }
         
-        // Resto de la lógica original sin cambios...
         if (preciosProducto.length === 1) { 
             const precioUnico = preciosProducto[0]; 
             return { p: { n: precioUnico.precio_neto, b: precioUnico.precio_bruto }, t: precioUnico.tipo_precio }; 
@@ -425,9 +449,7 @@
         
         if (tipoCliente !== 'normal') { 
             const precioEspecial = preciosProducto.find(p => p.tipo_precio.toUpperCase().trim() === tipoCliente.toUpperCase()); 
-            if (precioEspecial) { 
-                return { p: { n: precioEspecial.precio_neto, b: precioEspecial.precio_bruto }, t: precioEspecial.tipo_precio }; 
-            } 
+            if (precioEspecial) return { p: { n: precioEspecial.precio_neto, b: precioEspecial.precio_bruto }, t: precioEspecial.tipo_precio }; 
         } 
         
         const tramosConMinimo = preciosProducto.map(p => { 
@@ -435,24 +457,16 @@
             const precio = p.precio_neto || 0; 
             let minCantidad = 0; 
             const matchNumero = tipo.match(/(\d+)/); 
-            if (matchNumero) { 
-                minCantidad = parseInt(matchNumero[1], 10); 
-            } else if (tipo.includes('DETALLE')) { 
-                minCantidad = 1; 
-            } else if (tipo.includes('MAYOR')) { 
-                minCantidad = 2; 
-            } 
-            if (!precio || precio === 0) { 
-                minCantidad = Infinity; 
-            } 
+            if (matchNumero) { minCantidad = parseInt(matchNumero[1], 10); } 
+            else if (tipo.includes('DETALLE')) { minCantidad = 1; } 
+            else if (tipo.includes('MAYOR')) { minCantidad = 2; } 
+            if (!precio || precio === 0) { minCantidad = Infinity; } 
             return { ...p, minCantidad: minCantidad }; 
         }); 
         
         const tramosAplicables = tramosConMinimo.filter(p => cantidadTotalCategoria >= p.minCantidad); 
         if (tramosAplicables.length > 0) { 
-            const mejorTramo = tramosAplicables.reduce((mejor, actual) => { 
-                return actual.minCantidad > mejor.minCantidad ? actual : mejor; 
-            }); 
+            const mejorTramo = tramosAplicables.reduce((mejor, actual) => actual.minCantidad > mejor.minCantidad ? actual : mejor); 
             return { p: { n: mejorTramo.precio_neto, b: mejorTramo.precio_bruto }, t: mejorTramo.tipo_precio }; 
         } 
         
@@ -460,16 +474,12 @@
         return { p: { n: primerPrecio.precio_neto, b: primerPrecio.precio_bruto }, t: primerPrecio.tipo_precio }; 
     }
     
-    // 🆕 FUNCIÓN MODIFICADA: corregirUnItem ahora acepta lista forzada
     function corregirUnItem(i,t,n,c, agrupar, listaForzada = null){ 
         const r={...i},pr=catalogoCompleto.find(p=>p.sku===r.sku); 
         r.descripcion=pr?pr.descripcion:"Desc. no encontrada"; 
         const ca=getCategoriaPrecios(r.descripcion); 
         const ct=agrupar?(c[ca]||r.cantidad):r.cantidad; 
-        
-        // 🆕 Pasar lista forzada a obtenerMejorPrecio
         const rp=obtenerMejorPrecio(r.sku,t,r.cantidad,ct, listaForzada); 
-        
         let e="",cl="",pc=null,d=null,dt=0,h=false; 
         const colorClasses={ok:'bg-green-800 bg-opacity-20',aviso:'bg-orange-800 bg-opacity-20',error:'bg-red-800 bg-opacity-20',no_encontrado:'bg-yellow-800 bg-opacity-20'}; 
         if(!rp.p){e=rp.t;cl=colorClasses.no_encontrado;}else{pc=n?rp.p.n:rp.p.b;if(!pc||pc<=0){e="PRECIO NO DISPONIBLE";cl=colorClasses.no_encontrado}else{d=r.v_unitario_usuario-pc;dt=d*r.cantidad;if(Math.abs(d)<1.5){e=`✅ OK`;cl=colorClasses.ok}else{h=true;e=d>0?`⚠️ AVISO`:`❌ ERROR`;cl=d>0?colorClasses.aviso:colorClasses.error}}}
@@ -497,7 +507,6 @@
             intelligentSearchSection:document.getElementById('intelligent-search-section'), intelligentSearchInput:document.getElementById('intelligent-search-input'),
             intelligentSearchResults:document.getElementById('intelligent-search-results'),
             btnRefreshCatalog: document.getElementById('btn-refresh-catalog'),
-            // 🆕 Nuevos elementos UI
             forzarListaPrecio: document.getElementById('forzar-lista-precio'),
             selectorListaPrecio: document.getElementById('selector-lista-precio')
         });
@@ -506,13 +515,30 @@
         window.addEventListener('click', (event) => { if (event.target == ui.priceModal) { hidePriceModal(); } });
         ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) { showPriceModal(e.target.dataset.sku); } });
         
-        ui.btnRefreshCatalog.addEventListener('click', loadCatalogFromGitHub);
+        // 🆕 ACTUALIZAR CATÁLOGO
+        ui.btnRefreshCatalog.addEventListener('click', () => loadCatalogFromGitHub());
 
-        // 🆕 NUEVO EVENT LISTENER: Control del selector manual
+        // 🆕 CAMBIO DE FUENTE: Actualizar descripción
+        document.querySelectorAll('input[name="fuente-catalogo"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const desc = document.getElementById('fuente-descripcion');
+                switch(e.target.value) {
+                    case 'cache':
+                        desc.textContent = '💾 Cache: Más rápido, usa versión guardada (4h de validez)';
+                        break;
+                    case 'auto':
+                        desc.textContent = '🔄 Auto: Usa cache si es válido, sino descarga desde Git';
+                        break;
+                    case 'git':
+                        desc.textContent = '☁️ Git: Siempre descarga la última versión (⚠️ cuidado con rate limit)';
+                        break;
+                }
+            });
+        });
+
         ui.forzarListaPrecio.addEventListener('change', function() {
             const selector = ui.selectorListaPrecio;
             selector.disabled = !this.checked;
-            
             if (this.checked) {
                 selector.classList.add('selector-manual-enabled');
             } else {
@@ -525,9 +551,7 @@
             ui.filtroPedido.value = '';
             const texto = ui.pedidoCrudo.value;
             if (!texto.trim()) { alert("Pegue el texto del pedido."); return; }
-            
             pedidoNormalizado = parsearPedidoInteligente(texto);
-            
             renderPedidoEditable(pedidoNormalizado);
             ui.btnCorregir.disabled = pedidoNormalizado.length === 0;
         });
@@ -555,51 +579,32 @@
             if (!termino) { renderPedidoEditable(pedidoNormalizado); } else { const filtrados = pedidoNormalizado.filter(p => p.sku.toLowerCase().includes(termino) || p.item.toLowerCase().includes(termino)); renderPedidoEditable(filtrados); }
         });
 
-        // 🆕 BOTÓN CORREGIR MODIFICADO: Ahora incluye lógica de lista forzada
         ui.btnCorregir.addEventListener('click', () => {
             if (pedidoNormalizado.length === 0) return;
-            
-            // 🆕 Validar lista forzada si está activada
             const forzarLista = ui.forzarListaPrecio.checked;
             const listaForzada = forzarLista ? ui.selectorListaPrecio.value : null;
-            
             if (forzarLista && !listaForzada) {
                 alert('Selecciona una lista de precio específica o desmarca la opción.');
                 return;
             }
-            
             ui.resultadosContainer.classList.remove('hidden');
             ui.loader.classList.remove('hidden');
             ui.btnCopiarDiferencias.classList.add('hidden');
             ui.btnCapturarTabla.classList.add('hidden');
-            
             setTimeout(() => {
                 try {
                     const esNeto = document.querySelector('input[name="tipo-precio"]:checked').value === 'neto';
                     const tipoCliente = document.querySelector('input[name="tipo-cliente"]:checked').value;
                     const agrupar = ui.agruparCategorias.checked;
-                    
-                    // 🆕 Pasar lista forzada a corregirUnItem
-                    resultadosParaDescarga = pedidoNormalizado.map(item => 
-                        corregirUnItem(item, tipoCliente, esNeto, calcularCantidadesPorCategoria(pedidoNormalizado), agrupar, listaForzada)
-                    );
-                    
+                    resultadosParaDescarga = pedidoNormalizado.map(item => corregirUnItem(item, tipoCliente, esNeto, calcularCantidadesPorCategoria(pedidoNormalizado), agrupar, listaForzada));
                     renderResultados(resultadosParaDescarga);
                     const diferenciaTotalGeneral = resultadosParaDescarga.reduce((sum, r) => sum + (r.diferencia_total_linea || 0), 0);
-                    
-                    // 🆕 Incluir info de lista forzada en el resumen
                     const infoPrecios = esNeto ? 'Netos (sin IVA)' : 'Brutos (con IVA)';
                     const infoListaForzada = listaForzada ? ` | Lista Forzada: ${listaForzada}` : '';
-                    
                     renderResumen(pedidoNormalizado.length, calcularCantidadesPorCategoria(pedidoNormalizado), diferenciaTotalGeneral, infoPrecios + infoListaForzada);
                     ui.btnCopiarDiferencias.classList.remove('hidden');
                     ui.btnCapturarTabla.classList.remove('hidden');
-                } catch (e) { 
-                    console.error(e); 
-                    alert("Error inesperado al procesar: " + e.message); 
-                } finally { 
-                    ui.loader.classList.add('hidden'); 
-                }
+                } catch (e) { console.error(e); alert("Error inesperado al procesar: " + e.message); } finally { ui.loader.classList.add('hidden'); }
             }, 100);
         });
 
@@ -645,6 +650,7 @@
             if (e.target && e.target.matches('.btn-copiar-catalogo')) { const sku = e.target.dataset.skuCopia; const productos = catalogoCompleto.filter(p => p.sku === sku); if (productos.length > 0) { let texto = `*Producto:* ${productos[0].sku} - ${productos[0].descripcion}\n\n*Lista de Precios:*\n`; texto += productos.map(p => `- ${p.tipo_precio}: Neto ${p.precio_neto ? formatter.format(p.precio_neto) : 'N/A'} / Bruto ${p.precio_bruto ? formatter.format(p.precio_bruto) : 'N/A'}`).join('\n'); navigator.clipboard.writeText(texto).then(() => { const originalText = e.target.textContent; e.target.textContent = '¡Copiado!'; setTimeout(() => { e.target.textContent = originalText; }, 2000); }); } }
         });
 
+        // 🆕 CARGA INICIAL CON FUENTE POR DEFECTO
         loadCatalogFromGitHub();
     });
 </script>
