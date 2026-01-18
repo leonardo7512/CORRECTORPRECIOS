@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector de Pedidos Pro v36.0 (Con Selector de Fuente)</title>
+    <title>Corrector de Pedidos Pro v37.0 (Con OCR)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -32,13 +33,24 @@
         .highlight-cell { border: 2px solid #f59e0b !important; font-weight: 700; }
         #price-modal-close:hover, #price-modal-close:focus { color: var(--text-primary); text-decoration: none; }
         .selector-manual-enabled { border-color: var(--accent-green) !important; background-color: rgba(72, 187, 120, 0.1) !important; }
+        
+        /* 🆕 ESTILOS PARA OCR */
+        .ocr-preview-container { position: relative; max-width: 100%; margin: 1rem auto; }
+        .ocr-preview-img { max-width: 100%; height: auto; border-radius: 8px; }
+        .ocr-guide-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
+        .ocr-guide-frame { border: 3px dashed var(--accent-green); position: absolute; top: 10%; left: 5%; right: 5%; bottom: 30%; background: rgba(72, 187, 120, 0.1); }
+        .ocr-tip { background: rgba(66, 153, 225, 0.9); color: white; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem; margin: 0.25rem; }
+        .ocr-progress { height: 4px; background: var(--accent-green); transition: width 0.3s ease; }
+        .detected-product { background: var(--bg-accent); padding: 0.5rem; margin: 0.25rem 0; border-radius: 4px; border-left: 3px solid var(--accent-green); }
+        .ocr-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
+        .ocr-modal-content { background-color: var(--bg-secondary); margin: 2% auto; padding: 20px; border: 1px solid var(--border-color); width: 95%; max-width: 900px; border-radius: 8px; max-height: 90vh; overflow-y: auto; }
     </style>
 </head>
 <body>
     <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1>
-            <p class="text-secondary mt-2">Versión 36.0 - Multiformat + Selector de Fuente</p>
+            <p class="text-secondary mt-2">Versión 37.0 - Con OCR de Fotos 📸</p>
         </header>
 
         <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
@@ -59,7 +71,6 @@
         <div id="upload-section" class="panel p-6 rounded-lg shadow-md mb-8">
             <h2 class="text-xl font-semibold mb-4">Estado del Catálogo</h2>
             
-            <!-- 🆕 SELECTOR DE FUENTE -->
             <div class="mb-4 p-3 rounded-lg" style="border: 1px solid var(--border-color); background-color: rgba(66, 153, 225, 0.05);">
                 <label class="block text-sm font-medium mb-2">🌐 Fuente del Catálogo:</label>
                 <div class="flex space-x-2 switch-group flex-wrap">
@@ -90,6 +101,20 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="panel p-6 rounded-lg shadow-md">
                     <h2 class="text-xl font-semibold mb-4">1. Pegar Pedido y Opciones</h2>
+                    
+                    <!-- 🆕 BOTONES OCR -->
+                    <div class="mb-4 flex gap-2 flex-wrap">
+                        <button id="btn-ocr-camera" class="flex-1 bg-purple-600 text-white font-bold py-2 px-4 rounded-md hover:bg-purple-700 flex items-center justify-center gap-2">
+                            📸 Sacar Foto de Nota
+                        </button>
+                        <button id="btn-ocr-upload" class="flex-1 bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2">
+                            🖼️ Subir Imagen(es)
+                        </button>
+                    </div>
+                    <input type="file" id="ocr-file-input" accept="image/*" multiple style="display: none;">
+                    
+                    <div class="mb-4 text-center text-xs text-secondary">- O pegar manualmente -</div>
+                    
                     <textarea id="pedido-crudo" class="input-field w-full h-40 p-3 rounded-md" placeholder="Pegue aquí el pedido en cualquier formato..."></textarea>
                     <div class="mt-4"><label for="nv-input" class="block text-sm font-medium mb-2">Nº Nota de Venta (Opcional):</label><input type="text" id="nv-input" class="input-field w-full p-2 rounded-md" placeholder="Ej: 12345"></div>
                     <div class="mt-4"><label class="block text-sm font-medium mb-2">Tipo de Cliente:</label><div class="flex space-x-2 switch-group"><input type="radio" id="cliente-normal" name="tipo-cliente" value="normal" checked><label for="cliente-normal">Normal</label><input type="radio" id="cliente-vip" name="tipo-cliente" value="VIP"><label for="cliente-vip">VIP</label><input type="radio" id="cliente-webalia" name="tipo-cliente" value="PRECIOS WEBALIA"><label for="cliente-webalia">Webalia</label></div></div>
@@ -131,11 +156,78 @@
         </div>
     </div>
 
+    <!-- MODAL DE PRECIOS -->
     <div id="price-modal" style="display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center;">
         <div id="price-modal-content" class="panel" style="padding: 20px; border: 1px solid var(--border-color); width: 90%; max-width: 500px; border-radius: 8px; position: relative;">
             <span id="price-modal-close" style="color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
             <h3 id="price-modal-title" style="margin-top: 0; color: var(--text-primary);"></h3>
             <div id="price-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- 🆕 MODAL OCR -->
+    <div id="ocr-modal" class="ocr-modal">
+        <div class="ocr-modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">📸 Procesamiento OCR</h2>
+                <button id="ocr-modal-close" class="text-2xl font-bold hover:text-red-500">&times;</button>
+            </div>
+            
+            <!-- Guías para foto -->
+            <div id="ocr-guide-section" class="mb-4 p-4 rounded-lg" style="background-color: rgba(66, 153, 225, 0.1); border: 1px solid var(--accent-blue);">
+                <h3 class="text-lg font-semibold mb-2">💡 Tips para mejor resultado:</h3>
+                <ul class="text-sm space-y-1">
+                    <li>✓ <strong>Iluminación uniforme</strong> (evita sombras y reflejos)</li>
+                    <li>✓ <strong>Foto desde arriba</strong> (90°, sin ángulo)</li>
+                    <li>✓ <strong>Solo la tabla de productos</strong> (no incluyas texto de abajo)</li>
+                    <li>✓ <strong>Documento plano</strong> (sin arrugas ni dobleces)</li>
+                    <li>✓ <strong>Enfoque nítido</strong> (espera que la cámara enfoque)</li>
+                    <li>⚠️ <strong>Evita números escritos a mano</strong> (pueden confundir)</li>
+                </ul>
+                <div class="mt-3 p-2 rounded" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);">
+                    <p class="text-xs font-semibold">🎯 Zona óptima: Solo desde "SKU" hasta la última fila de productos</p>
+                </div>
+            </div>
+            
+            <!-- Vista previa y progreso -->
+            <div id="ocr-preview-section" style="display: none;">
+                <div class="ocr-preview-container">
+                    <img id="ocr-preview-img" class="ocr-preview-img" alt="Vista previa">
+                    <div class="ocr-guide-overlay">
+                        <div class="ocr-guide-frame"></div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span id="ocr-status-text">Preparando...</span>
+                        <span id="ocr-progress-percent">0%</span>
+                    </div>
+                    <div style="background: var(--bg-accent); height: 4px; border-radius: 2px; overflow: hidden;">
+                        <div id="ocr-progress-bar" class="ocr-progress" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Resultados detectados -->
+            <div id="ocr-results-section" style="display: none;">
+                <h3 class="text-lg font-semibold mb-2">✅ Productos Detectados:</h3>
+                <div id="ocr-detected-products" class="max-h-96 overflow-y-auto mb-4"></div>
+                <div class="flex gap-2">
+                    <button id="btn-ocr-use-results" class="flex-1 bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">
+                        ✓ Usar Estos Productos
+                    </button>
+                    <button id="btn-ocr-retry" class="flex-1 bg-yellow-600 text-white font-bold py-2 px-4 rounded-md hover:bg-yellow-700">
+                        🔄 Intentar de Nuevo
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Botón para procesar -->
+            <div id="ocr-process-section" class="mt-4" style="display: none;">
+                <button id="btn-process-ocr" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-md hover:bg-purple-700">
+                    🚀 Procesar Imagen
+                </button>
+            </div>
         </div>
     </div>
 
@@ -147,48 +239,39 @@
         'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv'
     ];
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
-    const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 horas
+    const CACHE_DURATION = 4 * 60 * 60 * 1000;
+    
+    // 🆕 VARIABLES OCR
+    let currentOcrImages = [];
+    let ocrWorker = null;
 
-    // 🆕 FUNCIÓN MEJORADA: Cargar catálogo según fuente seleccionada
+    // ========== FUNCIONES ORIGINALES (sin cambios) ==========
     async function loadCatalogFromGitHub(forzarFuente = null) {
         const statusEl = document.getElementById('loading-status');
         const versionEl = document.getElementById('catalog-version');
-        
-        // Determinar fuente
         const fuenteSeleccionada = forzarFuente || document.querySelector('input[name="fuente-catalogo"]:checked').value;
-        
         ui.btnRefreshCatalog.disabled = true;
         ui.btnRefreshCatalog.innerHTML = '🔄 Actualizando...';
-        
         console.log(`🔄 Cargando catálogo - Fuente: ${fuenteSeleccionada}`);
-        
         const cachedData = localStorage.getItem('catalogoCache');
         const cacheTime = localStorage.getItem('catalogoCacheTime');
         const cacheValid = cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION;
         
-        // MODO CACHE: Solo usar cache local
         if (fuenteSeleccionada === 'cache') {
             if (cachedData) {
-                statusEl.textContent = cacheValid ? 
-                    '✅ Catálogo desde cache local (válido)' : 
-                    '⚠️ Cache expirado (>4h) pero funcional';
+                statusEl.textContent = cacheValid ? '✅ Catálogo desde cache local (válido)' : '⚠️ Cache expirado (>4h) pero funcional';
                 statusEl.style.color = cacheValid ? 'var(--accent-green)' : '#f59e0b';
-                
                 Papa.parse(cachedData, {
                     delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
                     complete: (results) => {
                         const dataRows = results.data.slice(1);
                         catalogoCompleto = procesarCatalogo(dataRows);
                         habilitarInterfaz();
-                        
-                        const minutos = cacheValid ? 
-                            Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000) : 
-                            'expirado';
+                        const minutos = cacheValid ? Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000) : 'expirado';
                         versionEl.textContent = `💾 Cache: ${catalogoCompleto.length} productos | Válido: ${minutos !== 'expirado' ? minutos + ' min' : 'expirado'}`;
                         llenarSelectorListasPrecio();
                     }
                 });
-                
                 ui.btnRefreshCatalog.disabled = false;
                 ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
                 console.log('✅ Usando solo cache');
@@ -196,35 +279,29 @@
             } else {
                 statusEl.textContent = '⚠️ No hay cache, descargando desde Git...';
                 statusEl.style.color = '#f59e0b';
-                // Continuar con descarga
             }
         }
         
-        // MODO AUTO: Usar cache si es válido, sino descargar
         if (fuenteSeleccionada === 'auto' && cacheValid) {
             statusEl.textContent = '✅ Cache válido - sin descargas necesarias';
             statusEl.style.color = 'var(--accent-green)';
-            
             Papa.parse(cachedData, {
                 delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
                 complete: (results) => {
                     const dataRows = results.data.slice(1);
                     catalogoCompleto = procesarCatalogo(dataRows);
                     habilitarInterfaz();
-                    
                     const minutos = Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000);
                     versionEl.textContent = `🔄 Auto (cache): ${catalogoCompleto.length} productos | ${minutos} min restantes`;
                     llenarSelectorListasPrecio();
                 }
             });
-            
             ui.btnRefreshCatalog.disabled = false;
             ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
             console.log('✅ Modo auto: cache válido');
             return;
         }
         
-        // MODO GIT o AUTO sin cache: Descargar desde GitHub
         if (fuenteSeleccionada === 'git') {
             statusEl.textContent = '☁️ Descargando desde Git (puede tardar)...';
             statusEl.style.color = '#f59e0b';
@@ -233,7 +310,6 @@
             statusEl.style.color = '#f59e0b';
         }
         
-        // Si hay cache, usarlo mientras descargamos
         if (cachedData) {
             Papa.parse(cachedData, {
                 delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
@@ -249,11 +325,9 @@
         try {
             let response = null;
             let successUrl = null;
-            
             for (let urlIndex = 0; urlIndex < CATALOG_ALTERNATIVES.length; urlIndex++) {
                 const currentUrl = CATALOG_ALTERNATIVES[urlIndex];
                 console.log(`🔄 Intentando fuente ${urlIndex + 1}/${CATALOG_ALTERNATIVES.length}`);
-                
                 try {
                     response = await fetch(currentUrl);
                     if (response && response.ok) {
@@ -275,7 +349,6 @@
 
             const csvText = await response.text();
             const isNewVersion = csvText !== cachedData;
-            
             localStorage.setItem('catalogoCache', csvText);
             localStorage.setItem('catalogoCacheTime', Date.now().toString());
             
@@ -285,28 +358,17 @@
                     if (!results.data || results.data.length < 2) {
                         throw new Error("CSV inválido");
                     }
-                    
                     const dataRows = results.data.slice(1);
                     catalogoCompleto = procesarCatalogo(dataRows);
-                    
                     if (catalogoCompleto.length === 0) {
                         throw new Error("No hay productos válidos");
                     }
-                    
-                    statusEl.textContent = isNewVersion ? 
-                        `✅ Catálogo actualizado: ${catalogoCompleto.length} productos` :
-                        `✅ Verificado: ${catalogoCompleto.length} productos (sin cambios)`;
+                    statusEl.textContent = isNewVersion ? `✅ Catálogo actualizado: ${catalogoCompleto.length} productos` : `✅ Verificado: ${catalogoCompleto.length} productos (sin cambios)`;
                     statusEl.style.color = 'var(--accent-green)';
-                    
-                    const sourceName = successUrl.includes('leonardo7512.github.io') ? 'GitHub Pages' :
-                                      successUrl.startsWith('./') ? 'Local' :
-                                      successUrl.includes('jsdelivr') ? 'jsDelivr' : 
-                                      successUrl.includes('raw.githubusercontent') ? 'GitHub Raw' : 'Externo';
+                    const sourceName = successUrl.includes('leonardo7512.github.io') ? 'GitHub Pages' : successUrl.startsWith('./') ? 'Local' : successUrl.includes('jsdelivr') ? 'jsDelivr' : successUrl.includes('raw.githubusercontent') ? 'GitHub Raw' : 'Externo';
                     versionEl.textContent = `☁️ Descargado: ${sourceName} | ${catalogoCompleto.length} productos`;
-                    
                     habilitarInterfaz();
                     llenarSelectorListasPrecio();
-                    
                     console.log(`✅ Descarga completada desde ${sourceName}`);
                 },
                 error: (err) => { throw new Error(`Error CSV: ${err.message}`); }
@@ -314,12 +376,10 @@
 
         } catch (error) {
             console.error("Error al descargar:", error);
-            
             if (cachedData) {
                 statusEl.textContent = '⚠️ Error de descarga - usando cache';
                 statusEl.style.color = '#f59e0b';
                 versionEl.textContent = 'Modo fallback: funcionando con cache disponible';
-                
                 if (catalogoCompleto.length === 0) {
                     Papa.parse(cachedData, {
                         delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
@@ -352,18 +412,15 @@
     function llenarSelectorListasPrecio() {
         const listasPrecio = [...new Set(catalogoCompleto.map(p => p.tipo_precio))].sort();
         const selector = document.getElementById('selector-lista-precio');
-        
         selector.innerHTML = '<option value="">Seleccionar lista de precio...</option>';
         listasPrecio.forEach(lista => {
             if (lista && lista.trim()) {
                 selector.innerHTML += `<option value="${lista}">${lista}</option>`;
             }
         });
-        
         console.log(`✅ Selector llenado: ${listasPrecio.length} listas`);
     }
 
-    // ========== FUNCIONES ORIGINALES (sin cambios) ==========
     function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
     function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
     function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
@@ -432,7 +489,6 @@
     function obtenerMejorPrecio(sku, tipoCliente, _, cantidadTotalCategoria, listaForzada = null) { 
         const preciosProducto = catalogoCompleto.filter(p => p.sku === sku); 
         if (preciosProducto.length === 0) return { p: null, t: "SKU NO ENCONTRADO" }; 
-        
         if (listaForzada) {
             const precioForzado = preciosProducto.find(p => p.tipo_precio === listaForzada);
             if (precioForzado) {
@@ -441,17 +497,14 @@
                 return { p: null, t: `LISTA "${listaForzada}" NO DISPONIBLE` };
             }
         }
-        
         if (preciosProducto.length === 1) { 
             const precioUnico = preciosProducto[0]; 
             return { p: { n: precioUnico.precio_neto, b: precioUnico.precio_bruto }, t: precioUnico.tipo_precio }; 
         } 
-        
         if (tipoCliente !== 'normal') { 
             const precioEspecial = preciosProducto.find(p => p.tipo_precio.toUpperCase().trim() === tipoCliente.toUpperCase()); 
             if (precioEspecial) return { p: { n: precioEspecial.precio_neto, b: precioEspecial.precio_bruto }, t: precioEspecial.tipo_precio }; 
         } 
-        
         const tramosConMinimo = preciosProducto.map(p => { 
             const tipo = (p.tipo_precio || '').toUpperCase(); 
             const precio = p.precio_neto || 0; 
@@ -463,13 +516,11 @@
             if (!precio || precio === 0) { minCantidad = Infinity; } 
             return { ...p, minCantidad: minCantidad }; 
         }); 
-        
         const tramosAplicables = tramosConMinimo.filter(p => cantidadTotalCategoria >= p.minCantidad); 
         if (tramosAplicables.length > 0) { 
             const mejorTramo = tramosAplicables.reduce((mejor, actual) => actual.minCantidad > mejor.minCantidad ? actual : mejor); 
             return { p: { n: mejorTramo.precio_neto, b: mejorTramo.precio_bruto }, t: mejorTramo.tipo_precio }; 
         } 
-        
         const primerPrecio = preciosProducto[0]; 
         return { p: { n: primerPrecio.precio_neto, b: primerPrecio.precio_bruto }, t: primerPrecio.tipo_precio }; 
     }
@@ -493,6 +544,403 @@
     const showPriceModal = (sku) => { const allPricesForSku = catalogoCompleto.filter(p => p.sku === sku); const correctedItem = resultadosParaDescarga.find(r => r.sku === sku); if (allPricesForSku.length === 0) return; ui.priceModalTitle.textContent = `Precios para ${sku}`; const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); let contentHtml = '<ul class="list-none p-0 m-0 space-y-2">'; allPricesForSku.forEach(priceInfo => { const isApplied = correctedItem && correctedItem.tipoAplicado === priceInfo.tipo_precio; contentHtml += `<li style="padding: 8px; ${isApplied ? 'background-color: var(--accent-green); color: var(--bg-primary); border-radius: 4px;' : 'background-color: var(--bg-accent); border-radius: 4px;'}"><strong>${priceInfo.tipo_precio}</strong>: Neto ${f.format(priceInfo.precio_neto || 0)} / Bruto ${f.format(priceInfo.precio_bruto || 0)}${isApplied ? '<strong> (Aplicado)</strong>' : ''}</li>`; }); contentHtml += '</ul>'; ui.priceModalBody.innerHTML = contentHtml; ui.priceModal.style.display = 'flex'; };
     const hidePriceModal = () => { ui.priceModal.style.display = 'none'; };
 
+    // ========== 🆕 FUNCIONES OCR ==========
+    
+    async function initOcrWorker() {
+        if (ocrWorker) return ocrWorker;
+        
+        ui.ocrStatusText.textContent = 'Inicializando motor OCR...';
+        ui.ocrProgressBar.style.width = '10%';
+        
+        ocrWorker = await Tesseract.createWorker('spa', 1, {
+            logger: (m) => {
+                if (m.status === 'recognizing text') {
+                    const progress = Math.round(m.progress * 100);
+                    ui.ocrProgressBar.style.width = `${10 + (progress * 0.8)}%`;
+                    ui.ocrProgressPercent.textContent = `${progress}%`;
+                    ui.ocrStatusText.textContent = `Reconociendo texto... ${progress}%`;
+                }
+            }
+        });
+        
+        await ocrWorker.setParameters({
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$.,- áéíóúñÁÉÍÓÚÑ',
+        });
+        
+        return ocrWorker;
+    }
+
+    function preprocessImage(imageElement) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = imageElement.naturalWidth;
+        canvas.height = imageElement.naturalHeight;
+        
+        ctx.drawImage(imageElement, 0, 0);
+        
+        // 🆕 RECORTE INTELIGENTE: Intentar detectar zona de tabla (1/3 superior de la imagen)
+        const tableHeight = Math.floor(canvas.height * 0.6); // 60% superior
+        const tableStartY = Math.floor(canvas.height * 0.15); // Comenzar desde 15% para evitar header
+        
+        const croppedCanvas = document.createElement('canvas');
+        const croppedCtx = croppedCanvas.getContext('2d');
+        croppedCanvas.width = canvas.width;
+        croppedCanvas.height = tableHeight;
+        
+        croppedCtx.drawImage(
+            canvas, 
+            0, tableStartY,           // source x, y
+            canvas.width, tableHeight, // source width, height
+            0, 0,                      // dest x, y
+            canvas.width, tableHeight  // dest width, height
+        );
+        
+        // 🆕 MEJORA DE CONTRASTE MÁS AGRESIVA
+        const imageData = croppedCtx.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
+        const data = imageData.data;
+        
+        // Paso 1: Aumentar contraste general
+        const contrastFactor = 1.5;
+        for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.min(255, Math.max(0, ((data[i] - 128) * contrastFactor) + 128));
+            data[i + 1] = Math.min(255, Math.max(0, ((data[i + 1] - 128) * contrastFactor) + 128));
+            data[i + 2] = Math.min(255, Math.max(0, ((data[i + 2] - 128) * contrastFactor) + 128));
+        }
+        
+        // Paso 2: Binarización con umbral adaptativo
+        for (let i = 0; i < data.length; i += 4) {
+            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+            const threshold = avg > 140 ? 255 : 0; // Umbral más alto para texto más limpio
+            data[i] = data[i + 1] = data[i + 2] = threshold;
+        }
+        
+        croppedCtx.putImageData(imageData, 0, 0);
+        
+        console.log(`✂️ Imagen recortada: ${canvas.width}x${canvas.height} -> ${croppedCanvas.width}x${croppedCanvas.height}`);
+        
+        return croppedCanvas;
+    }
+
+    function extractProductsFromOcrText(text) {
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const products = [];
+        
+        console.log('📝 Texto OCR completo:', text);
+        
+        // 🆕 Detectar inicio y fin de la tabla
+        let tableStartIndex = 0;
+        let tableEndIndex = lines.length;
+        
+        for (let i = 0; i < lines.length; i++) {
+            const lineLower = lines[i].toLowerCase();
+            // Buscar header de tabla
+            if (lineLower.includes('sku') && lineLower.includes('item') && lineLower.includes('cantidad')) {
+                tableStartIndex = i + 1;
+                console.log(`📋 Inicio de tabla en línea ${i}`);
+            }
+            // Buscar fin de tabla
+            if (lineLower.includes('nota:') || lineLower.includes('neto') || lineLower.includes('forma de pago') || lineLower.includes('tesoreria')) {
+                tableEndIndex = i;
+                console.log(`📋 Fin de tabla en línea ${i}`);
+                break;
+            }
+        }
+        
+        // Procesar solo las líneas de la tabla
+        for (let i = tableStartIndex; i < tableEndIndex; i++) {
+            const line = lines[i];
+            
+            // Buscar SKU
+            const skuMatch = line.match(/FC[\s-]?(\d{5})/i);
+            if (!skuMatch) continue;
+            
+            const sku = 'FC' + skuMatch[1];
+            
+            // Construir línea completa (puede estar en múltiples líneas)
+            let fullLine = line;
+            let nextLineIndex = i + 1;
+            while (nextLineIndex < tableEndIndex && !lines[nextLineIndex].match(/FC[\s-]?\d{5}/i)) {
+                fullLine += ' ' + lines[nextLineIndex];
+                nextLineIndex++;
+            }
+            
+            console.log(`🔍 Procesando línea completa: ${fullLine}`);
+            
+            // 🆕 MEJORAR DETECCIÓN DE PRECIO
+            // Buscar patrones de precio chileno: $X.XXX,XX o $X.XXX o $XXXXX
+            const pricePatterns = [
+                /\$\s?([\d]{1,3}\.[\d]{3},[\d]{1,2})/,  // $25.202,50
+                /\$\s?([\d]{1,3}\.[\d]{3})/,            // $25.202
+                /\$\s?([\d]{4,6})/                       // $25202
+            ];
+            
+            let precio = null;
+            let precioStr = null;
+            
+            for (const pattern of pricePatterns) {
+                const match = fullLine.match(pattern);
+                if (match) {
+                    precioStr = match[1];
+                    // Normalizar: si no tiene puntos, agregarlos
+                    if (!precioStr.includes('.') && precioStr.length >= 4) {
+                        // 25202 -> 25.202
+                        const len = precioStr.length;
+                        const miles = precioStr.slice(0, -3);
+                        const cientos = precioStr.slice(-3);
+                        precioStr = miles + '.' + cientos;
+                    }
+                    precio = limpiarValor(precioStr);
+                    if (precio && precio > 10) { // Precio mínimo razonable
+                        console.log(`💰 Precio detectado: ${precioStr} -> ${precio}`);
+                        break;
+                    }
+                }
+            }
+            
+            // 🆕 MEJORAR DETECCIÓN DE CANTIDAD
+            // Buscar números pequeños (1-999) que estén ANTES del precio
+            const priceIndex = fullLine.indexOf('$');
+            const textBeforePrice = priceIndex > 0 ? fullLine.substring(0, priceIndex) : fullLine;
+            
+            // Buscar todos los números en el texto antes del precio
+            const numberMatches = textBeforePrice.match(/\b(\d{1,3})\b/g);
+            
+            let cantidad = null;
+            if (numberMatches && numberMatches.length > 0) {
+                // Tomar el último número antes del precio (generalmente es la cantidad)
+                const lastNumber = parseInt(numberMatches[numberMatches.length - 1]);
+                if (lastNumber > 0 && lastNumber <= 999) {
+                    cantidad = lastNumber;
+                    console.log(`📦 Cantidad detectada: ${cantidad}`);
+                }
+            }
+            
+            // Si no hay cantidad, asumir 1
+            if (!cantidad) {
+                cantidad = 1;
+                console.log(`📦 Cantidad no detectada, asumiendo: 1`);
+            }
+            
+            // 🆕 MEJORAR EXTRACCIÓN DE DESCRIPCIÓN
+            let description = fullLine
+                .replace(/FC[\s-]?\d{5}/gi, '') // Quitar SKU
+                .replace(/\$[\s]?[\d.,]+/g, '') // Quitar precio
+                .replace(/\bCANTIDAD\b/gi, '')  // Quitar palabra "CANTIDAD"
+                .replace(/\bV\.?\s?UNITARIO\b/gi, '') // Quitar "V. UNITARIO"
+                .replace(/\bDescuento\b/gi, '') // Quitar "Descuento"
+                .replace(/\bSUBTOTAL\b/gi, '')  // Quitar "SUBTOTAL"
+                .replace(/\s{2,}/g, ' ')        // Normalizar espacios
+                .trim();
+            
+            // Quitar el número de cantidad de la descripción
+            if (cantidad) {
+                description = description.replace(new RegExp(`\\b${cantidad}\\b`, 'g'), '').trim();
+            }
+            
+            // 🆕 VALIDACIÓN FINAL
+            const isValid = 
+                sku && 
+                cantidad && cantidad > 0 && cantidad <= 999 &&
+                precio && precio > 10 && precio < 1000000 &&
+                description && description.length > 3;
+            
+            if (isValid) {
+                products.push({
+                    sku: normalizarSKU(sku),
+                    item: description,
+                    cantidad: cantidad,
+                    v_unitario_usuario: precio
+                });
+                
+                console.log(`✅ Producto válido: ${sku} | ${description} | Cant: ${cantidad} | Precio: ${precio}`);
+            } else {
+                console.log(`❌ Producto rechazado: SKU=${sku}, Cant=${cantidad}, Precio=${precio}, Desc="${description}"`);
+            }
+        }
+        
+        console.log(`📊 Total productos detectados: ${products.length}`);
+        return products;
+    }
+
+    async function processOcrImages(images) {
+        ui.ocrPreviewSection.style.display = 'block';
+        ui.ocrProcessSection.style.display = 'none';
+        ui.ocrResultsSection.style.display = 'none';
+        ui.ocrProgressBar.style.width = '0%';
+        
+        try {
+            const worker = await initOcrWorker();
+            const allProducts = [];
+            
+            for (let i = 0; i < images.length; i++) {
+                ui.ocrStatusText.textContent = `Procesando imagen ${i + 1} de ${images.length}...`;
+                ui.ocrProgressBar.style.width = `${(i / images.length) * 100}%`;
+                
+                const img = images[i];
+                ui.ocrPreviewImg.src = img.dataUrl;
+                
+                const processedCanvas = preprocessImage(ui.ocrPreviewImg);
+                
+                const { data: { text } } = await worker.recognize(processedCanvas);
+                
+                const products = extractProductsFromOcrText(text);
+                allProducts.push(...products);
+                
+                console.log(`📄 Imagen ${i + 1}: ${products.length} productos detectados`);
+            }
+            
+            ui.ocrProgressBar.style.width = '100%';
+            ui.ocrStatusText.textContent = `✅ Completado: ${allProducts.length} productos detectados`;
+            
+            if (allProducts.length === 0) {
+                ui.ocrStatusText.textContent = '⚠️ No se detectaron productos válidos';
+                alert('No se pudieron detectar productos en las imágenes.\n\nConsejos:\n- Asegúrate de que la foto sea clara\n- Verifica que el texto sea legible\n- Intenta tomar la foto desde arriba sin ángulo');
+                return;
+            }
+            
+            displayDetectedProducts(allProducts);
+            
+        } catch (error) {
+            console.error('Error en OCR:', error);
+            alert('Error al procesar las imágenes. Por favor intenta de nuevo.');
+            hideOcrModal();
+        }
+    }
+
+    function displayDetectedProducts(products) {
+        ui.ocrPreviewSection.style.display = 'none';
+        ui.ocrResultsSection.style.display = 'block';
+        
+        const formatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
+        
+        if (products.length === 0) {
+            ui.ocrDetectedProducts.innerHTML = `
+                <div class="p-4 rounded-lg" style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444;">
+                    <p class="font-semibold text-red-400">❌ No se detectaron productos válidos</p>
+                    <p class="text-sm mt-2">Posibles causas:</p>
+                    <ul class="text-sm mt-1 ml-4">
+                        <li>• Foto borrosa o con poca luz</li>
+                        <li>• Ángulo muy inclinado</li>
+                        <li>• Texto tapado o cortado</li>
+                    </ul>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <div class="mb-3 p-2 rounded" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);">
+                <p class="text-sm font-semibold text-green-400">✅ ${products.length} producto(s) detectado(s) correctamente</p>
+                <p class="text-xs text-secondary mt-1">Verifica que los datos sean correctos antes de continuar</p>
+            </div>
+        `;
+        
+        products.forEach((p, index) => {
+            // Validar si el producto parece tener datos correctos
+            const priceOk = p.v_unitario_usuario > 100 && p.v_unitario_usuario < 100000;
+            const qtyOk = p.cantidad > 0 && p.cantidad <= 100;
+            const descOk = p.item && p.item.length > 5;
+            
+            const alertClass = (!priceOk || !qtyOk || !descOk) ? 'border-yellow-500' : 'border-green-600';
+            
+            html += `
+                <div class="detected-product" style="border-left: 3px solid ${!priceOk || !qtyOk ? '#f59e0b' : 'var(--accent-green)'};">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="font-bold text-purple-400">${p.sku}</div>
+                            <div class="text-sm ${descOk ? '' : 'text-yellow-400'}">${p.item}</div>
+                            ${!descOk ? '<div class="text-xs text-yellow-400">⚠️ Descripción muy corta</div>' : ''}
+                        </div>
+                        <div class="text-right ml-4">
+                            <div class="font-semibold ${qtyOk ? '' : 'text-yellow-400'}">
+                                Cant: ${p.cantidad}
+                                ${!qtyOk ? ' ⚠️' : ''}
+                            </div>
+                            <div class="text-sm ${priceOk ? '' : 'text-yellow-400'}">
+                                ${formatter.format(p.v_unitario_usuario)}
+                                ${!priceOk ? ' ⚠️' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Agregar advertencia si hay productos sospechosos
+        const suspiciousCount = products.filter(p => 
+            p.v_unitario_usuario < 100 || p.v_unitario_usuario > 100000 || 
+            p.cantidad > 100 || 
+            !p.item || p.item.length < 5
+        ).length;
+        
+        if (suspiciousCount > 0) {
+            html += `
+                <div class="mt-3 p-2 rounded" style="background-color: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b;">
+                    <p class="text-xs text-yellow-400">⚠️ ${suspiciousCount} producto(s) con datos sospechosos (marcados con ⚠️)</p>
+                    <p class="text-xs text-secondary">Puedes continuar y editar después, o retomar la foto</p>
+                </div>
+            `;
+        }
+        
+        ui.ocrDetectedProducts.innerHTML = html;
+        
+        ui.btnOcrUseResults.onclick = () => {
+            const pedidoTexto = products.map(p => 
+                `${p.sku} ${p.item} ${p.cantidad} $${Math.round(p.v_unitario_usuario)}`
+            ).join('\n');
+            
+            ui.pedidoCrudo.value = pedidoTexto;
+            hideOcrModal();
+            ui.debugInfo.innerHTML = `<p class="text-green-400">✅ ${products.length} productos cargados desde OCR</p>`;
+            
+            setTimeout(() => {
+                ui.btnNormalizar.click();
+            }, 500);
+        };
+    }
+
+    function showOcrModal() {
+        ui.ocrModal.style.display = 'block';
+        ui.ocrGuideSection.style.display = 'block';
+        ui.ocrPreviewSection.style.display = 'none';
+        ui.ocrResultsSection.style.display = 'none';
+        ui.ocrProcessSection.style.display = 'none';
+    }
+
+    function hideOcrModal() {
+        ui.ocrModal.style.display = 'none';
+        currentOcrImages = [];
+    }
+
+    function handleOcrFileSelection(files) {
+        if (files.length === 0) return;
+        
+        showOcrModal();
+        currentOcrImages = [];
+        
+        const loadPromises = Array.from(files).map(file => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentOcrImages.push({
+                        file: file,
+                        dataUrl: e.target.result
+                    });
+                    resolve();
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+        
+        Promise.all(loadPromises).then(() => {
+            ui.ocrPreviewImg.src = currentOcrImages[0].dataUrl;
+            ui.ocrProcessSection.style.display = 'block';
+            ui.ocrGuideSection.style.display = 'none';
+        });
+    }
+
+    // ========== EVENT LISTENERS ==========
     document.addEventListener('DOMContentLoaded', () => {
         Object.assign(ui, {
             priceModal: document.getElementById('price-modal'), priceModalClose: document.getElementById('price-modal-close'),
@@ -508,17 +956,67 @@
             intelligentSearchResults:document.getElementById('intelligent-search-results'),
             btnRefreshCatalog: document.getElementById('btn-refresh-catalog'),
             forzarListaPrecio: document.getElementById('forzar-lista-precio'),
-            selectorListaPrecio: document.getElementById('selector-lista-precio')
+            selectorListaPrecio: document.getElementById('selector-lista-precio'),
+            // 🆕 OCR Elements
+            btnOcrCamera: document.getElementById('btn-ocr-camera'),
+            btnOcrUpload: document.getElementById('btn-ocr-upload'),
+            ocrFileInput: document.getElementById('ocr-file-input'),
+            ocrModal: document.getElementById('ocr-modal'),
+            ocrModalClose: document.getElementById('ocr-modal-close'),
+            ocrGuideSection: document.getElementById('ocr-guide-section'),
+            ocrPreviewSection: document.getElementById('ocr-preview-section'),
+            ocrPreviewImg: document.getElementById('ocr-preview-img'),
+            ocrResultsSection: document.getElementById('ocr-results-section'),
+            ocrDetectedProducts: document.getElementById('ocr-detected-products'),
+            ocrProcessSection: document.getElementById('ocr-process-section'),
+            btnProcessOcr: document.getElementById('btn-process-ocr'),
+            btnOcrUseResults: document.getElementById('btn-ocr-use-results'),
+            btnOcrRetry: document.getElementById('btn-ocr-retry'),
+            ocrStatusText: document.getElementById('ocr-status-text'),
+            ocrProgressBar: document.getElementById('ocr-progress-bar'),
+            ocrProgressPercent: document.getElementById('ocr-progress-percent')
+        });
+        
+        // 🆕 OCR Event Listeners
+        ui.btnOcrCamera.addEventListener('click', () => {
+            ui.ocrFileInput.setAttribute('capture', 'environment');
+            ui.ocrFileInput.click();
+        });
+        
+        ui.btnOcrUpload.addEventListener('click', () => {
+            ui.ocrFileInput.removeAttribute('capture');
+            ui.ocrFileInput.click();
+        });
+        
+        ui.ocrFileInput.addEventListener('change', (e) => {
+            handleOcrFileSelection(e.target.files);
+            e.target.value = '';
+        });
+        
+        ui.btnProcessOcr.addEventListener('click', () => {
+            if (currentOcrImages.length > 0) {
+                processOcrImages(currentOcrImages);
+            }
+        });
+        
+        ui.ocrModalClose.addEventListener('click', hideOcrModal);
+        ui.btnOcrRetry.addEventListener('click', () => {
+            hideOcrModal();
+            ui.btnOcrUpload.click();
+        });
+        
+        window.addEventListener('click', (e) => {
+            if (e.target === ui.ocrModal) {
+                hideOcrModal();
+            }
         });
         
         ui.priceModalClose.addEventListener('click', hidePriceModal);
         window.addEventListener('click', (event) => { if (event.target == ui.priceModal) { hidePriceModal(); } });
         ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) { showPriceModal(e.target.dataset.sku); } });
         
-        // 🆕 ACTUALIZAR CATÁLOGO
         ui.btnRefreshCatalog.addEventListener('click', () => loadCatalogFromGitHub());
 
-        // 🆕 CAMBIO DE FUENTE: Actualizar descripción
         document.querySelectorAll('input[name="fuente-catalogo"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 const desc = document.getElementById('fuente-descripcion');
@@ -650,7 +1148,6 @@
             if (e.target && e.target.matches('.btn-copiar-catalogo')) { const sku = e.target.dataset.skuCopia; const productos = catalogoCompleto.filter(p => p.sku === sku); if (productos.length > 0) { let texto = `*Producto:* ${productos[0].sku} - ${productos[0].descripcion}\n\n*Lista de Precios:*\n`; texto += productos.map(p => `- ${p.tipo_precio}: Neto ${p.precio_neto ? formatter.format(p.precio_neto) : 'N/A'} / Bruto ${p.precio_bruto ? formatter.format(p.precio_bruto) : 'N/A'}`).join('\n'); navigator.clipboard.writeText(texto).then(() => { const originalText = e.target.textContent; e.target.textContent = '¡Copiado!'; setTimeout(() => { e.target.textContent = originalText; }, 2000); }); } }
         });
 
-        // 🆕 CARGA INICIAL CON FUENTE POR DEFECTO
         loadCatalogFromGitHub();
     });
 </script>
