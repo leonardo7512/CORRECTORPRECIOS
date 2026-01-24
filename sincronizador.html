@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sincronizador de Catálogo Drive ↔ Git - AROMAKER</title>
+    <title>Sincronizador Inteligente de Catálogo v2.0 - AROMAKER</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
@@ -17,6 +17,7 @@
             --accent-blue: #4299e1;
             --accent-orange: #ed8936;
             --accent-red: #f56565;
+            --accent-purple: #9f7aea;
             --border-color: #4a5568;
         }
         body {
@@ -34,17 +35,43 @@
         }
         .badge-nuevo { background-color: var(--accent-green); }
         .badge-actualizado { background-color: var(--accent-blue); }
-        .badge-sin-cambios { background-color: var(--bg-accent); }
-        .badge-advertencia { background-color: var(--accent-orange); }
         .badge-error { background-color: var(--accent-red); }
+        .badge-warning { background-color: var(--accent-orange); }
+        .badge-info { background-color: var(--accent-purple); }
+        .familia-card {
+            background-color: var(--bg-accent);
+            border-left: 4px solid var(--accent-purple);
+            transition: all 0.2s ease;
+        }
+        .familia-card:hover {
+            border-left-color: var(--accent-green);
+            background-color: rgba(72, 187, 120, 0.1);
+        }
+        .error-critical { border-left: 4px solid var(--accent-red); }
+        .error-warning { border-left: 4px solid var(--accent-orange); }
+        .error-info { border-left: 4px solid var(--accent-blue); }
+        .prefix-badge {
+            background-color: var(--accent-purple);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .similarity-bar {
+            height: 4px;
+            background-color: var(--accent-green);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 <body class="p-4">
     <div class="container mx-auto max-w-7xl">
         <!-- Header -->
         <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold mb-2">🔄 Sincronizador de Catálogo</h1>
-            <p class="text-secondary">Drive → Git | Estructura Inmutable</p>
+            <h1 class="text-4xl font-bold mb-2">🔄 Sincronizador Inteligente v2.0</h1>
+            <p class="text-secondary">Drive → Git | Detección de Familias | Validación Avanzada</p>
         </header>
 
         <!-- Paso 1: Cargar Archivos -->
@@ -53,7 +80,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium mb-2">
-                        Catálogo Git (Actual - Estructura Base):
+                        Catálogo Git (Estructura Base):
                     </label>
                     <input type="file" id="file-git" accept=".csv" 
                            class="input-field w-full p-2 rounded-md text-sm">
@@ -61,7 +88,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-2">
-                        Catálogo Drive (Fuente de Actualización):
+                        Catálogo Drive (Fuente de Datos):
                     </label>
                     <input type="file" id="file-drive" accept=".csv" 
                            class="input-field w-full p-2 rounded-md text-sm">
@@ -70,20 +97,74 @@
             </div>
             <button id="btn-analizar" disabled
                     class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed">
-                🔍 Analizar Diferencias
+                🔍 Analizar y Detectar Familias
             </button>
         </div>
 
-        <!-- Paso 2: Vista Previa de Cambios -->
-        <div id="panel-analisis" class="panel p-6 rounded-lg shadow-md mb-6 hidden">
-            <h2 class="text-2xl font-semibold mb-4">📊 Paso 2: Revisión de Cambios</h2>
+        <!-- Paso 2: Validación y Errores -->
+        <div id="panel-validacion" class="panel p-6 rounded-lg shadow-md mb-6 hidden">
+            <h2 class="text-2xl font-semibold mb-4">⚠️ Paso 2: Validación y Errores</h2>
+            
+            <!-- Resumen de Validación -->
+            <div id="resumen-validacion" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+
+            <!-- Tabs de Categorías de Errores -->
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <button class="tab-error active px-4 py-2 rounded font-semibold" data-tipo="todos" style="background-color: var(--accent-blue);">
+                    📊 Todos
+                </button>
+                <button class="tab-error px-4 py-2 rounded" data-tipo="criticos" style="background-color: rgba(245, 101, 101, 0.2);">
+                    ❌ Críticos
+                </button>
+                <button class="tab-error px-4 py-2 rounded" data-tipo="advertencias" style="background-color: rgba(237, 137, 54, 0.2);">
+                    ⚠️ Advertencias
+                </button>
+                <button class="tab-error px-4 py-2 rounded" data-tipo="sugerencias" style="background-color: rgba(159, 122, 234, 0.2);">
+                    💡 Sugerencias
+                </button>
+            </div>
+
+            <!-- Lista de Errores Categorizados -->
+            <div id="lista-errores" class="max-h-96 overflow-y-auto space-y-2">
+                <p class="text-secondary">Los errores y validaciones aparecerán aquí...</p>
+            </div>
+        </div>
+
+        <!-- Paso 3: Detector de Familias -->
+        <div id="panel-familias" class="panel p-6 rounded-lg shadow-md mb-6 hidden">
+            <h2 class="text-2xl font-semibold mb-4">🔍 Paso 3: Familias de Productos Detectadas</h2>
+            
+            <div class="bg-accent p-4 rounded-lg mb-4">
+                <h3 class="font-semibold mb-2">💡 ¿Qué son las familias?</h3>
+                <p class="text-sm text-secondary">
+                    El sistema detecta productos similares (ej: "RASPADOR 1" y "RASPADOR 2") y sugiere prefijos 
+                    (ej: "RP-") para que el corrector pueda sumar cantidades y aplicar precios mayoristas correctamente.
+                </p>
+            </div>
+
+            <div class="mb-4">
+                <label class="flex items-center text-sm font-medium">
+                    <input type="checkbox" id="auto-aplicar-familias" class="h-4 w-4 rounded mr-2">
+                    <span>Aplicar automáticamente prefijos sugeridos a productos nuevos</span>
+                </label>
+            </div>
+
+            <!-- Lista de Familias Detectadas -->
+            <div id="lista-familias" class="space-y-3">
+                <p class="text-secondary">Las familias detectadas aparecerán aquí...</p>
+            </div>
+        </div>
+
+        <!-- Paso 4: Vista Previa de Cambios -->
+        <div id="panel-cambios" class="panel p-6 rounded-lg shadow-md mb-6 hidden">
+            <h2 class="text-2xl font-semibold mb-4">📊 Paso 4: Revisión de Cambios</h2>
             
             <!-- Resumen -->
             <div id="resumen-cambios" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
 
             <!-- Filtros -->
             <div class="flex gap-2 mb-4 flex-wrap">
-                <button class="filtro-btn px-3 py-1 rounded text-sm font-semibold" data-tipo="todos">
+                <button class="filtro-btn px-3 py-1 rounded text-sm font-semibold bg-blue-600" data-tipo="todos">
                     Todos
                 </button>
                 <button class="filtro-btn px-3 py-1 rounded text-sm" data-tipo="nuevos">
@@ -91,12 +172,6 @@
                 </button>
                 <button class="filtro-btn px-3 py-1 rounded text-sm" data-tipo="actualizados">
                     Actualizados
-                </button>
-                <button class="filtro-btn px-3 py-1 rounded text-sm" data-tipo="advertencias">
-                    Advertencias
-                </button>
-                <button class="filtro-btn px-3 py-1 rounded text-sm" data-tipo="errores">
-                    Errores
                 </button>
             </div>
 
@@ -110,18 +185,22 @@
             </div>
         </div>
 
-        <!-- Paso 3: Generar Catálogo -->
+        <!-- Paso 5: Generar Catálogo -->
         <div id="panel-generar" class="panel p-6 rounded-lg shadow-md hidden">
-            <h2 class="text-2xl font-semibold mb-4">💾 Paso 3: Generar Catálogo Actualizado</h2>
+            <h2 class="text-2xl font-semibold mb-4">💾 Paso 5: Generar Catálogo Actualizado</h2>
+            
             <div class="bg-accent p-4 rounded-lg mb-4">
-                <h3 class="font-semibold mb-2">⚠️ Verificación Final:</h3>
-                <ul class="text-sm space-y-1 list-disc list-inside">
-                    <li>La estructura del Git se mantendrá intacta</li>
-                    <li>Los prefijos de familia se respetarán</li>
-                    <li>Solo se actualizarán precios y se agregarán productos nuevos</li>
-                    <li>Los productos con precios pendientes se agregarán con precio 0</li>
+                <h3 class="font-semibold mb-2">✅ Verificación Final:</h3>
+                <ul class="text-sm space-y-1 list-disc list-inside" id="checklist-final">
+                    <li>Estructura Git preservada (delimitador ;)</li>
+                    <li>Formato: SKU;DESCRIPCION;TIPO_PRECIO;PRECIO_NETO;PRECIO_BRUTO</li>
+                    <li>Compatible con el Corrector de Pedidos</li>
                 </ul>
             </div>
+
+            <div id="estadisticas-finales" class="mb-4 p-3 rounded" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);">
+            </div>
+
             <button id="btn-generar" 
                     class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md">
                 ✅ Generar CSV Actualizado para Git
@@ -131,7 +210,7 @@
         <!-- Log de Proceso -->
         <div class="panel p-4 rounded-lg shadow-md mt-6">
             <h3 class="text-lg font-semibold mb-2">📝 Log de Proceso</h3>
-            <div id="log-proceso" class="text-sm max-h-40 overflow-y-auto bg-accent p-3 rounded">
+            <div id="log-proceso" class="text-sm max-h-48 overflow-y-auto bg-accent p-3 rounded">
                 <p class="text-secondary">El log aparecerá aquí...</p>
             </div>
         </div>
@@ -141,19 +220,31 @@
         let catalogoGit = [];
         let catalogoDrive = [];
         let cambiosDetectados = [];
+        let erroresDetectados = [];
+        let familiasDetectadas = [];
+        let prefijosAplicados = {};
         let filtroActivo = 'todos';
+        let tabErrorActiva = 'todos';
 
         const ui = {
             fileGit: document.getElementById('file-git'),
             fileDrive: document.getElementById('file-drive'),
             btnAnalizar: document.getElementById('btn-analizar'),
             btnGenerar: document.getElementById('btn-generar'),
-            panelAnalisis: document.getElementById('panel-analisis'),
+            panelValidacion: document.getElementById('panel-validacion'),
+            panelFamilias: document.getElementById('panel-familias'),
+            panelCambios: document.getElementById('panel-cambios'),
             panelGenerar: document.getElementById('panel-generar'),
+            resumenValidacion: document.getElementById('resumen-validacion'),
+            listaErrores: document.getElementById('lista-errores'),
+            listaFamilias: document.getElementById('lista-familias'),
             resumenCambios: document.getElementById('resumen-cambios'),
             listaCambios: document.getElementById('lista-cambios'),
             buscarCambios: document.getElementById('buscar-cambios'),
-            logProceso: document.getElementById('log-proceso')
+            logProceso: document.getElementById('log-proceso'),
+            autoAplicarFamilias: document.getElementById('auto-aplicar-familias'),
+            checklistFinal: document.getElementById('checklist-final'),
+            estadisticasFinales: document.getElementById('estadisticas-finales')
         };
 
         // ========== UTILIDADES ==========
@@ -180,7 +271,6 @@
             
             const str = String(precio).trim();
             
-            // Detectar casos especiales
             if (str.includes('Inf a MM') || 
                 str.includes('#VALUE!') || 
                 str.includes('PRECIOS VARIABLES') ||
@@ -188,10 +278,9 @@
                 str.startsWith('🔹') ||
                 str.includes('Caja') ||
                 isNaN(parseFloat(str.replace(/[^0-9.,]/g, '')))) {
-                return 0; // Precio pendiente
+                return 0;
             }
 
-            // Limpiar y convertir
             try {
                 let cleanStr = str.replace(/[$\s]/g, '');
                 const lastDot = cleanStr.lastIndexOf('.');
@@ -213,13 +302,38 @@
             }
         }
 
+        function calcularSimilitud(str1, str2) {
+            const s1 = str1.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const s2 = str2.toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            if (s1 === s2) return 100;
+            
+            let matches = 0;
+            const len = Math.min(s1.length, s2.length);
+            
+            for (let i = 0; i < len; i++) {
+                if (s1[i] === s2[i]) matches++;
+            }
+            
+            return Math.round((matches / Math.max(s1.length, s2.length)) * 100);
+        }
+
+        function extraerPalabrasClave(descripcion) {
+            return descripcion
+                .toUpperCase()
+                .replace(/[^A-Z0-9\s]/g, '')
+                .split(/\s+/)
+                .filter(p => p.length >= 3)
+                .filter(p => !['PARA', 'CON', 'SIN', 'THE', 'AND', 'POR'].includes(p));
+        }
+
         // ========== PROCESADORES CSV ==========
         function procesarCatalogoGit(data) {
             log('Procesando catálogo Git...', 'info');
             const productos = [];
             
             data.forEach((row, index) => {
-                if (index === 0 || row.length < 5) return; // Skip header
+                if (index === 0 || row.length < 5) return;
                 
                 const sku = normalizarSKU(row[0]);
                 if (!sku) return;
@@ -230,7 +344,7 @@
                     tipo_precio: row[2] ? String(row[2]).trim() : '',
                     precio_neto: limpiarPrecio(row[3]),
                     precio_bruto: limpiarPrecio(row[4]),
-                    linea_original: row // Para preservar estructura exacta
+                    linea_original: row
                 });
             });
 
@@ -243,9 +357,9 @@
             const productos = [];
             
             data.forEach((row, index) => {
-                if (index === 0 || row.length < 6) return; // Skip header
+                if (index === 0 || row.length < 6) return;
                 
-                const sku = normalizarSKU(row[1]); // Columna B
+                const sku = normalizarSKU(row[1]);
                 if (!sku || sku === 'NA') return;
 
                 const descripcion = row[0] ? String(row[0]).trim() : '';
@@ -255,7 +369,6 @@
                 const precioMayorNeto = limpiarPrecio(row[5]);
                 const observaciones = row[6] ? String(row[6]).trim() : '';
 
-                // Detectar tipo de lista desde observaciones
                 let tipoMayor = 'MAYOR 6 UN.';
                 if (observaciones.includes('MAYOR DESDE 3')) {
                     tipoMayor = 'MAYOR 3 UN.';
@@ -287,6 +400,130 @@
             return productos;
         }
 
+        // ========== DETECTOR DE FAMILIAS ==========
+        function detectarFamilias() {
+            log('Detectando familias de productos...', 'info');
+            const familias = {};
+            const productosNuevos = cambiosDetectados.filter(c => c.tipo === 'nuevo');
+            
+            productosNuevos.forEach(producto => {
+                const palabrasClave = extraerPalabrasClave(producto.descripcion);
+                
+                productosNuevos.forEach(otroProducto => {
+                    if (producto.sku === otroProducto.sku) return;
+                    
+                    const otrasPalabras = extraerPalabrasClave(otroProducto.descripcion);
+                    const palabrasComunes = palabrasClave.filter(p => otrasPalabras.includes(p));
+                    
+                    if (palabrasComunes.length >= 2 || calcularSimilitud(producto.descripcion, otroProducto.descripcion) > 60) {
+                        const familiaKey = palabrasComunes.sort().join('_') || producto.descripcion.substring(0, 20);
+                        
+                        if (!familias[familiaKey]) {
+                            familias[familiaKey] = {
+                                palabrasClave: palabrasComunes,
+                                productos: [],
+                                prefijoSugerido: generarPrefijo(palabrasComunes)
+                            };
+                        }
+                        
+                        if (!familias[familiaKey].productos.find(p => p.sku === producto.sku)) {
+                            familias[familiaKey].productos.push(producto);
+                        }
+                        if (!familias[familiaKey].productos.find(p => p.sku === otroProducto.sku)) {
+                            familias[familiaKey].productos.push(otroProducto);
+                        }
+                    }
+                });
+            });
+
+            const familiasArray = Object.entries(familias)
+                .map(([key, familia]) => familia)
+                .filter(f => f.productos.length >= 2)
+                .sort((a, b) => b.productos.length - a.productos.length);
+
+            log(`✅ ${familiasArray.length} familias detectadas`, 'success');
+            return familiasArray;
+        }
+
+        function generarPrefijo(palabrasClave) {
+            if (palabrasClave.length === 0) return 'XX';
+            
+            const palabra = palabrasClave[0];
+            if (palabra.length >= 3) {
+                return palabra.substring(0, 2).toUpperCase() + '-';
+            }
+            return palabra.toUpperCase() + '-';
+        }
+
+        // ========== VALIDADOR ==========
+        function validarCatalogos() {
+            log('Validando catálogos...', 'info');
+            const errores = [];
+
+            // Validar duplicados en Git
+            const skusGit = {};
+            catalogoGit.forEach(p => {
+                const key = `${p.sku}_${p.tipo_precio}`;
+                if (skusGit[key]) {
+                    errores.push({
+                        tipo: 'critico',
+                        titulo: 'SKU Duplicado en Git',
+                        mensaje: `${p.sku} tiene múltiples entradas para ${p.tipo_precio}`,
+                        sku: p.sku,
+                        icono: '❌'
+                    });
+                }
+                skusGit[key] = true;
+            });
+
+            // Validar precios inconsistentes
+            cambiosDetectados.forEach(cambio => {
+                if (cambio.tipo === 'actualizado') {
+                    cambio.cambiosPrecios.forEach(cp => {
+                        const difNeto = Math.abs(cp.netoDespues - cp.netoAntes);
+                        const difBruto = Math.abs(cp.brutoDespues - cp.brutoAntes);
+                        
+                        if (difNeto > cp.netoAntes * 0.5 || difBruto > cp.brutoAntes * 0.5) {
+                            errores.push({
+                                tipo: 'advertencia',
+                                titulo: 'Cambio de Precio Grande',
+                                mensaje: `${cambio.sku}: Cambio >50% en ${cp.lista}`,
+                                sku: cambio.sku,
+                                icono: '⚠️',
+                                detalle: `Neto: ${cp.netoAntes} → ${cp.netoDespues}`
+                            });
+                        }
+                    });
+                }
+            });
+
+            // Validar productos sin precio
+            const sinPrecio = cambiosDetectados.filter(c => c.preciosPendientes);
+            if (sinPrecio.length > 0) {
+                errores.push({
+                    tipo: 'advertencia',
+                    titulo: 'Productos Sin Precio',
+                    mensaje: `${sinPrecio.length} productos se agregarán con precio $0`,
+                    icono: '⚠️',
+                    detalle: `Se deben actualizar precios posteriormente`
+                });
+            }
+
+            // Sugerencia: Familias sin prefijo
+            if (familiasDetectadas.length > 0) {
+                errores.push({
+                    tipo: 'sugerencia',
+                    titulo: 'Familias Detectadas',
+                    mensaje: `${familiasDetectadas.length} familias podrían beneficiarse de prefijos`,
+                    icono: '💡',
+                    detalle: 'Revisa el panel de familias para aplicar prefijos'
+                });
+            }
+
+            log(`✅ Validación completada: ${errores.length} alertas`, errores.length > 0 ? 'warning' : 'success');
+            return errores;
+        }
+
         // ========== COMPARADOR ==========
         function analizarDiferencias() {
             log('Analizando diferencias...', 'info');
@@ -294,7 +531,6 @@
             const skusGit = new Set(catalogoGit.map(p => p.sku));
             const skusDrive = new Set(catalogoDrive.map(p => p.sku));
 
-            // Productos nuevos (en Drive pero no en Git)
             catalogoDrive.forEach(prodDrive => {
                 if (!skusGit.has(prodDrive.sku)) {
                     const tienePrecios = prodDrive.precios.some(p => p.neto > 0 || p.bruto > 0);
@@ -312,7 +548,6 @@
                 }
             });
 
-            // Productos existentes (comparar precios)
             catalogoDrive.forEach(prodDrive => {
                 if (skusGit.has(prodDrive.sku)) {
                     const registrosGit = catalogoGit.filter(p => p.sku === prodDrive.sku);
@@ -362,11 +597,181 @@
             return cambios;
         }
 
-        // ========== RENDERIZADO ==========
-        function renderResumen() {
+        // ========== RENDERIZADORES ==========
+        function renderResumenValidacion() {
+            const criticos = erroresDetectados.filter(e => e.tipo === 'critico').length;
+            const advertencias = erroresDetectados.filter(e => e.tipo === 'advertencia').length;
+            const sugerencias = erroresDetectados.filter(e => e.tipo === 'sugerencia').length;
+            const total = erroresDetectados.length;
+
+            ui.resumenValidacion.innerHTML = `
+                <div class="badge-error text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${criticos}</div>
+                    <div class="text-sm">Críticos</div>
+                </div>
+                <div class="badge-warning text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${advertencias}</div>
+                    <div class="text-sm">Advertencias</div>
+                </div>
+                <div class="badge-info text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${sugerencias}</div>
+                    <div class="text-sm">Sugerencias</div>
+                </div>
+                <div class="bg-accent text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${total}</div>
+                    <div class="text-sm">Total</div>
+                </div>
+            `;
+        }
+
+        function renderErrores(filtro = 'todos') {
+            let erroresFiltrados = erroresDetectados;
+
+            if (filtro !== 'todos') {
+                erroresFiltrados = erroresDetectados.filter(e => {
+                    if (filtro === 'criticos') return e.tipo === 'critico';
+                    if (filtro === 'advertencias') return e.tipo === 'advertencia';
+                    if (filtro === 'sugerencias') return e.tipo === 'sugerencia';
+                    return true;
+                });
+            }
+
+            if (erroresFiltrados.length === 0) {
+                ui.listaErrores.innerHTML = '<p class="text-secondary text-center py-8">✅ No hay errores de este tipo</p>';
+                return;
+            }
+
+            let html = '';
+            erroresFiltrados.forEach(error => {
+                const claseError = `error-${error.tipo === 'critico' ? 'critical' : error.tipo === 'advertencia' ? 'warning' : 'info'}`;
+                
+                html += `
+                    <div class="bg-accent p-3 rounded-lg ${claseError}">
+                        <div class="flex items-start gap-2">
+                            <span class="text-xl">${error.icono}</span>
+                            <div class="flex-1">
+                                <div class="font-semibold">${error.titulo}</div>
+                                <div class="text-sm text-secondary">${error.mensaje}</div>
+                                ${error.detalle ? `<div class="text-xs text-secondary mt-1">${error.detalle}</div>` : ''}
+                                ${error.sku ? `<div class="text-xs text-purple-400 mt-1">SKU: ${error.sku}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            ui.listaErrores.innerHTML = html;
+        }
+
+        function renderFamilias() {
+            if (familiasDetectadas.length === 0) {
+                ui.listaFamilias.innerHTML = '<p class="text-secondary text-center py-8">✅ No se detectaron familias (o todos los productos ya están en Git)</p>';
+                return;
+            }
+
+            let html = '';
+            familiasDetectadas.forEach((familia, index) => {
+                const similitudPromedio = Math.round(
+                    familia.productos.reduce((sum, p, i) => {
+                        if (i === 0) return 0;
+                        return sum + calcularSimilitud(p.descripcion, familia.productos[0].descripcion);
+                    }, 0) / (familia.productos.length - 1)
+                );
+
+                html += `
+                    <div class="familia-card p-4 rounded-lg">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <div class="font-semibold text-lg mb-1">
+                                    Familia ${index + 1}: ${familia.palabrasClave.join(' + ')}
+                                </div>
+                                <div class="text-xs text-secondary">
+                                    ${familia.productos.length} productos | Similitud: ${similitudPromedio}%
+                                </div>
+                                <div class="mt-1">
+                                    <div style="width: ${similitudPromedio}%; background-color: var(--accent-green); height: 4px; border-radius: 2px;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="prefix-badge">${familia.prefijoSugerido}</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1 mb-3">
+                            ${familia.productos.map(p => `
+                                <div class="text-sm bg-primary p-2 rounded">
+                                    <span class="text-purple-400 font-semibold">${p.sku}</span> - ${p.descripcion}
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <div class="flex gap-2">
+                            <input type="text" 
+                                   class="input-field flex-1 p-2 rounded text-sm" 
+                                   value="${familia.prefijoSugerido}" 
+                                   id="prefijo-${index}"
+                                   placeholder="Prefijo personalizado">
+                            <button class="btn-aplicar-prefijo bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-semibold"
+                                    data-familia-index="${index}">
+                                ✓ Aplicar
+                            </button>
+                            <button class="btn-ignorar-familia bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm"
+                                    data-familia-index="${index}">
+                                Ignorar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            ui.listaFamilias.innerHTML = html;
+
+            // Event listeners para botones de familias
+            document.querySelectorAll('.btn-aplicar-prefijo').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.familiaIndex);
+                    const prefijo = document.getElementById(`prefijo-${index}`).value.trim();
+                    aplicarPrefijoFamilia(index, prefijo);
+                });
+            });
+
+            document.querySelectorAll('.btn-ignorar-familia').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.familiaIndex);
+                    ignorarFamilia(index);
+                });
+            });
+        }
+
+        function aplicarPrefijoFamilia(index, prefijo) {
+            const familia = familiasDetectadas[index];
+            
+            familia.productos.forEach(producto => {
+                const cambio = cambiosDetectados.find(c => c.sku === producto.sku);
+                if (cambio && !cambio.sku.startsWith(prefijo)) {
+                    prefijosAplicados[cambio.sku] = prefijo + cambio.sku;
+                    log(`✅ Prefijo aplicado: ${cambio.sku} → ${prefijosAplicados[cambio.sku]}`, 'success');
+                }
+            });
+
+            familiasDetectadas.splice(index, 1);
+            renderFamilias();
+            renderCambios(filtroActivo);
+            
+            log(`✅ Familia procesada con prefijo: ${prefijo}`, 'success');
+        }
+
+        function ignorarFamilia(index) {
+            familiasDetectadas.splice(index, 1);
+            renderFamilias();
+            log(`ℹ️ Familia ignorada`, 'info');
+        }
+
+        function renderResumenCambios() {
             const nuevos = cambiosDetectados.filter(c => c.tipo === 'nuevo').length;
             const actualizados = cambiosDetectados.filter(c => c.tipo === 'actualizado').length;
             const advertencias = cambiosDetectados.filter(c => c.preciosPendientes).length;
+            const conPrefijo = Object.keys(prefijosAplicados).length;
 
             ui.resumenCambios.innerHTML = `
                 <div class="badge-nuevo text-white p-4 rounded-lg text-center">
@@ -377,17 +782,17 @@
                     <div class="text-3xl font-bold">${actualizados}</div>
                     <div class="text-sm">Actualizados</div>
                 </div>
-                <div class="badge-advertencia text-white p-4 rounded-lg text-center">
+                <div class="badge-warning text-white p-4 rounded-lg text-center">
                     <div class="text-3xl font-bold">${advertencias}</div>
                     <div class="text-sm">Sin Precios</div>
                 </div>
-                <div class="badge-sin-cambios text-white p-4 rounded-lg text-center">
-                    <div class="text-3xl font-bold">${catalogoGit.length}</div>
-                    <div class="text-sm">Total Git</div>
+                <div class="badge-info text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${conPrefijo}</div>
+                    <div class="text-sm">Con Prefijo</div>
                 </div>
-                <div class="badge-sin-cambios text-white p-4 rounded-lg text-center">
-                    <div class="text-3xl font-bold">${catalogoDrive.length}</div>
-                    <div class="text-sm">Total Drive</div>
+                <div class="bg-accent text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${catalogoGit.length + nuevos}</div>
+                    <div class="text-sm">Total Final</div>
                 </div>
             `;
         }
@@ -395,18 +800,14 @@
         function renderCambios(filtro = 'todos', busqueda = '') {
             let cambiosFiltrados = cambiosDetectados;
 
-            // Filtro por tipo
             if (filtro !== 'todos') {
                 if (filtro === 'nuevos') {
                     cambiosFiltrados = cambiosFiltrados.filter(c => c.tipo === 'nuevo');
                 } else if (filtro === 'actualizados') {
                     cambiosFiltrados = cambiosFiltrados.filter(c => c.tipo === 'actualizado');
-                } else if (filtro === 'advertencias') {
-                    cambiosFiltrados = cambiosFiltrados.filter(c => c.preciosPendientes);
                 }
             }
 
-            // Filtro por búsqueda
             if (busqueda) {
                 const termino = busqueda.toLowerCase();
                 cambiosFiltrados = cambiosFiltrados.filter(c => 
@@ -425,6 +826,8 @@
             cambiosFiltrados.forEach(cambio => {
                 const badgeClass = cambio.tipo === 'nuevo' ? 'badge-nuevo' : 'badge-actualizado';
                 const iconoAdvertencia = cambio.preciosPendientes ? ' ⚠️' : '';
+                const skuFinal = prefijosAplicados[cambio.sku] || cambio.sku;
+                const tienePrefijo = prefijosAplicados[cambio.sku] ? true : false;
 
                 html += `
                     <div class="bg-accent p-4 rounded-lg border-l-4 ${cambio.tipo === 'nuevo' ? 'border-green-500' : 'border-blue-500'}">
@@ -433,7 +836,13 @@
                                 <span class="${badgeClass} text-white text-xs px-2 py-1 rounded font-semibold">
                                     ${cambio.tipo.toUpperCase()}${iconoAdvertencia}
                                 </span>
-                                <span class="ml-2 font-bold text-blue-300">${cambio.sku}</span>
+                                ${tienePrefijo ? `
+                                    <span class="ml-2 text-xs bg-purple-600 text-white px-2 py-1 rounded">
+                                        ${cambio.sku} → ${skuFinal}
+                                    </span>
+                                ` : `
+                                    <span class="ml-2 font-bold text-blue-300">${skuFinal}</span>
+                                `}
                             </div>
                         </div>
                         <p class="text-sm mb-2">${cambio.descripcion}</p>
@@ -467,7 +876,6 @@
         function generarCSVActualizado() {
             log('Generando catálogo actualizado...', 'info');
             
-            // Clonar catálogo Git
             let csvFinal = [...catalogoGit];
             const skusExistentes = new Set(catalogoGit.map(p => p.sku));
 
@@ -484,34 +892,36 @@
                         if (index !== -1) {
                             csvFinal[index].precio_neto = precioDrive.neto;
                             csvFinal[index].precio_bruto = precioDrive.bruto;
-                            log(`Actualizado: ${cambio.sku} - ${precioDrive.tipo}`, 'success');
+                            log(`✓ Actualizado: ${cambio.sku} - ${precioDrive.tipo}`, 'success');
                         }
                     });
                 }
             });
 
-            // Agregar productos nuevos
+            // Agregar productos nuevos (con prefijos aplicados)
             cambiosDetectados.forEach(cambio => {
                 if (cambio.tipo === 'nuevo') {
+                    const skuFinal = prefijosAplicados[cambio.sku] || cambio.sku;
+                    
                     cambio.drive.precios.forEach(precio => {
                         csvFinal.push({
-                            sku: cambio.sku,
+                            sku: skuFinal,
                             descripcion: cambio.descripcion,
                             tipo_precio: precio.tipo,
                             precio_neto: precio.neto,
                             precio_bruto: precio.bruto
                         });
-                        log(`Agregado: ${cambio.sku} - ${precio.tipo}`, 'success');
+                        log(`✓ Agregado: ${skuFinal} - ${precio.tipo}`, 'success');
                     });
                 }
             });
 
-            // Generar CSV con estructura Git
+            // Generar CSV con estructura Git EXACTA
             let csvTexto = 'SKU;DESCRIPCION;TIPO_PRECIO;PRECIO_NETO;PRECIO_BRUTO\n';
             csvFinal.forEach(producto => {
                 const linea = [
                     producto.sku,
-                    `"${producto.descripcion.replace(/"/g, '""')}"`, // Escapar comillas
+                    `"${producto.descripcion.replace(/"/g, '""')}"`,
                     producto.tipo_precio,
                     producto.precio_neto || 0,
                     producto.precio_bruto || 0
@@ -533,7 +943,21 @@
             document.body.removeChild(link);
 
             log(`✅ CSV generado: GIT${fecha}CATALOGO_ACTUALIZADO.csv`, 'success');
-            log(`Total de productos en nuevo catálogo: ${csvFinal.length}`, 'info');
+            log(`📊 Total de productos: ${csvFinal.length}`, 'info');
+            log(`📊 Productos con prefijo: ${Object.keys(prefijosAplicados).length}`, 'info');
+            
+            // Mostrar estadísticas finales
+            ui.estadisticasFinales.innerHTML = `
+                <div class="text-sm font-semibold mb-2">✅ Catálogo Generado Exitosamente</div>
+                <div class="text-xs space-y-1">
+                    <div>📦 Total productos: ${csvFinal.length}</div>
+                    <div>🆕 Nuevos agregados: ${cambiosDetectados.filter(c => c.tipo === 'nuevo').length}</div>
+                    <div>🔄 Precios actualizados: ${cambiosDetectados.filter(c => c.tipo === 'actualizado').length}</div>
+                    <div>🏷️ SKUs con prefijo: ${Object.keys(prefijosAplicados).length}</div>
+                    <div>✓ Formato: Compatible con Corrector de Pedidos</div>
+                    <div>✓ Delimitador: ; (punto y coma)</div>
+                </div>
+            `;
         }
 
         // ========== EVENT LISTENERS ==========
@@ -571,16 +995,52 @@
         }
 
         ui.btnAnalizar.addEventListener('click', () => {
+            // Paso 1: Analizar diferencias
             cambiosDetectados = analizarDiferencias();
-            renderResumen();
+            
+            // Paso 2: Validar
+            erroresDetectados = validarCatalogos();
+            renderResumenValidacion();
+            renderErrores(tabErrorActiva);
+            ui.panelValidacion.classList.remove('hidden');
+            
+            // Paso 3: Detectar familias
+            familiasDetectadas = detectarFamilias();
+            renderFamilias();
+            ui.panelFamilias.classList.remove('hidden');
+            
+            // Paso 4: Mostrar cambios
+            renderResumenCambios();
             renderCambios(filtroActivo);
-            ui.panelAnalisis.classList.remove('hidden');
+            ui.panelCambios.classList.remove('hidden');
+            
+            // Paso 5: Habilitar generación
             ui.panelGenerar.classList.remove('hidden');
+            
+            // Scroll suave al resultado
+            setTimeout(() => {
+                ui.panelValidacion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 200);
         });
 
         ui.btnGenerar.addEventListener('click', generarCSVActualizado);
 
-        // Filtros
+        // Tabs de errores
+        document.querySelectorAll('.tab-error').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab-error').forEach(t => {
+                    t.classList.remove('active');
+                    t.style.backgroundColor = 'rgba(66, 153, 225, 0.2)';
+                });
+                e.target.classList.add('active');
+                e.target.style.backgroundColor = 'var(--accent-blue)';
+                
+                tabErrorActiva = e.target.dataset.tipo;
+                renderErrores(tabErrorActiva);
+            });
+        });
+
+        // Filtros de cambios
         document.querySelectorAll('.filtro-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.filtro-btn').forEach(b => {
@@ -597,9 +1057,22 @@
             renderCambios(filtroActivo, e.target.value);
         });
 
+        // Auto-aplicar familias
+        ui.autoAplicarFamilias.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                log('🤖 Auto-aplicación de prefijos activada', 'info');
+                // Aplicar automáticamente todos los prefijos sugeridos
+                familiasDetectadas.forEach((familia, index) => {
+                    aplicarPrefijoFamilia(index, familia.prefijoSugerido);
+                });
+                familiasDetectadas = [];
+                renderFamilias();
+            }
+        });
+
         // Inicialización
-        log('Sistema de sincronización listo', 'success');
-        log('Carga ambos archivos para comenzar', 'info');
+        log('✅ Sistema de sincronización inteligente listo', 'success');
+        log('📋 Carga ambos archivos para comenzar', 'info');
     </script>
 </body>
 </html>
