@@ -3,65 +3,233 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector de Pedidos Pro v41.0 (Full - Selector Inteligente)</title>
+    <title>Corrector Pro v43.1 (Key Integrada)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #1a1d23; --bg-secondary: #242832; --bg-accent: #2d3748;
-            --text-primary: #e2e8f0; --text-secondary: #a0aec0; --accent-green: #48bb78;
-            --accent-blue: #4299e1; --border-color: #4a5568;
+            --bg-primary: #1a1d23; 
+            --bg-secondary: #242832; 
+            --bg-accent: #2d3748;
+            --text-primary: #e2e8f0; 
+            --text-secondary: #a0aec0; 
+            --accent-green: #48bb78;
+            --accent-blue: #4299e1; 
+            --border-color: #4a5568;
         }
-        body { font-family: 'Courier Prime', monospace; background-color: var(--bg-primary); color: var(--text-primary); }
-        .panel { background-color: var(--bg-secondary); } 
-        .input-area, .internal-box { background-color: var(--bg-accent); } 
-        #debug-section { background-color: var(--bg-accent); border-left: 4px solid var(--accent-green); }
-        #debug-section h3 { color: var(--accent-green); }
-        .input-field { background-color: var(--bg-accent); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.2s ease, box-shadow 0.2s ease; }
-        .input-field::placeholder { color: var(--text-secondary); }
-        .input-field:hover { border-color: var(--accent-blue); }
-        .input-field:focus { border-color: var(--accent-green); box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2); outline: none; }
-        .loader { border-top-color: var(--accent-blue); animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .disabled-section, button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .switch-group input[type="radio"] { display: none; }
-        .switch-group label { cursor: pointer; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.375rem; transition: all 0.2s ease-in-out; }
-        .switch-group input[type="radio"]:checked + label { background-color: var(--accent-blue); border-color: var(--accent-blue); }
-        .highlight-cell { border: 2px solid #f59e0b !important; font-weight: 700; }
-        #price-modal-close:hover, #price-modal-close:focus { color: var(--text-primary); text-decoration: none; }
-        .selector-manual-enabled { border-color: var(--accent-green) !important; background-color: rgba(72, 187, 120, 0.1) !important; }
+        body { 
+            font-family: 'Courier Prime', monospace; 
+            background-color: var(--bg-primary); 
+            color: var(--text-primary); 
+        }
+        .panel { 
+            background-color: var(--bg-secondary); 
+        } 
+        .input-area, .internal-box { 
+            background-color: var(--bg-accent); 
+        } 
+        #debug-section { 
+            background-color: var(--bg-accent); 
+            border-left: 4px solid var(--accent-green); 
+        }
+        #debug-section h3 { 
+            color: var(--accent-green); 
+        }
+        .input-field { 
+            background-color: var(--bg-accent); 
+            border: 1px solid var(--border-color); 
+            color: var(--text-primary); 
+            transition: border-color 0.2s ease, box-shadow 0.2s ease; 
+        }
+        .input-field::placeholder { 
+            color: var(--text-secondary); 
+        }
+        .input-field:hover { 
+            border-color: var(--accent-blue); 
+        }
+        .input-field:focus { 
+            border-color: var(--accent-green); 
+            box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2); 
+            outline: none; 
+        }
+        .loader { 
+            border-top-color: var(--accent-blue); 
+            animation: spin 1s linear infinite; 
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        .disabled-section, button:disabled { 
+            opacity: 0.5; 
+            cursor: not-allowed; 
+        }
+        .switch-group input[type="radio"] { 
+            display: none; 
+        }
+        .switch-group label { 
+            cursor: pointer; 
+            padding: 0.5rem 1rem; 
+            border: 1px solid var(--border-color); 
+            border-radius: 0.375rem; 
+            transition: all 0.2s ease-in-out; 
+        }
+        .switch-group input[type="radio"]:checked + label { 
+            background-color: var(--accent-blue); 
+            border-color: var(--accent-blue); 
+        }
+        .highlight-cell { 
+            border: 2px solid #f59e0b !important; 
+            font-weight: 700; 
+        }
+        #price-modal-close:hover, #price-modal-close:focus { 
+            color: var(--text-primary); 
+            text-decoration: none; 
+        }
+        .selector-manual-enabled { 
+            border-color: var(--accent-green) !important; 
+            background-color: rgba(72, 187, 120, 0.1) !important; 
+        }
         
-        /* 🆕 ESTILOS PARA OCR */
-        .ocr-preview-container { position: relative; max-width: 100%; margin: 1rem auto; }
-        .ocr-preview-img { max-width: 100%; height: auto; border-radius: 8px; }
-        .ocr-guide-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
-        .ocr-guide-frame { border: 3px dashed var(--accent-green); position: absolute; top: 10%; left: 5%; right: 5%; bottom: 30%; background: rgba(72, 187, 120, 0.1); }
-        .ocr-tip { background: rgba(66, 153, 225, 0.9); color: white; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem; margin: 0.25rem; }
-        .ocr-progress { height: 4px; background: var(--accent-green); transition: width 0.3s ease; }
-        .detected-product { background: var(--bg-accent); padding: 0.5rem; margin: 0.25rem 0; border-radius: 4px; border-left: 3px solid var(--accent-green); }
-        .ocr-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
-        .ocr-modal-content { background-color: var(--bg-secondary); margin: 2% auto; padding: 20px; border: 1px solid var(--border-color); width: 95%; max-width: 900px; border-radius: 8px; max-height: 90vh; overflow-y: auto; }
-
-        /* 🆕 ESTILOS PARA BARRA MASIVA (NUEVO) */
-        #bulk-action-bar {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background-color: var(--bg-secondary); border: 1px solid var(--accent-blue);
-            padding: 15px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.7);
-            z-index: 999; display: none; align-items: center; gap: 15px; width: 90%; max-width: 800px;
-            animation: slideUp 0.3s ease-out;
+        /* ESTILOS OCR */
+        .ocr-preview-container { 
+            position: relative; 
+            max-width: 100%; 
+            margin: 1rem auto; 
         }
-        @keyframes slideUp { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
-        .checkbox-custom { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue); }
+        .ocr-preview-img { 
+            max-width: 100%; 
+            height: auto; 
+            border-radius: 8px; 
+        }
+        .ocr-guide-overlay { 
+            position: absolute; 
+            top: 0; left: 0; right: 0; bottom: 0; 
+            pointer-events: none; 
+        }
+        .ocr-guide-frame { 
+            border: 3px dashed var(--accent-green); 
+            position: absolute; 
+            top: 10%; left: 5%; right: 5%; bottom: 30%; 
+            background: rgba(72, 187, 120, 0.1); 
+        }
+        .ocr-tip { 
+            background: rgba(66, 153, 225, 0.9); 
+            color: white; 
+            padding: 0.5rem 1rem; 
+            border-radius: 4px; 
+            font-size: 0.875rem; 
+            margin: 0.25rem; 
+        }
+        .ocr-progress { 
+            height: 4px; 
+            background: var(--accent-green); 
+            transition: width 0.3s ease; 
+        }
+        .detected-product { 
+            background: var(--bg-accent); 
+            padding: 0.5rem; 
+            margin: 0.25rem 0; 
+            border-radius: 4px; 
+            border-left: 3px solid var(--accent-green); 
+        }
+        .ocr-modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; top: 0; 
+            width: 100%; height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.8); 
+        }
+        .ocr-modal-content { 
+            background-color: var(--bg-secondary); 
+            margin: 2% auto; 
+            padding: 20px; 
+            border: 1px solid var(--border-color); 
+            width: 95%; max-width: 900px; 
+            border-radius: 8px; 
+            max-height: 90vh; 
+            overflow-y: auto; 
+        }
+
+        /* ESTILOS BARRA MASIVA */
+        #bulk-action-bar { 
+            position: fixed; 
+            bottom: 20px; left: 50%; 
+            transform: translateX(-50%); 
+            background-color: var(--bg-secondary); 
+            border: 1px solid var(--accent-blue); 
+            padding: 15px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7); 
+            z-index: 999; 
+            display: none; 
+            align-items: center; 
+            gap: 15px; 
+            width: 90%; max-width: 800px; 
+            animation: slideUp 0.3s ease-out; 
+        }
+        @keyframes slideUp { 
+            from { transform: translate(-50%, 100%); opacity: 0; } 
+            to { transform: translate(-50%, 0); opacity: 1; } 
+        }
+        .checkbox-custom { 
+            width: 18px; height: 18px; 
+            cursor: pointer; 
+            accent-color: var(--accent-blue); 
+        }
+
+        /* ESTILOS QR LOCAL */
+        #qr-modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 3000; 
+            left: 0; top: 0; 
+            width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.95); 
+            align-items: center; 
+            justify-content: center; 
+            flex-direction: column; 
+        }
+        #qr-container { 
+            background: white; 
+            padding: 0; 
+            border-radius: 12px; 
+            width: 100%; 
+            max-width: 400px; 
+            position: relative; 
+            overflow: hidden; 
+        }
+        #reader { 
+            width: 100%; 
+        }
+        #qr-close-btn { 
+            position: absolute; 
+            top: 10px; right: 10px; 
+            z-index: 10; 
+            background: rgba(0,0,0,0.5); 
+            color: white; 
+            border-radius: 50%; 
+            width: 30px; height: 30px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            font-weight: bold; 
+        }
     </style>
 </head>
 <body>
     <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1>
-            <p class="text-secondary mt-2">Versión 41.0 - Selector Contextual Full 📸</p>
+            <p class="text-secondary mt-2">Versión 43.1 - Key Integrada ✅</p>
         </header>
 
         <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
@@ -87,10 +255,8 @@
                 <div class="flex space-x-2 switch-group flex-wrap">
                     <input type="radio" id="fuente-cache" name="fuente-catalogo" value="cache" checked>
                     <label for="fuente-cache">💾 Cache</label>
-                    
                     <input type="radio" id="fuente-auto" name="fuente-catalogo" value="auto">
                     <label for="fuente-auto">🔄 Auto</label>
-                    
                     <input type="radio" id="fuente-git" name="fuente-catalogo" value="git">
                     <label for="fuente-git">☁️ Git</label>
                 </div>
@@ -113,12 +279,21 @@
                 <div class="panel p-6 rounded-lg shadow-md">
                     <h2 class="text-xl font-semibold mb-4">1. Pegar Pedido y Opciones</h2>
                     
+                    <div class="mb-4 p-3 rounded-lg border border-gray-600 bg-gray-800" style="opacity: 0.7;">
+                        <label class="block text-xs font-medium mb-1 text-green-400">✅ API Key Integrada (Sistema):</label>
+                        <input type="password" id="groq-api-key" class="input-field w-full p-1 text-sm rounded-md bg-gray-900 text-gray-500" readonly value="INTEGRADA_EN_CODIGO">
+                        <p class="text-[10px] text-gray-500 mt-1">Tu llave está segura en el código. Lista para usar IA.</p>
+                    </div>
+
                     <div class="mb-4 flex gap-2 flex-wrap">
+                        <button id="btn-scan-qr" class="flex-1 bg-teal-600 text-white font-bold py-2 px-4 rounded-md hover:bg-teal-700 flex items-center justify-center gap-2">
+                            📱 QR
+                        </button>
                         <button id="btn-ocr-camera" class="flex-1 bg-purple-600 text-white font-bold py-2 px-4 rounded-md hover:bg-purple-700 flex items-center justify-center gap-2">
-                            📸 Sacar Foto de Nota
+                            📸 Foto Nota
                         </button>
                         <button id="btn-ocr-upload" class="flex-1 bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2">
-                            🖼️ Subir Imagen(es)
+                            🖼️ Subir
                         </button>
                     </div>
                     <input type="file" id="ocr-file-input" accept="image/*" multiple style="display: none;">
@@ -133,7 +308,7 @@
                     <div class="mt-4 p-3 rounded-lg" style="border: 1px solid var(--border-color); background-color: rgba(66, 153, 225, 0.05);">
                         <label class="flex items-center text-sm font-medium mb-2">
                             <input type="checkbox" id="forzar-lista-precio" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-2">🎯 Forzar Lista de Precio Específica (Global)</span>
+                            <span class="ml-2">🎯 Forzar Lista Global (A todo el pedido)</span>
                         </label>
                         <select id="selector-lista-precio" class="input-field w-full p-2 rounded-md mt-2" disabled>
                             <option value="">Seleccionar lista de precio...</option>
@@ -196,23 +371,16 @@
     <div id="ocr-modal" class="ocr-modal">
         <div class="ocr-modal-content">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold">📸 Procesamiento OCR</h2>
+                <h2 class="text-2xl font-bold">📸 Procesamiento de Imagen</h2>
                 <button id="ocr-modal-close" class="text-2xl font-bold hover:text-red-500">&times;</button>
             </div>
             
             <div id="ocr-guide-section" class="mb-4 p-4 rounded-lg" style="background-color: rgba(66, 153, 225, 0.1); border: 1px solid var(--accent-blue);">
-                <h3 class="text-lg font-semibold mb-2">💡 Tips para mejor resultado:</h3>
+                <h3 class="text-lg font-semibold mb-2">💡 Opciones de Lectura:</h3>
                 <ul class="text-sm space-y-1">
-                    <li>✓ <strong>Iluminación uniforme</strong> (evita sombras y reflejos)</li>
-                    <li>✓ <strong>Foto desde arriba</strong> (90°, sin ángulo)</li>
-                    <li>✓ <strong>Solo la tabla de productos</strong> (no incluyas texto de abajo)</li>
-                    <li>✓ <strong>Documento plano</strong> (sin arrugas ni dobleces)</li>
-                    <li>✓ <strong>Enfoque nítido</strong> (espera que la cámara enfoque)</li>
-                    <li>⚠️ <strong>Evita números escritos a mano</strong> (pueden confundir)</li>
+                    <li>🔹 <strong>Normal (Tesseract):</strong> Rápido, local, para fotos claras y rectas.</li>
+                    <li>🔸 <strong>IA (Groq Vision):</strong> Usa tu API Key. Lee tablas difíciles, sombras y manuscritos.</li>
                 </ul>
-                <div class="mt-3 p-2 rounded" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);">
-                    <p class="text-xs font-semibold">🎯 Zona óptima: Solo desde "SKU" hasta la última fila de productos</p>
-                </div>
             </div>
             
             <div id="ocr-preview-section" style="display: none;">
@@ -224,7 +392,7 @@
                 </div>
                 <div class="mt-4">
                     <div class="flex justify-between text-sm mb-1">
-                        <span id="ocr-status-text">Preparando...</span>
+                        <span id="ocr-status-text">Listo para procesar...</span>
                         <span id="ocr-progress-percent">0%</span>
                     </div>
                     <div style="background: var(--bg-accent); height: 4px; border-radius: 2px; overflow: hidden;">
@@ -246,15 +414,32 @@
                 </div>
             </div>
             
-            <div id="ocr-process-section" class="mt-4" style="display: none;">
-                <button id="btn-process-ocr" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-md hover:bg-purple-700">
-                    🚀 Procesar Imagen
+            <div id="ocr-process-section" class="mt-4 flex gap-2" style="display: none;">
+                <button id="btn-process-ocr" class="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700" title="Usa Tesseract (Gratis, Local)">
+                    🚀 Procesar Normal
+                </button>
+                <button id="btn-process-groq" class="flex-1 bg-orange-600 text-white font-bold py-3 px-4 rounded-md hover:bg-orange-700" title="Usa API Key (Internet)">
+                    🧠 Procesar con IA (Groq)
                 </button>
             </div>
         </div>
     </div>
 
+    <div id="qr-modal">
+        <div id="qr-container">
+            <div id="qr-close-btn">&times;</div>
+            <div id="reader"></div>
+            <p class="text-center text-black font-bold mt-2">Apunta al código QR</p>
+        </div>
+    </div>
+
 <script>
+    // ============================================
+    // 🔑 TU API KEY INTEGRADA
+    // ============================================
+    const GROQ_API_KEY_INTEGRATED = "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";
+    // ============================================
+
     const CATALOG_ALTERNATIVES = [
         'https://leonardo7512.github.io/CORRECTORPRECIOS/2708CATALOGO_ACTUALIZADO3.csv',
         './2708CATALOGO_ACTUALIZADO3.csv',
@@ -264,165 +449,53 @@
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
     const CACHE_DURATION = 4 * 60 * 60 * 1000;
     
-    // 🆕 VARIABLES OCR
+    // VARIABLES OCR
     let currentOcrImages = [];
     let ocrWorker = null;
+    let html5QrCode = null;
 
-    // ========== FUNCIONES ORIGINALES (sin cambios) ==========
+    // ========== CARGA DE DATOS ==========
     async function loadCatalogFromGitHub(forzarFuente = null) {
         const statusEl = document.getElementById('loading-status');
         const versionEl = document.getElementById('catalog-version');
         const fuenteSeleccionada = forzarFuente || document.querySelector('input[name="fuente-catalogo"]:checked').value;
         ui.btnRefreshCatalog.disabled = true;
         ui.btnRefreshCatalog.innerHTML = '🔄 Actualizando...';
-        console.log(`🔄 Cargando catálogo - Fuente: ${fuenteSeleccionada}`);
         const cachedData = localStorage.getItem('catalogoCache');
         const cacheTime = localStorage.getItem('catalogoCacheTime');
         const cacheValid = cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION;
         
-        if (fuenteSeleccionada === 'cache') {
-            if (cachedData) {
-                statusEl.textContent = cacheValid ? '✅ Catálogo desde cache local (válido)' : '⚠️ Cache expirado (>4h) pero funcional';
-                statusEl.style.color = cacheValid ? 'var(--accent-green)' : '#f59e0b';
-                Papa.parse(cachedData, {
-                    delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                    complete: (results) => {
-                        const dataRows = results.data.slice(1);
-                        catalogoCompleto = procesarCatalogo(dataRows);
-                        habilitarInterfaz();
-                        const minutos = cacheValid ? Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000) : 'expirado';
-                        versionEl.textContent = `💾 Cache: ${catalogoCompleto.length} productos | Válido: ${minutos !== 'expirado' ? minutos + ' min' : 'expirado'}`;
-                        llenarSelectorListasPrecio();
-                    }
-                });
-                ui.btnRefreshCatalog.disabled = false;
-                ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
-                console.log('✅ Usando solo cache');
-                return;
-            } else {
-                statusEl.textContent = '⚠️ No hay cache, descargando desde Git...';
-                statusEl.style.color = '#f59e0b';
-            }
-        }
-        
-        if (fuenteSeleccionada === 'auto' && cacheValid) {
-            statusEl.textContent = '✅ Cache válido - sin descargas necesarias';
-            statusEl.style.color = 'var(--accent-green)';
-            Papa.parse(cachedData, {
+        const processData = (csvText, sourceName, isCache) => {
+             Papa.parse(csvText, {
                 delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
                 complete: (results) => {
                     const dataRows = results.data.slice(1);
                     catalogoCompleto = procesarCatalogo(dataRows);
                     habilitarInterfaz();
-                    const minutos = Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000);
-                    versionEl.textContent = `🔄 Auto (cache): ${catalogoCompleto.length} productos | ${minutos} min restantes`;
+                    statusEl.textContent = `✅ Catálogo cargado: ${catalogoCompleto.length} productos`;
+                    statusEl.style.color = 'var(--accent-green)';
+                    versionEl.textContent = `${sourceName} | ${catalogoCompleto.length} productos`;
                     llenarSelectorListasPrecio();
+                    ui.btnRefreshCatalog.disabled = false;
+                    ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
                 }
             });
-            ui.btnRefreshCatalog.disabled = false;
-            ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
-            console.log('✅ Modo auto: cache válido');
-            return;
-        }
-        
-        if (fuenteSeleccionada === 'git') {
-            statusEl.textContent = '☁️ Descargando desde Git (puede tardar)...';
-            statusEl.style.color = '#f59e0b';
-        } else {
-            statusEl.textContent = '🔄 Actualizando desde Git...';
-            statusEl.style.color = '#f59e0b';
-        }
-        
-        if (cachedData) {
-            Papa.parse(cachedData, {
-                delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                complete: (results) => {
-                    const dataRows = results.data.slice(1);
-                    catalogoCompleto = procesarCatalogo(dataRows);
-                    habilitarInterfaz();
-                    llenarSelectorListasPrecio();
-                }
-            });
-        }
+        };
+
+        if (fuenteSeleccionada === 'cache' && cachedData) { processData(cachedData, "💾 Cache Local", true); return; }
+        if (fuenteSeleccionada === 'auto' && cacheValid) { processData(cachedData, "🔄 Cache Auto", true); return; }
         
         try {
             let response = null;
-            let successUrl = null;
-            for (let urlIndex = 0; urlIndex < CATALOG_ALTERNATIVES.length; urlIndex++) {
-                const currentUrl = CATALOG_ALTERNATIVES[urlIndex];
-                console.log(`🔄 Intentando fuente ${urlIndex + 1}/${CATALOG_ALTERNATIVES.length}`);
-                try {
-                    response = await fetch(currentUrl);
-                    if (response && response.ok) {
-                        successUrl = currentUrl;
-                        console.log(`✅ Éxito con fuente ${urlIndex + 1}`);
-                        break;
-                    }
-                } catch (error) {
-                    console.log(`❌ Fuente ${urlIndex + 1} falló: ${error.message}`);
-                    if (urlIndex < CATALOG_ALTERNATIVES.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                }
-            }
-            
-            if (!response || !response.ok) {
-                throw new Error('Todas las fuentes temporalmente no disponibles');
-            }
-
+            for (let url of CATALOG_ALTERNATIVES) { try { response = await fetch(url); if (response && response.ok) break; } catch (e) {} }
+            if (!response || !response.ok) throw new Error('Fuentes no disponibles');
             const csvText = await response.text();
-            const isNewVersion = csvText !== cachedData;
             localStorage.setItem('catalogoCache', csvText);
             localStorage.setItem('catalogoCacheTime', Date.now().toString());
-            
-            Papa.parse(csvText, {
-                delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                complete: (results) => {
-                    if (!results.data || results.data.length < 2) {
-                        throw new Error("CSV inválido");
-                    }
-                    const dataRows = results.data.slice(1);
-                    catalogoCompleto = procesarCatalogo(dataRows);
-                    if (catalogoCompleto.length === 0) {
-                        throw new Error("No hay productos válidos");
-                    }
-                    statusEl.textContent = isNewVersion ? `✅ Catálogo actualizado: ${catalogoCompleto.length} productos` : `✅ Verificado: ${catalogoCompleto.length} productos (sin cambios)`;
-                    statusEl.style.color = 'var(--accent-green)';
-                    const sourceName = successUrl.includes('leonardo7512.github.io') ? 'GitHub Pages' : successUrl.startsWith('./') ? 'Local' : successUrl.includes('jsdelivr') ? 'jsDelivr' : successUrl.includes('raw.githubusercontent') ? 'GitHub Raw' : 'Externo';
-                    versionEl.textContent = `☁️ Descargado: ${sourceName} | ${catalogoCompleto.length} productos`;
-                    habilitarInterfaz();
-                    llenarSelectorListasPrecio();
-                    console.log(`✅ Descarga completada desde ${sourceName}`);
-                },
-                error: (err) => { throw new Error(`Error CSV: ${err.message}`); }
-            });
-
+            processData(csvText, "☁️ Descarga Reciente", false);
         } catch (error) {
-            console.error("Error al descargar:", error);
-            if (cachedData) {
-                statusEl.textContent = '⚠️ Error de descarga - usando cache';
-                statusEl.style.color = '#f59e0b';
-                versionEl.textContent = 'Modo fallback: funcionando con cache disponible';
-                if (catalogoCompleto.length === 0) {
-                    Papa.parse(cachedData, {
-                        delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                        complete: (results) => {
-                            const dataRows = results.data.slice(1);
-                            catalogoCompleto = procesarCatalogo(dataRows);
-                            habilitarInterfaz();
-                            llenarSelectorListasPrecio();
-                        }
-                    });
-                }
-            } else {
-                statusEl.textContent = '❌ Error: Sin cache y sin conexión';
-                statusEl.style.color = '#ef4444';
-                versionEl.textContent = 'Reintenta cambiando la fuente o espera unos minutos';
-            }
-        } finally {
-            ui.btnRefreshCatalog.disabled = false;
-            ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
-            console.log('🏁 Carga completada');
+            if (cachedData) processData(cachedData, "⚠️ Fallback a Cache", true);
+            else { statusEl.textContent = '❌ Error Fatal: Sin conexión y sin cache'; ui.btnRefreshCatalog.disabled = false; }
         }
     }
 
@@ -437,20 +510,18 @@
         const selector = document.getElementById('selector-lista-precio');
         const selectorBulk = document.getElementById('bulk-list-selector');
         
-        const optionsHTML = '<option value="">Seleccionar lista de precio...</option>' + 
+        const optionsHtml = '<option value="">Seleccionar lista de precio...</option>' + 
             listasPrecio.filter(l => l && l.trim()).map(l => `<option value="${l}">${l}</option>`).join('');
             
-        selector.innerHTML = optionsHTML;
-        // El bulk se llena dinámicamente, pero inicializamos
+        selector.innerHTML = optionsHtml;
         if(selectorBulk) selectorBulk.innerHTML = '<option value="">-- Seleccione productos primero --</option>';
-        
-        console.log(`✅ Selector llenado: ${listasPrecio.length} listas`);
     }
 
     function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
     function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
     function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
     
+    // PARSERS
     function parsearPedidoTabla(texto) {
         const lineas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         const productos = [];
@@ -466,11 +537,9 @@
             const match = linea.match(/^(\d+)\s+(.+?)\s+(FC[0-9A-Z-]+)\s+(\d+)$/i);
             if (match) {
                 const cantidad = parseInt(match[1], 10);
-                const descripcion = match[2].trim();
-                const sku = normalizarSKU(match[3]);
                 const precio = limpiarValor(match[4]);
-                if (cantidad > 0 && precio !== null && sku) {
-                    productos.push({ sku: sku, item: descripcion, cantidad: cantidad, v_unitario_usuario: precio });
+                if (cantidad > 0 && precio !== null && match[3]) {
+                    productos.push({ sku: normalizarSKU(match[3]), item: match[2].trim(), cantidad: cantidad, v_unitario_usuario: precio });
                 }
             }
         }
@@ -483,12 +552,9 @@
         const regex = /(FC[0-9A-Z-]+)(.*?)\s*(\d+)\s*(\$[\s\d.,]+)/gi; 
         let match; 
         while ((match = regex.exec(textoNormalizado)) !== null) { 
-            let sku = normalizarSKU(match[1]); 
-            let item = match[2].replace(/SKU|ITEM|CANTIDAD|V\. UNITARIO|Descuento|SUBTOTAL/gi, '').trim(); 
-            let cantidad = parseInt(match[3], 10); 
             let precio = limpiarValor(match[4]); 
-            if (item && cantidad > 0 && precio !== null) { 
-                productos.push({ sku: sku, item: item, cantidad: cantidad, v_unitario_usuario: precio }); 
+            if (precio !== null) { 
+                productos.push({ sku: normalizarSKU(match[1]), item: match[2].replace(/SKU|ITEM|CANTIDAD|V\. UNITARIO|Descuento|SUBTOTAL/gi, '').trim(), cantidad: parseInt(match[3], 10), v_unitario_usuario: precio }); 
             } 
         } 
         return productos;
@@ -496,24 +562,17 @@
     
     function parsearPedidoInteligente(texto) {
         const productosTabla = parsearPedidoTabla(texto);
-        if (productosTabla.length > 0) {
-            ui.debugInfo.innerHTML = `<p>✅ Formato tabla: ${productosTabla.length} productos.</p>`;
-            return productosTabla;
-        }
-        const productosOriginal = parsearPedidoUnificado(texto);
-        if (productosOriginal.length > 0) {
-            ui.debugInfo.innerHTML = `<p>✅ Formato original: ${productosOriginal.length} productos.</p>`;
-            return productosOriginal;
-        }
-        ui.debugInfo.innerHTML = `<p class="text-red-500">❌ Formato no válido.</p>`;
-        return [];
+        if (productosTabla.length > 0) return productosTabla;
+        return parsearPedidoUnificado(texto);
     }
     
     function getCategoriaPrecios(d) { const match = String(d).trim().match(/(.*?)\s*-\s*/); return (match && match[1]) ? match[1].trim() : "General"; }
     function calcularCantidadesPorCategoria(p){ const c={}; p.forEach(i=>{ const pr=catalogoCompleto.find(p=>p.sku===i.sku); const d=pr?pr.descripcion:i.item||""; c[getCategoriaPrecios(d)]=(c[getCategoriaPrecios(d)]||0)+i.cantidad }); return c }
     
+    // ========== LOGICA PRECIOS ==========
     function obtenerMejorPrecio(sku, tipoCliente, _, cantidadTotalCategoria, listaForzada = null) { 
         const preciosProducto = catalogoCompleto.filter(p => p.sku === sku); 
+        
         if (preciosProducto.length === 0) return { p: null, t: "SKU NO ENCONTRADO" }; 
         
         if (listaForzada) {
@@ -535,13 +594,10 @@
         } 
         const tramosConMinimo = preciosProducto.map(p => { 
             const tipo = (p.tipo_precio || '').toUpperCase(); 
-            const precio = p.precio_neto || 0; 
-            let minCantidad = 0; 
+            let minCantidad = 1; 
             const matchNumero = tipo.match(/(\d+)/); 
             if (matchNumero) { minCantidad = parseInt(matchNumero[1], 10); } 
-            else if (tipo.includes('DETALLE')) { minCantidad = 1; } 
             else if (tipo.includes('MAYOR')) { minCantidad = 2; } 
-            if (!precio || precio === 0) { minCantidad = Infinity; } 
             return { ...p, minCantidad: minCantidad }; 
         }); 
         const tramosAplicables = tramosConMinimo.filter(p => cantidadTotalCategoria >= p.minCantidad); 
@@ -566,446 +622,401 @@
         const colorClasses={ok:'bg-green-800 bg-opacity-20',aviso:'bg-orange-800 bg-opacity-20',error:'bg-red-800 bg-opacity-20',no_encontrado:'bg-yellow-800 bg-opacity-20 border-l-4 border-yellow-500'}; 
         
         if(!rp.p){
-            e=rp.t;
-            cl=colorClasses.no_encontrado;
-            h=true;
-        }else{
+            e=rp.t; cl=colorClasses.no_encontrado; h=true;
+        } else {
             pc=n?rp.p.n:rp.p.b;
             if(!pc||pc<=0){
-                e="PRECIO NO DISPONIBLE";cl=colorClasses.no_encontrado
-            }else{
-                d=r.v_unitario_usuario-pc;dt=d*r.cantidad;
+                e="PRECIO NO DISPONIBLE"; cl=colorClasses.no_encontrado;
+            } else {
+                d=r.v_unitario_usuario-pc; dt=d*r.cantidad;
                 if(Math.abs(d)<1.5){
-                    e=`✅ OK`;cl=colorClasses.ok
-                }else{
-                    h=true;e=d>0?`⚠️ AVISO`:`❌ ERROR`;cl=d>0?colorClasses.aviso:colorClasses.error
+                    e=`✅ OK`; cl=colorClasses.ok;
+                } else {
+                    h=true; e=d>0?`⚠️ AVISO`:`❌ ERROR`; cl=d>0?colorClasses.aviso:colorClasses.error;
                 }
             }
         }
-        
         return{...r,estado:e,colorClass:cl,precioCorrecto:pc,diferencia:d,diferencia_total_linea:dt,highlight:h,categoria:ca,cantidadCategoria:ct,tipoAplicado:rp.t, isManual: !!i.listaManual}
     }
     
+    // ========== RENDERIZADO ==========
+    const renderResultados = (resultados) => {
+        const formatter = new Intl.NumberFormat('es-CL', {style: 'currency', currency: 'CLP'});
+        let html = `<table class="min-w-full"><thead style="background-color:rgba(45,55,72,0.5);"><tr>`;
+        html += `<th class="px-2 py-3 w-10 text-center"><input type="checkbox" id="select-all-rows" class="checkbox-custom"></th>`;
+        ["SKU", "Item", "Cant.", "Categoría", "Tu Precio", "Estado", "Precio Correcto", "Tipo Aplicado", "Dif. Unitaria"].forEach(col => {
+            html += `<th class="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">${col}</th>`; 
+        });
+        html += `</tr></thead><tbody style="border-top:1px solid var(--border-color);">`;
+        
+        resultados.forEach((producto, idx) => {
+            const diferencia = producto.diferencia !== null ? (producto.diferencia > 0 ? '+' : '') + formatter.format(producto.diferencia) : 'N/A';
+            const categoria = producto.categoria ? `${producto.categoria} (${producto.cantidadCategoria}u)` : 'N/A';
+            const manualBadge = producto.isManual ? `<span class="inline-block bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded ml-1 tracking-wider font-bold">MANUAL</span>` : '';
+            html += `<tr class="${producto.colorClass} hover:bg-white hover:bg-opacity-5 transition-colors" style="border-bottom:1px solid var(--border-color);">
+                <td class="px-2 py-4 text-center"><input type="checkbox" class="row-checkbox checkbox-custom" data-index="${idx}"></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium sku-clickable" style="cursor: pointer; text-decoration: underline; color: var(--accent-blue);" data-sku="${producto.sku}">${producto.sku}</td>
+                <td class="px-6 py-4">${producto.descripcion}</td>
+                <td class="px-6 py-4">${producto.cantidad}</td>
+                <td class="px-6 py-4 font-semibold" style="color:var(--accent-blue);">${categoria}</td>
+                <td class="px-6 py-4">${formatter.format(producto.v_unitario_usuario)}</td>
+                <td class="px-6 py-4 font-semibold">${producto.estado}</td>
+                <td class="px-6 py-4 ${producto.highlight ? 'highlight-cell' : ''}">${producto.precioCorrecto ? formatter.format(producto.precioCorrecto) : 'N/A'}</td>
+                <td class="px-6 py-4 text-xs text-purple-400 font-medium"><div class="flex flex-col items-start"><span>${producto.tipoAplicado || 'N/A'}</span>${manualBadge}</div></td>
+                <td class="px-6 py-4 font-bold ${producto.diferencia < 0 ? 'text-red-400' : 'text-green-400'}">${diferencia}</td>
+            </tr>`;
+        });
+        ui.resultadosCorreccion.innerHTML = html + '</tbody></table>';
+        document.getElementById('select-all-rows').addEventListener('change', toggleAllRows);
+        document.querySelectorAll('.row-checkbox').forEach(cb => cb.addEventListener('change', updateBulkActionBar));
+    };
+
+    const renderResumen = (totalProductos, categorias, diferenciaTotalGeneral, tipoPrecios) => {
+        const formatter = new Intl.NumberFormat('es-CL', {style: 'currency', currency: 'CLP'});
+        let html = `<h3 class="text-lg font-semibold mb-2">Resumen</h3><ul class="list-disc list-inside space-y-1"><li><strong>Productos:</strong> ${totalProductos}</li><li><strong>Precios Verificados:</strong> ${tipoPrecios}</li><li><strong>Categorías:</strong></li>`;
+        for (const categoria in categorias) { html += `<li class="ml-4"><strong>${categoria}:</strong> ${categorias[categoria]} u.</li>`; }
+        html += `</ul>`;
+        if (Math.abs(diferenciaTotalGeneral) > 0) { const colorClass = diferenciaTotalGeneral > 0 ? 'text-orange-400' : 'text-red-400'; html += `<div class="mt-4 font-semibold text-lg ${colorClass}">Diferencia Total: ${(diferenciaTotalGeneral > 0 ? '+' : '') + formatter.format(diferenciaTotalGeneral)}</div>`; } 
+        else { html += `<div class="mt-4 font-semibold text-lg" style="color:var(--accent-green);">Diferencia Total: ${formatter.format(0)}</div>`; }
+        ui.resumenPedido.innerHTML = html;
+    };
+    
+    // LOGICA SELECCIÓN MASIVA
+    function toggleAllRows(e) {
+        const checked = e.target.checked;
+        document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = checked);
+        updateBulkActionBar();
+    }
+
+    function updateBulkActionBar() {
+        const selected = document.querySelectorAll('.row-checkbox:checked');
+        const bar = document.getElementById('bulk-action-bar');
+        const countSpan = document.getElementById('selected-count');
+        const selector = document.getElementById('bulk-list-selector');
+        
+        if (selected.length > 0) {
+            bar.style.display = 'flex';
+            countSpan.textContent = selected.length;
+            const indices = Array.from(selected).map(cb => parseInt(cb.dataset.index));
+            const skusSeleccionados = indices.map(idx => pedidoNormalizado[idx].sku);
+            const listasDisponibles = new Set();
+            skusSeleccionados.forEach(sku => {
+                const precios = catalogoCompleto.filter(p => p.sku === sku);
+                precios.forEach(p => { if(p.tipo_precio) listasDisponibles.add(p.tipo_precio); });
+            });
+            if (listasDisponibles.size > 0) {
+                selector.innerHTML = '<option value="">-- Seleccionar Lista a Forzar --</option>';
+                Array.from(listasDisponibles).sort().forEach(lista => { selector.innerHTML += `<option value="${lista}">${lista}</option>`; });
+            } else {
+                selector.innerHTML = '<option value="">-- Sin listas alternativas --</option>';
+            }
+        } else {
+            bar.style.display = 'none';
+        }
+    }
+
+    function aplicarListaMasiva() {
+        const lista = document.getElementById('bulk-list-selector').value;
+        const selectedIndices = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => parseInt(cb.dataset.index));
+        if (!lista) { alert("Por favor selecciona una lista válida."); return; }
+        selectedIndices.forEach(idx => { if (pedidoNormalizado[idx]) pedidoNormalizado[idx].listaManual = lista; });
+        ui.btnCorregir.click();
+    }
+
+    function limpiarListaMasiva() {
+        const selectedIndices = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => parseInt(cb.dataset.index));
+        selectedIndices.forEach(idx => { if (pedidoNormalizado[idx]) delete pedidoNormalizado[idx].listaManual; });
+        ui.btnCorregir.click();
+        document.getElementById('bulk-action-bar').style.display = 'none';
+    }
+
     function renderIntelligentResults(results) { const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }); let html = ''; if (Object.keys(results).length > 1) { html += `<button id="btn-copiar-todo-catalogo" class="w-full text-sm py-2 px-3 rounded mb-4" style="background-color: var(--accent-green);">Copiar Todos los Resultados</button>`; } html += '<div class="space-y-4">'; for (const sku in results) { const product = results[sku]; html += `<div class="internal-box p-3 rounded-lg"><p class="font-bold text-lg">${product.sku}</p><p class="text-base mb-2">${product.descripcion}</p><table class="w-full text-sm text-left"><thead><tr style="border-bottom: 1px solid var(--border-color);"><th class="py-1">Tipo</th><th class="py-1">Neto</th><th class="py-1">Bruto</th></tr></thead><tbody>`; product.prices.forEach(price => { html += `<tr style="border-bottom: 1px solid var(--border-color);" class="last:border-b-0"><td class="py-1 text-purple-400 font-medium">${price.tipo || 'N/A'}</td><td>${price.neto ? f.format(price.neto) : '---'}</td><td>${price.bruto ? f.format(price.bruto) : '---'}</td></tr>`; }); html += `</tbody></table><button data-sku-copia="${product.sku}" class="btn-copiar-catalogo mt-3 w-full text-sm py-1 px-3 rounded" style="background-color: var(--accent-blue);">Copiar Info de este Producto</button></div>`; } html += '</div>'; ui.intelligentSearchResults.innerHTML = html; }
     function handleIntelligentSearch() { const term = ui.intelligentSearchInput.value.toLowerCase().trim(); if (term.length < 3) { lastSearchResults={}; ui.intelligentSearchResults.innerHTML = '<p class="text-base text-secondary">Escribe al menos 3 caracteres...</p>'; return; } lastSearchResults = catalogoCompleto.reduce((acc, p) => { if (p.sku.toLowerCase().includes(term) || p.descripcion.toLowerCase().includes(term)) { if (!acc[p.sku]) { acc[p.sku] = { sku: p.sku, descripcion: p.descripcion, prices: [] }; } acc[p.sku].prices.push({ tipo: p.tipo_precio, neto: p.precio_neto, bruto: p.precio_bruto }); } return acc; }, {}); renderIntelligentResults(lastSearchResults); }
     const copiarDiferencias = () => { const diferencias = resultadosParaDescarga.filter(r => r.highlight === true); if (diferencias.length === 0) { alert("No hay diferencias para copiar."); return; } const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); const nv = ui.nvInput.value.trim() || 'Sin NV'; const totalDiferencia = diferencias.reduce((sum, item) => sum + (item.diferencia_total_linea || 0), 0); let texto = `*Resumen de Diferencias (NV: ${nv})*\n\n`; texto += diferencias.map(r => `SKU: ${r.sku} | Tu Precio: ${f.format(r.v_unitario_usuario)} | Correcto: ${f.format(r.precioCorrecto)} | Dif. Unitaria: ${f.format(r.diferencia)}`).join('\n'); texto += `\n\n*Diferencia Total General: ${f.format(totalDiferencia)}*`; navigator.clipboard.writeText(texto).then(() => { const btn = ui.btnCopiarDiferencias; const o = btn.textContent; btn.textContent = '¡Copiado!'; setTimeout(() => { btn.textContent = o; }, 2000); }, () => alert("Error al copiar.")); };
     
-    // FUNCION DE CAPTURA ACTUALIZADA
     const capturarTabla = async () => { 
-        const panel = ui.resultadosContainer; 
-        if (!panel) return; 
-        const btnContainer = panel.querySelector('.flex.gap-2.flex-wrap'); 
-        const bulkBar = document.getElementById('bulk-action-bar');
-        
-        btnContainer.style.display = 'none'; 
-        if(bulkBar) bulkBar.style.display = 'none'; // Ocultar para foto
-
+        const panel = ui.resultadosContainer; if (!panel) return; 
+        const btnContainer = panel.querySelector('.flex.gap-2.flex-wrap'); const bulkBar = document.getElementById('bulk-action-bar');
+        btnContainer.style.display = 'none'; if(bulkBar) bulkBar.style.display = 'none';
         try { 
-            const panelStyle = window.getComputedStyle(panel); 
-            const panelBgColor = panelStyle.backgroundColor; 
+            const panelStyle = window.getComputedStyle(panel); const panelBgColor = panelStyle.backgroundColor; 
             const canvas = await html2canvas(panel, { scale: 2, backgroundColor: panelBgColor }); 
             canvas.toBlob(async (blob) => { if (!blob) { alert('No se pudo generar la imagen para copiar.'); return; } try { if (!navigator.clipboard || !navigator.clipboard.write) { throw new Error('La API de portapapeles no es compatible o no tiene permisos en este navegador.'); } const clipboardItem = new ClipboardItem({ 'image/png': blob }); await navigator.clipboard.write([clipboardItem]); const btn = ui.btnCapturarTabla; const originalText = btn.textContent; btn.textContent = '✅ ¡Imagen Copiada!'; setTimeout(() => { btn.textContent = originalText; }, 2500); } catch (err) { alert(`No se pudo copiar la imagen al portapapeles. Causa: ${err.message}`); } }, 'image/png'); 
-        } catch (error) { alert('Hubo un problema al generar la captura de la tabla.'); } 
+        } catch (error) { alert('Hubo un problema al generar la captura.'); } 
         finally { btnContainer.style.display = 'flex'; } 
     };
 
     const showPriceModal = (sku) => { const allPricesForSku = catalogoCompleto.filter(p => p.sku === sku); const correctedItem = resultadosParaDescarga.find(r => r.sku === sku); if (allPricesForSku.length === 0) return; ui.priceModalTitle.textContent = `Precios para ${sku}`; const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); let contentHtml = '<ul class="list-none p-0 m-0 space-y-2">'; allPricesForSku.forEach(priceInfo => { const isApplied = correctedItem && correctedItem.tipoAplicado === priceInfo.tipo_precio; contentHtml += `<li style="padding: 8px; ${isApplied ? 'background-color: var(--accent-green); color: var(--bg-primary); border-radius: 4px;' : 'background-color: var(--bg-accent); border-radius: 4px;'}"><strong>${priceInfo.tipo_precio}</strong>: Neto ${f.format(priceInfo.precio_neto || 0)} / Bruto ${f.format(priceInfo.precio_bruto || 0)}${isApplied ? '<strong> (Aplicado)</strong>' : ''}</li>`; }); contentHtml += '</ul>'; ui.priceModalBody.innerHTML = contentHtml; ui.priceModal.style.display = 'flex'; };
     const hidePriceModal = () => { ui.priceModal.style.display = 'none'; };
 
-    // ========== 🆕 FUNCIONES OCR (Completas y Restauradas) ==========
-    
+    // ========== FUNCIONES OCR ORIGINALES (Tesseract) ==========
     async function initOcrWorker() {
         if (ocrWorker) return ocrWorker;
-        
-        ui.ocrStatusText.textContent = 'Inicializando motor OCR...';
+        ui.ocrStatusText.textContent = 'Inicializando Tesseract (Local)...';
         ui.ocrProgressBar.style.width = '10%';
-        
         ocrWorker = await Tesseract.createWorker('spa', 1, {
             logger: (m) => {
                 if (m.status === 'recognizing text') {
                     const progress = Math.round(m.progress * 100);
                     ui.ocrProgressBar.style.width = `${10 + (progress * 0.8)}%`;
                     ui.ocrProgressPercent.textContent = `${progress}%`;
-                    ui.ocrStatusText.textContent = `Reconociendo texto... ${progress}%`;
+                    ui.ocrStatusText.textContent = `Tesseract procesando... ${progress}%`;
                 }
             }
         });
-        
         await ocrWorker.setParameters({
             tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$.,- áéíóúñÁÉÍÓÚÑ',
         });
-        
         return ocrWorker;
     }
 
     function preprocessImage(imageElement) {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        
         canvas.width = imageElement.naturalWidth;
         canvas.height = imageElement.naturalHeight;
-        
         ctx.drawImage(imageElement, 0, 0);
         
-        // 🆕 RECORTE INTELIGENTE: Intentar detectar zona de tabla (1/3 superior de la imagen)
-        const tableHeight = Math.floor(canvas.height * 0.6); // 60% superior
-        const tableStartY = Math.floor(canvas.height * 0.15); // Comenzar desde 15% para evitar header
-        
+        // Recorte
+        const tableHeight = Math.floor(canvas.height * 0.6);
+        const tableStartY = Math.floor(canvas.height * 0.15);
         const croppedCanvas = document.createElement('canvas');
         const croppedCtx = croppedCanvas.getContext('2d');
         croppedCanvas.width = canvas.width;
         croppedCanvas.height = tableHeight;
+        croppedCtx.drawImage(canvas, 0, tableStartY, canvas.width, tableHeight, 0, 0, canvas.width, tableHeight);
         
-        croppedCtx.drawImage(
-            canvas, 
-            0, tableStartY,           // source x, y
-            canvas.width, tableHeight, // source width, height
-            0, 0,                      // dest x, y
-            canvas.width, tableHeight  // dest width, height
-        );
-        
-        // 🆕 MEJORA DE CONTRASTE MÁS AGRESIVA
+        // Filtros
         const imageData = croppedCtx.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
         const data = imageData.data;
-        
-        // Paso 1: Aumentar contraste general
         const contrastFactor = 1.5;
         for (let i = 0; i < data.length; i += 4) {
             data[i] = Math.min(255, Math.max(0, ((data[i] - 128) * contrastFactor) + 128));
             data[i + 1] = Math.min(255, Math.max(0, ((data[i + 1] - 128) * contrastFactor) + 128));
             data[i + 2] = Math.min(255, Math.max(0, ((data[i + 2] - 128) * contrastFactor) + 128));
         }
-        
-        // Paso 2: Binarización con umbral adaptativo
         for (let i = 0; i < data.length; i += 4) {
             const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-            const threshold = avg > 140 ? 255 : 0; // Umbral más alto para texto más limpio
+            const threshold = avg > 140 ? 255 : 0; 
             data[i] = data[i + 1] = data[i + 2] = threshold;
         }
-        
         croppedCtx.putImageData(imageData, 0, 0);
-        
-        console.log(`✂️ Imagen recortada: ${canvas.width}x${canvas.height} -> ${croppedCanvas.width}x${croppedCanvas.height}`);
-        
         return croppedCanvas;
+    }
+
+    // ========== 🆕 NUEVA FUNCIÓN: PROCESAMIENTO CON GROQ AI ==========
+    async function processWithGroq(images) {
+        // Usa la constante definida arriba
+        const apiKey = GROQ_API_KEY_INTEGRATED;
+        
+        ui.ocrPreviewSection.style.display = 'block';
+        ui.ocrProcessSection.style.display = 'none';
+        ui.ocrResultsSection.style.display = 'none';
+        ui.ocrProgressBar.style.width = '20%';
+        ui.ocrStatusText.textContent = "🧠 Conectando con Inteligencia Artificial (Groq)...";
+
+        const allProducts = [];
+
+        try {
+            for (let i = 0; i < images.length; i++) {
+                const img = images[i];
+                ui.ocrPreviewImg.src = img.dataUrl;
+                
+                const base64Content = img.dataUrl.split(',')[1];
+
+                const payload = {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                { "type": "text", "text": "Analiza esta imagen de un pedido. Extrae los productos en una tabla con formato CSV (sin encabezados). Columnas: SKU, DESCRIPCION, CANTIDAD, PRECIO_UNITARIO. Si el SKU no es visible, intenta deducirlo o déjalo vacío. Solo devuelve el texto CSV, nada más." },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": `data:image/jpeg;base64,${base64Content}`
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "model": "llama-3.2-11b-vision-preview",
+                    "temperature": 0.1,
+                    "max_completion_tokens": 1024,
+                    "top_p": 1,
+                    "stream": false,
+                    "stop": null
+                };
+
+                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("Error en API Groq: " + response.statusText);
+
+                const json = await response.json();
+                const content = json.choices[0].message.content;
+                
+                console.log("🤖 Respuesta Groq:", content);
+                
+                const products = extractProductsFromGroqText(content);
+                allProducts.push(...products);
+                
+                ui.ocrProgressBar.style.width = `${((i+1)/images.length)*100}%`;
+            }
+            
+            ui.ocrStatusText.textContent = "✅ IA Finalizó el análisis.";
+            displayDetectedProducts(allProducts);
+
+        } catch (e) {
+            console.error(e);
+            alert("Error con la IA: " + e.message + "\n\nSe usará el método normal.");
+            ui.ocrProcessSection.style.display = 'flex';
+        }
+    }
+
+    function extractProductsFromGroqText(text) {
+        const lines = text.split('\n');
+        const products = [];
+        
+        lines.forEach(line => {
+            const cleanLine = line.replace(/[^\w\s,.;$áéíóúñÁÉÍÓÚÑ-]/g, '').trim();
+            if (cleanLine.length < 5) return;
+
+            const parts = cleanLine.split(/,|;/);
+            
+            if (parts.length >= 3) {
+                let sku = parts.find(p => p.toUpperCase().includes('FC')) || '';
+                let precio = parts.find(p => p.includes('$') || (parseInt(p) > 1000));
+                let cantidad = parts.find(p => parseInt(p) > 0 && parseInt(p) < 1000 && !p.includes('$'));
+                let desc = parts.find(p => p.length > 5 && p !== sku && p !== precio);
+
+                if (sku) sku = normalizarSKU(sku);
+                if (precio) precio = limpiarValor(precio);
+                if (cantidad) cantidad = parseInt(cantidad.replace(/\D/g,''));
+                
+                if (precio && cantidad) {
+                    products.push({ sku: sku || '??', item: desc || 'Item detectado por IA', cantidad: cantidad, v_unitario_usuario: precio });
+                }
+            } else {
+                const match = cleanLine.match(/(FC\d+)?\s*(.*?)\s+(\d+)\s+(\$?\d+)/i);
+                if (match) {
+                    products.push({
+                        sku: match[1] ? normalizarSKU(match[1]) : '',
+                        item: match[2].trim(),
+                        cantidad: parseInt(match[3]),
+                        v_unitario_usuario: limpiarValor(match[4])
+                    });
+                }
+            }
+        });
+        return products;
     }
 
     function extractProductsFromOcrText(text) {
         const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         const products = [];
-        
-        console.log('📝 Texto OCR completo:', text);
-        
-        // 🆕 Detectar inicio y fin de la tabla
-        let tableStartIndex = 0;
-        let tableEndIndex = lines.length;
-        
+        let tableStartIndex = 0; let tableEndIndex = lines.length;
         for (let i = 0; i < lines.length; i++) {
             const lineLower = lines[i].toLowerCase();
-            // Buscar header de tabla
-            if (lineLower.includes('sku') && lineLower.includes('item') && lineLower.includes('cantidad')) {
-                tableStartIndex = i + 1;
-                console.log(`📋 Inicio de tabla en línea ${i}`);
-            }
-            // Buscar fin de tabla
-            if (lineLower.includes('nota:') || lineLower.includes('neto') || lineLower.includes('forma de pago') || lineLower.includes('tesoreria')) {
-                tableEndIndex = i;
-                console.log(`📋 Fin de tabla en línea ${i}`);
-                break;
-            }
+            if (lineLower.includes('sku') && lineLower.includes('item') && lineLower.includes('cantidad')) tableStartIndex = i + 1;
+            if (lineLower.includes('nota:') || lineLower.includes('neto')) { tableEndIndex = i; break; }
         }
-        
-        // Procesar solo las líneas de la tabla
         for (let i = tableStartIndex; i < tableEndIndex; i++) {
-            const line = lines[i];
-            
-            // Buscar SKU
-            const skuMatch = line.match(/FC[\s-]?(\d{5})/i);
-            if (!skuMatch) continue;
-            
-            const sku = 'FC' + skuMatch[1];
-            
-            // Construir línea completa (puede estar en múltiples líneas)
-            let fullLine = line;
-            let nextLineIndex = i + 1;
-            while (nextLineIndex < tableEndIndex && !lines[nextLineIndex].match(/FC[\s-]?\d{5}/i)) {
-                fullLine += ' ' + lines[nextLineIndex];
-                nextLineIndex++;
-            }
-            
-            console.log(`🔍 Procesando línea completa: ${fullLine}`);
-            
-            // 🆕 MEJORAR DETECCIÓN DE PRECIO
-            // Buscar patrones de precio chileno: $X.XXX,XX o $X.XXX o $XXXXX
-            const pricePatterns = [
-                /\$\s?([\d]{1,3}\.[\d]{3},[\d]{1,2})/,  // $25.202,50
-                /\$\s?([\d]{1,3}\.[\d]{3})/,            // $25.202
-                /\$\s?([\d]{4,6})/                       // $25202
-            ];
-            
-            let precio = null;
-            let precioStr = null;
-            
-            for (const pattern of pricePatterns) {
-                const match = fullLine.match(pattern);
-                if (match) {
-                    precioStr = match[1];
-                    // Normalizar: si no tiene puntos, agregarlos
-                    if (!precioStr.includes('.') && precioStr.length >= 4) {
-                        // 25202 -> 25.202
-                        const len = precioStr.length;
-                        const miles = precioStr.slice(0, -3);
-                        const cientos = precioStr.slice(-3);
-                        precioStr = miles + '.' + cientos;
-                    }
-                    precio = limpiarValor(precioStr);
-                    if (precio && precio > 10) { // Precio mínimo razonable
-                        console.log(`💰 Precio detectado: ${precioStr} -> ${precio}`);
-                        break;
-                    }
-                }
-            }
-            
-            // 🆕 MEJORAR DETECCIÓN DE CANTIDAD
-            // Buscar números pequeños (1-999) que estén ANTES del precio
-            const priceIndex = fullLine.indexOf('$');
-            const textBeforePrice = priceIndex > 0 ? fullLine.substring(0, priceIndex) : fullLine;
-            
-            // Buscar todos los números en el texto antes del precio
-            const numberMatches = textBeforePrice.match(/\b(\d{1,3})\b/g);
-            
-            let cantidad = null;
-            if (numberMatches && numberMatches.length > 0) {
-                // Tomar el último número antes del precio (generalmente es la cantidad)
-                const lastNumber = parseInt(numberMatches[numberMatches.length - 1]);
-                if (lastNumber > 0 && lastNumber <= 999) {
-                    cantidad = lastNumber;
-                    console.log(`📦 Cantidad detectada: ${cantidad}`);
-                }
-            }
-            
-            // Si no hay cantidad, asumir 1
-            if (!cantidad) {
-                cantidad = 1;
-                console.log(`📦 Cantidad no detectada, asumiendo: 1`);
-            }
-            
-            // 🆕 MEJORAR EXTRACCIÓN DE DESCRIPCIÓN
-            let description = fullLine
-                .replace(/FC[\s-]?\d{5}/gi, '') // Quitar SKU
-                .replace(/\$[\s]?[\d.,]+/g, '') // Quitar precio
-                .replace(/\bCANTIDAD\b/gi, '')  // Quitar palabra "CANTIDAD"
-                .replace(/\bV\.?\s?UNITARIO\b/gi, '') // Quitar "V. UNITARIO"
-                .replace(/\bDescuento\b/gi, '') // Quitar "Descuento"
-                .replace(/\bSUBTOTAL\b/gi, '')  // Quitar "SUBTOTAL"
-                .replace(/\s{2,}/g, ' ')        // Normalizar espacios
-                .trim();
-            
-            // Quitar el número de cantidad de la descripción
-            if (cantidad) {
-                description = description.replace(new RegExp(`\\b${cantidad}\\b`, 'g'), '').trim();
-            }
-            
-            // 🆕 VALIDACIÓN FINAL
-            const isValid = 
-                sku && 
-                cantidad && cantidad > 0 && cantidad <= 999 &&
-                precio && precio > 10 && precio < 1000000 &&
-                description && description.length > 3;
-            
-            if (isValid) {
-                products.push({
-                    sku: normalizarSKU(sku),
-                    item: description,
-                    cantidad: cantidad,
-                    v_unitario_usuario: precio
-                });
-                
-                console.log(`✅ Producto válido: ${sku} | ${description} | Cant: ${cantidad} | Precio: ${precio}`);
-            } else {
-                console.log(`❌ Producto rechazado: SKU=${sku}, Cant=${cantidad}, Precio=${precio}, Desc="${description}"`);
-            }
+            const line = lines[i]; const skuMatch = line.match(/FC[\s-]?(\d{5})/i); if (!skuMatch) continue; const sku = 'FC' + skuMatch[1];
+            let fullLine = line; let nextLineIndex = i + 1;
+            while (nextLineIndex < tableEndIndex && !lines[nextLineIndex].match(/FC[\s-]?\d{5}/i)) { fullLine += ' ' + lines[nextLineIndex]; nextLineIndex++; }
+            const pricePatterns = [/\$\s?([\d]{1,3}\.[\d]{3},[\d]{1,2})/, /\$\s?([\d]{1,3}\.[\d]{3})/, /\$\s?([\d]{4,6})/];
+            let precio = null, precioStr = null;
+            for (const pattern of pricePatterns) { const match = fullLine.match(pattern); if (match) { precioStr = match[1]; if (!precioStr.includes('.') && precioStr.length >= 4) { const miles = precioStr.slice(0, -3); const cientos = precioStr.slice(-3); precioStr = miles + '.' + cientos; } precio = limpiarValor(precioStr); if (precio && precio > 10) break; } }
+            const priceIndex = fullLine.indexOf('$'); const textBeforePrice = priceIndex > 0 ? fullLine.substring(0, priceIndex) : fullLine; const numberMatches = textBeforePrice.match(/\b(\d{1,3})\b/g);
+            let cantidad = 1; if (numberMatches && numberMatches.length > 0) { const lastNumber = parseInt(numberMatches[numberMatches.length - 1]); if (lastNumber > 0 && lastNumber <= 999) cantidad = lastNumber; }
+            let description = fullLine.replace(/FC[\s-]?\d{5}/gi, '').replace(/\$[\s]?[\d.,]+/g, '').replace(/\bCANTIDAD\b/gi, '').replace(/\bV\.?\s?UNITARIO\b/gi, '').replace(/\bDescuento\b/gi, '').replace(/\bSUBTOTAL\b/gi, '').replace(/\s{2,}/g, ' ').trim();
+            if (cantidad) description = description.replace(new RegExp(`\\b${cantidad}\\b`, 'g'), '').trim();
+            if (sku && precio && precio > 10 && description.length > 3) products.push({ sku: normalizarSKU(sku), item: description, cantidad: cantidad, v_unitario_usuario: precio });
         }
-        
-        console.log(`📊 Total productos detectados: ${products.length}`);
         return products;
     }
 
     async function processOcrImages(images) {
-        ui.ocrPreviewSection.style.display = 'block';
-        ui.ocrProcessSection.style.display = 'none';
-        ui.ocrResultsSection.style.display = 'none';
-        ui.ocrProgressBar.style.width = '0%';
-        
+        ui.ocrPreviewSection.style.display = 'block'; ui.ocrProcessSection.style.display = 'none'; ui.ocrResultsSection.style.display = 'none'; ui.ocrProgressBar.style.width = '0%';
         try {
-            const worker = await initOcrWorker();
-            const allProducts = [];
-            
+            const worker = await initOcrWorker(); const allProducts = [];
             for (let i = 0; i < images.length; i++) {
                 ui.ocrStatusText.textContent = `Procesando imagen ${i + 1} de ${images.length}...`;
                 ui.ocrProgressBar.style.width = `${(i / images.length) * 100}%`;
-                
-                const img = images[i];
-                ui.ocrPreviewImg.src = img.dataUrl;
-                
+                const img = images[i]; ui.ocrPreviewImg.src = img.dataUrl;
                 const processedCanvas = preprocessImage(ui.ocrPreviewImg);
-                
                 const { data: { text } } = await worker.recognize(processedCanvas);
-                
-                const products = extractProductsFromOcrText(text);
-                allProducts.push(...products);
-                
-                console.log(`📄 Imagen ${i + 1}: ${products.length} productos detectados`);
+                allProducts.push(...extractProductsFromOcrText(text));
             }
-            
-            ui.ocrProgressBar.style.width = '100%';
-            ui.ocrStatusText.textContent = `✅ Completado: ${allProducts.length} productos detectados`;
-            
-            if (allProducts.length === 0) {
-                ui.ocrStatusText.textContent = '⚠️ No se detectaron productos válidos';
-                alert('No se pudieron detectar productos en las imágenes.\n\nConsejos:\n- Asegúrate de que la foto sea clara\n- Verifica que el texto sea legible\n- Intenta tomar la foto desde arriba sin ángulo');
-                return;
-            }
-            
+            ui.ocrProgressBar.style.width = '100%'; ui.ocrStatusText.textContent = `✅ Completado: ${allProducts.length} productos detectados`;
+            if (allProducts.length === 0) { alert('No se detectaron productos.'); return; }
             displayDetectedProducts(allProducts);
-            
-        } catch (error) {
-            console.error('Error en OCR:', error);
-            alert('Error al procesar las imágenes. Por favor intenta de nuevo.');
-            hideOcrModal();
-        }
+        } catch (error) { alert('Error al procesar.'); hideOcrModal(); }
     }
 
     function displayDetectedProducts(products) {
-        ui.ocrPreviewSection.style.display = 'none';
-        ui.ocrResultsSection.style.display = 'block';
-        
+        ui.ocrPreviewSection.style.display = 'none'; ui.ocrResultsSection.style.display = 'block';
         const formatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
-        
-        if (products.length === 0) {
-            ui.ocrDetectedProducts.innerHTML = `
-                <div class="p-4 rounded-lg" style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444;">
-                    <p class="font-semibold text-red-400">❌ No se detectaron productos válidos</p>
-                    <p class="text-sm mt-2">Posibles causas:</p>
-                    <ul class="text-sm mt-1 ml-4">
-                        <li>• Foto borrosa o con poca luz</li>
-                        <li>• Ángulo muy inclinado</li>
-                        <li>• Texto tapado o cortado</li>
-                    </ul>
-                </div>
-            `;
-            return;
-        }
-        
-        let html = `
-            <div class="mb-3 p-2 rounded" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);">
-                <p class="text-sm font-semibold text-green-400">✅ ${products.length} producto(s) detectado(s) correctamente</p>
-                <p class="text-xs text-secondary mt-1">Verifica que los datos sean correctos antes de continuar</p>
-            </div>
-        `;
-        
-        products.forEach((p, index) => {
-            // Validar si el producto parece tener datos correctos
-            const priceOk = p.v_unitario_usuario > 100 && p.v_unitario_usuario < 100000;
-            const qtyOk = p.cantidad > 0 && p.cantidad <= 100;
-            const descOk = p.item && p.item.length > 5;
-            
-            const alertClass = (!priceOk || !qtyOk || !descOk) ? 'border-yellow-500' : 'border-green-600';
-            
-            html += `
-                <div class="detected-product" style="border-left: 3px solid ${!priceOk || !qtyOk ? '#f59e0b' : 'var(--accent-green)'};">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-bold text-purple-400">${p.sku}</div>
-                            <div class="text-sm ${descOk ? '' : 'text-yellow-400'}">${p.item}</div>
-                            ${!descOk ? '<div class="text-xs text-yellow-400">⚠️ Descripción muy corta</div>' : ''}
-                        </div>
-                        <div class="text-right ml-4">
-                            <div class="font-semibold ${qtyOk ? '' : 'text-yellow-400'}">
-                                Cant: ${p.cantidad}
-                                ${!qtyOk ? ' ⚠️' : ''}
-                            </div>
-                            <div class="text-sm ${priceOk ? '' : 'text-yellow-400'}">
-                                ${formatter.format(p.v_unitario_usuario)}
-                                ${!priceOk ? ' ⚠️' : ''}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+        if (products.length === 0) { ui.ocrDetectedProducts.innerHTML = `<p class="text-red-400">❌ No se detectaron productos</p>`; return; }
+        let html = `<div class="mb-3 p-2 rounded" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);"><p class="text-sm font-semibold text-green-400">✅ ${products.length} producto(s) detectado(s) correctamente</p></div>`;
+        products.forEach((p) => {
+            const priceOk = p.v_unitario_usuario > 100 && p.v_unitario_usuario < 100000; const qtyOk = p.cantidad > 0 && p.cantidad <= 100;
+            html += `<div class="detected-product" style="border-left: 3px solid ${!priceOk || !qtyOk ? '#f59e0b' : 'var(--accent-green)'};"><div class="flex justify-between items-start"><div class="flex-1"><div class="font-bold text-purple-400">${p.sku}</div><div class="text-sm">${p.item}</div></div><div class="text-right ml-4"><div>Cant: ${p.cantidad}</div><div>${formatter.format(p.v_unitario_usuario)}</div></div></div></div>`;
         });
-        
-        // Agregar advertencia si hay productos sospechosos
-        const suspiciousCount = products.filter(p => 
-            p.v_unitario_usuario < 100 || p.v_unitario_usuario > 100000 || 
-            p.cantidad > 100 || 
-            !p.item || p.item.length < 5
-        ).length;
-        
-        if (suspiciousCount > 0) {
-            html += `
-                <div class="mt-3 p-2 rounded" style="background-color: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b;">
-                    <p class="text-xs text-yellow-400">⚠️ ${suspiciousCount} producto(s) con datos sospechosos (marcados con ⚠️)</p>
-                    <p class="text-xs text-secondary">Puedes continuar y editar después, o retomar la foto</p>
-                </div>
-            `;
-        }
-        
         ui.ocrDetectedProducts.innerHTML = html;
-        
-        ui.btnOcrUseResults.onclick = () => {
-            const pedidoTexto = products.map(p => 
-                `${p.sku} ${p.item} ${p.cantidad} $${Math.round(p.v_unitario_usuario)}`
-            ).join('\n');
-            
-            ui.pedidoCrudo.value = pedidoTexto;
-            hideOcrModal();
-            ui.debugInfo.innerHTML = `<p class="text-green-400">✅ ${products.length} productos cargados desde OCR</p>`;
-            
-            setTimeout(() => {
-                ui.btnNormalizar.click();
-            }, 500);
-        };
+        ui.btnOcrUseResults.onclick = () => { ui.pedidoCrudo.value = products.map(p => `${p.sku} ${p.item} ${p.cantidad} $${Math.round(p.v_unitario_usuario)}`).join('\n'); hideOcrModal(); setTimeout(() => ui.btnNormalizar.click(), 500); };
     }
 
-    function showOcrModal() {
-        ui.ocrModal.style.display = 'block';
-        ui.ocrGuideSection.style.display = 'block';
-        ui.ocrPreviewSection.style.display = 'none';
-        ui.ocrResultsSection.style.display = 'none';
-        ui.ocrProcessSection.style.display = 'none';
-    }
+    function showOcrModal() { ui.ocrModal.style.display = 'block'; ui.ocrGuideSection.style.display = 'block'; ui.ocrPreviewSection.style.display = 'none'; ui.ocrResultsSection.style.display = 'none'; ui.ocrProcessSection.style.display = 'flex'; }
+    function hideOcrModal() { ui.ocrModal.style.display = 'none'; currentOcrImages = []; }
+    function handleOcrFileSelection(files) { if (files.length === 0) return; showOcrModal(); currentOcrImages = []; const loadPromises = Array.from(files).map(file => { return new Promise((resolve) => { const reader = new FileReader(); reader.onload = (e) => { currentOcrImages.push({ file: file, dataUrl: e.target.result }); resolve(); }; reader.readAsDataURL(file); }); }); Promise.all(loadPromises).then(() => { ui.ocrPreviewImg.src = currentOcrImages[0].dataUrl; ui.ocrProcessSection.style.display = 'flex'; ui.ocrGuideSection.style.display = 'none'; }); }
 
-    function hideOcrModal() {
-        ui.ocrModal.style.display = 'none';
-        currentOcrImages = [];
-    }
-
-    function handleOcrFileSelection(files) {
-        if (files.length === 0) return;
+    // ========== 🆕 LOGICA QR (LOCAL) ==========
+    function startQrScanner() {
+        document.getElementById('qr-modal').style.display = 'flex';
+        // Verificar si la librería cargó
+        if (typeof Html5Qrcode === 'undefined') { alert("Error: La librería QR no cargó. Verifica tu conexión."); return; }
         
-        showOcrModal();
-        currentOcrImages = [];
+        html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
         
-        const loadPromises = Array.from(files).map(file => {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    currentOcrImages.push({
-                        file: file,
-                        dataUrl: e.target.result
-                    });
-                    resolve();
-                };
-                reader.readAsDataURL(file);
-            });
+        html5QrCode.start(
+            { facingMode: "environment" }, // Cámara trasera
+            config,
+            (decodedText, decodedResult) => {
+                console.log(`QR Leído: ${decodedText}`);
+                ui.pedidoCrudo.value = decodedText; // Pegar texto
+                stopQrScanner();
+                
+                // Efecto visual
+                ui.pedidoCrudo.style.borderColor = "var(--accent-green)";
+                setTimeout(() => ui.pedidoCrudo.style.borderColor = "var(--border-color)", 1000);
+            },
+            (errorMessage) => {
+                // Error frame, ignorar
+            }
+        ).catch(err => {
+            console.error(err);
+            alert("No se pudo iniciar la cámara. Asegúrate de estar en HTTPS y dar permisos.");
+            document.getElementById('qr-modal').style.display = 'none';
         });
-        
-        Promise.all(loadPromises).then(() => {
-            ui.ocrPreviewImg.src = currentOcrImages[0].dataUrl;
-            ui.ocrProcessSection.style.display = 'block';
-            ui.ocrGuideSection.style.display = 'none';
-        });
+    }
+
+    function stopQrScanner() {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => {
+                document.getElementById('qr-modal').style.display = 'none';
+                html5QrCode.clear();
+            }).catch(err => console.error(err));
+        } else {
+            document.getElementById('qr-modal').style.display = 'none';
+        }
     }
 
     // ========== EVENT LISTENERS ==========
@@ -1023,97 +1034,64 @@
             intelligentSearchSection:document.getElementById('intelligent-search-section'), intelligentSearchInput:document.getElementById('intelligent-search-input'),
             intelligentSearchResults:document.getElementById('intelligent-search-results'), btnRefreshCatalog: document.getElementById('btn-refresh-catalog'),
             forzarListaPrecio: document.getElementById('forzar-lista-precio'), selectorListaPrecio: document.getElementById('selector-lista-precio'),
-            // 🆕 OCR Elements
-            btnOcrCamera: document.getElementById('btn-ocr-camera'),
-            btnOcrUpload: document.getElementById('btn-ocr-upload'),
-            ocrFileInput: document.getElementById('ocr-file-input'),
-            ocrModal: document.getElementById('ocr-modal'),
-            ocrModalClose: document.getElementById('ocr-modal-close'),
-            ocrGuideSection: document.getElementById('ocr-guide-section'),
-            ocrPreviewSection: document.getElementById('ocr-preview-section'),
-            ocrPreviewImg: document.getElementById('ocr-preview-img'),
-            ocrResultsSection: document.getElementById('ocr-results-section'),
-            ocrDetectedProducts: document.getElementById('ocr-detected-products'),
-            ocrProcessSection: document.getElementById('ocr-process-section'),
+            // OCR UI
+            btnOcrCamera: document.getElementById('btn-ocr-camera'), btnOcrUpload: document.getElementById('btn-ocr-upload'),
+            ocrFileInput: document.getElementById('ocr-file-input'), ocrModal: document.getElementById('ocr-modal'),
+            ocrModalClose: document.getElementById('ocr-modal-close'), ocrGuideSection: document.getElementById('ocr-guide-section'),
+            ocrPreviewSection: document.getElementById('ocr-preview-section'), ocrPreviewImg: document.getElementById('ocr-preview-img'),
+            ocrResultsSection: document.getElementById('ocr-results-section'), ocrDetectedProducts: document.getElementById('ocr-detected-products'),
+            ocrProcessSection: document.getElementById('ocr-process-section'), 
+            // 🆕 Botones Duales
             btnProcessOcr: document.getElementById('btn-process-ocr'),
-            btnOcrUseResults: document.getElementById('btn-ocr-use-results'),
-            btnOcrRetry: document.getElementById('btn-ocr-retry'),
-            ocrStatusText: document.getElementById('ocr-status-text'),
-            ocrProgressBar: document.getElementById('ocr-progress-bar'),
-            ocrProgressPercent: document.getElementById('ocr-progress-percent')
+            btnProcessGroq: document.getElementById('btn-process-groq'),
+            
+            btnOcrUseResults: document.getElementById('btn-ocr-use-results'), btnOcrRetry: document.getElementById('btn-ocr-retry'),
+            ocrStatusText: document.getElementById('ocr-status-text'), ocrProgressBar: document.getElementById('ocr-progress-bar'),
+            ocrProgressPercent: document.getElementById('ocr-progress-percent'),
+            // QR UI
+            btnScanQr: document.getElementById('btn-scan-qr')
         });
         
-        // 🆕 OCR Event Listeners
-        ui.btnOcrCamera.addEventListener('click', () => {
-            ui.ocrFileInput.setAttribute('capture', 'environment');
-            ui.ocrFileInput.click();
-        });
+        // Listeners OCR
+        ui.btnOcrCamera.addEventListener('click', () => { ui.ocrFileInput.setAttribute('capture', 'environment'); ui.ocrFileInput.click(); });
+        ui.btnOcrUpload.addEventListener('click', () => { ui.ocrFileInput.removeAttribute('capture'); ui.ocrFileInput.click(); });
+        ui.ocrFileInput.addEventListener('change', (e) => { handleOcrFileSelection(e.target.files); e.target.value = ''; });
         
-        ui.btnOcrUpload.addEventListener('click', () => {
-            ui.ocrFileInput.removeAttribute('capture');
-            ui.ocrFileInput.click();
-        });
-        
-        ui.ocrFileInput.addEventListener('change', (e) => {
-            handleOcrFileSelection(e.target.files);
-            e.target.value = '';
-        });
-        
-        ui.btnProcessOcr.addEventListener('click', () => {
-            if (currentOcrImages.length > 0) {
-                processOcrImages(currentOcrImages);
-            }
-        });
-        
+        ui.btnProcessOcr.addEventListener('click', () => { if (currentOcrImages.length > 0) processOcrImages(currentOcrImages); });
+        ui.btnProcessGroq.addEventListener('click', () => { if (currentOcrImages.length > 0) processWithGroq(currentOcrImages); });
+
         ui.ocrModalClose.addEventListener('click', hideOcrModal);
-        ui.btnOcrRetry.addEventListener('click', () => {
-            hideOcrModal();
-            ui.btnOcrUpload.click();
-        });
-        
-        window.addEventListener('click', (e) => {
-            if (e.target === ui.ocrModal) {
-                hideOcrModal();
-            }
-        });
+        ui.btnOcrRetry.addEventListener('click', () => { hideOcrModal(); ui.btnOcrUpload.click(); });
+        window.addEventListener('click', (e) => { if (e.target === ui.ocrModal) hideOcrModal(); });
+
+        // Listener QR
+        ui.btnScanQr.addEventListener('click', startQrScanner);
+        document.getElementById('qr-close-btn').addEventListener('click', stopQrScanner);
         
         ui.priceModalClose.addEventListener('click', hidePriceModal);
-        window.addEventListener('click', (event) => { if (event.target == ui.priceModal) { hidePriceModal(); } });
-        ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) { showPriceModal(e.target.dataset.sku); } });
-        
+        window.addEventListener('click', (event) => { if (event.target == ui.priceModal) hidePriceModal(); });
+        ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) showPriceModal(e.target.dataset.sku); });
         ui.btnRefreshCatalog.addEventListener('click', () => loadCatalogFromGitHub());
 
         document.querySelectorAll('input[name="fuente-catalogo"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 const desc = document.getElementById('fuente-descripcion');
                 switch(e.target.value) {
-                    case 'cache':
-                        desc.textContent = '💾 Cache: Más rápido, usa versión guardada (4h de validez)';
-                        break;
-                    case 'auto':
-                        desc.textContent = '🔄 Auto: Usa cache si es válido, sino descarga desde Git';
-                        break;
-                    case 'git':
-                        desc.textContent = '☁️ Git: Siempre descarga la última versión (⚠️ cuidado con rate limit)';
-                        break;
+                    case 'cache': desc.textContent = '💾 Cache: Más rápido, usa versión guardada (4h de validez)'; break;
+                    case 'auto': desc.textContent = '🔄 Auto: Usa cache si es válido, sino descarga desde Git'; break;
+                    case 'git': desc.textContent = '☁️ Git: Siempre descarga la última versión (⚠️ cuidado con rate limit)'; break;
                 }
             });
         });
 
         ui.forzarListaPrecio.addEventListener('change', function() {
-            const selector = ui.selectorListaPrecio;
-            selector.disabled = !this.checked;
-            if (this.checked) {
-                selector.classList.add('selector-manual-enabled');
-            } else {
-                selector.classList.remove('selector-manual-enabled');
-                selector.value = '';
-            }
+            const selector = ui.selectorListaPrecio; selector.disabled = !this.checked;
+            if (this.checked) selector.classList.add('selector-manual-enabled');
+            else { selector.classList.remove('selector-manual-enabled'); selector.value = ''; }
         });
 
         ui.btnNormalizar.addEventListener('click', () => {
-            ui.filtroPedido.value = '';
-            const texto = ui.pedidoCrudo.value;
+            ui.filtroPedido.value = ''; const texto = ui.pedidoCrudo.value;
             if (!texto.trim()) { alert("Pegue el texto del pedido."); return; }
             pedidoNormalizado = parsearPedidoInteligente(texto);
             renderPedidoEditable(pedidoNormalizado);
@@ -1128,171 +1106,50 @@
                 html += `<tr><td class="p-1">${producto.sku}</td><td class="p-1">${producto.item}</td><td class="p-1 bg-blue-900 rounded" contenteditable="true" data-index="${index}">${producto.cantidad}</td><td class="p-1">${formatoPrecio}</td></tr>`;
             });
             ui.datosNormalizados.innerHTML = html + '</tbody></table>';
-            
             ui.datosNormalizados.querySelectorAll('td[contenteditable="true"]').forEach(celda => {
                 celda.addEventListener('blur', (e) => {
-                    const index = parseInt(e.target.dataset.index);
-                    if (isNaN(index) || !pedidoNormalizado[index]) return;
+                    const index = parseInt(e.target.dataset.index); if (isNaN(index) || !pedidoNormalizado[index]) return;
                     const nuevaCantidad = parseInt(e.target.textContent, 10);
-                    if (!isNaN(nuevaCantidad) && nuevaCantidad > 0) { pedidoNormalizado[index].cantidad = nuevaCantidad; } else { e.target.textContent = pedidoNormalizado[index].cantidad; }
+                    if (!isNaN(nuevaCantidad) && nuevaCantidad > 0) pedidoNormalizado[index].cantidad = nuevaCantidad; else e.target.textContent = pedidoNormalizado[index].cantidad;
                 });
             });
         };
 
         ui.filtroPedido.addEventListener('input', () => {
             const termino = ui.filtroPedido.value.toLowerCase();
-            if (!termino) { renderPedidoEditable(pedidoNormalizado); } 
+            if (!termino) renderPedidoEditable(pedidoNormalizado);
             else { const filtrados = pedidoNormalizado.filter(p => p.sku.toLowerCase().includes(termino) || p.item.toLowerCase().includes(termino)); renderPedidoEditable(filtrados); }
         });
 
-        // CORRECCIÓN PRINCIPAL
         ui.btnCorregir.addEventListener('click', () => {
             if (pedidoNormalizado.length === 0) return;
-            ui.resultadosContainer.classList.remove('hidden');
-            ui.loader.classList.remove('hidden');
-            ui.btnCopiarDiferencias.classList.add('hidden');
-            ui.btnCapturarTabla.classList.add('hidden');
+            ui.resultadosContainer.classList.remove('hidden'); ui.loader.classList.remove('hidden');
+            ui.btnCopiarDiferencias.classList.add('hidden'); ui.btnCapturarTabla.classList.add('hidden');
             setTimeout(() => {
                 try {
                     const esNeto = document.querySelector('input[name="tipo-precio"]:checked').value === 'neto';
                     const tipoCliente = document.querySelector('input[name="tipo-cliente"]:checked').value;
                     const agrupar = ui.agruparCategorias.checked;
                     const listaForzada = ui.forzarListaPrecio.checked ? ui.selectorListaPrecio.value : null;
-
                     resultadosParaDescarga = pedidoNormalizado.map(item => corregirUnItem(item, tipoCliente, esNeto, calcularCantidadesPorCategoria(pedidoNormalizado), agrupar, listaForzada));
-                    
                     renderResultados(resultadosParaDescarga);
-                    
                     const diferenciaTotalGeneral = resultadosParaDescarga.reduce((sum, r) => sum + (r.diferencia_total_linea || 0), 0);
                     const infoPrecios = esNeto ? 'Netos (sin IVA)' : 'Brutos (con IVA)';
                     const infoListaForzada = listaForzada ? ` | Lista Forzada: ${listaForzada}` : '';
-                    
                     renderResumen(pedidoNormalizado.length, calcularCantidadesPorCategoria(pedidoNormalizado), diferenciaTotalGeneral, infoPrecios + infoListaForzada);
-                    ui.btnCopiarDiferencias.classList.remove('hidden');
-                    ui.btnCapturarTabla.classList.remove('hidden');
+                    ui.btnCopiarDiferencias.classList.remove('hidden'); ui.btnCapturarTabla.classList.remove('hidden');
                 } catch (e) { console.error(e); alert("Error inesperado al procesar: " + e.message); } finally { ui.loader.classList.add('hidden'); }
             }, 100);
         });
 
-        // 🆕 RENDERIZADO CON CHECKBOXES
-        const renderResultados = (resultados) => {
-            const formatter = new Intl.NumberFormat('es-CL', {style: 'currency', currency: 'CLP'});
-            let html = `<table class="min-w-full"><thead style="background-color:rgba(45,55,72,0.5);"><tr>`;
-            
-            // CHECKBOX COLUMN
-            html += `<th class="px-2 py-3 w-10 text-center"><input type="checkbox" id="select-all-rows" class="checkbox-custom"></th>`;
-            
-            ["SKU", "Item", "Cant.", "Categoría", "Tu Precio", "Estado", "Precio Correcto", "Tipo Aplicado", "Dif. Unitaria"].forEach(col => {
-                html += `<th class="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">${col}</th>`; 
-            });
-            html += `</tr></thead><tbody style="border-top:1px solid var(--border-color);">`;
-            
-            resultados.forEach((producto, idx) => {
-                const diferencia = producto.diferencia !== null ? (producto.diferencia > 0 ? '+' : '') + formatter.format(producto.diferencia) : 'N/A';
-                const categoria = producto.categoria ? `${producto.categoria} (${producto.cantidadCategoria}u)` : 'N/A';
-                const manualBadge = producto.isManual ? `<span class="inline-block bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded ml-1 tracking-wider font-bold">MANUAL</span>` : '';
-                
-                html += `<tr class="${producto.colorClass} hover:bg-white hover:bg-opacity-5 transition-colors" style="border-bottom:1px solid var(--border-color);">
-                    <td class="px-2 py-4 text-center">
-                        <input type="checkbox" class="row-checkbox checkbox-custom" data-index="${idx}">
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium sku-clickable" style="cursor: pointer; text-decoration: underline; color: var(--accent-blue);" data-sku="${producto.sku}">${producto.sku}</td>
-                    <td class="px-6 py-4">${producto.descripcion}</td>
-                    <td class="px-6 py-4">${producto.cantidad}</td>
-                    <td class="px-6 py-4 font-semibold" style="color:var(--accent-blue);">${categoria}</td>
-                    <td class="px-6 py-4">${formatter.format(producto.v_unitario_usuario)}</td>
-                    <td class="px-6 py-4 font-semibold">${producto.estado}</td>
-                    <td class="px-6 py-4 ${producto.highlight ? 'highlight-cell' : ''}">${producto.precioCorrecto ? formatter.format(producto.precioCorrecto) : 'N/A'}</td>
-                    <td class="px-6 py-4 text-xs text-purple-400 font-medium">
-                        <div class="flex flex-col items-start">
-                            <span>${producto.tipoAplicado || 'N/A'}</span>
-                            ${manualBadge}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 font-bold ${producto.diferencia < 0 ? 'text-red-400' : 'text-green-400'}">${diferencia}</td>
-                </tr>`;
-            });
-            ui.resultadosCorreccion.innerHTML = html + '</tbody></table>';
-            
-            // EVENTS
-            document.getElementById('select-all-rows').addEventListener('change', toggleAllRows);
-            document.querySelectorAll('.row-checkbox').forEach(cb => cb.addEventListener('change', updateBulkActionBar));
-        };
-
-        const renderResumen = (totalProductos, categorias, diferenciaTotalGeneral, tipoPrecios) => {
-            const formatter = new Intl.NumberFormat('es-CL', {style: 'currency', currency: 'CLP'});
-            let html = `<h3 class="text-lg font-semibold mb-2">Resumen</h3><ul class="list-disc list-inside space-y-1"><li><strong>Productos:</strong> ${totalProductos}</li><li><strong>Precios Verificados:</strong> ${tipoPrecios}</li><li><strong>Categorías:</strong></li>`;
-            for (const categoria in categorias) { html += `<li class="ml-4"><strong>${categoria}:</strong> ${categorias[categoria]} u.</li>`; }
-            html += `</ul>`;
-            if (Math.abs(diferenciaTotalGeneral) > 0) { const colorClass = diferenciaTotalGeneral > 0 ? 'text-orange-400' : 'text-red-400'; html += `<div class="mt-4 font-semibold text-lg ${colorClass}">Diferencia Total: ${(diferenciaTotalGeneral > 0 ? '+' : '') + formatter.format(diferenciaTotalGeneral)}</div>`; } 
-            else { html += `<div class="mt-4 font-semibold text-lg" style="color:var(--accent-green);">Diferencia Total: ${formatter.format(0)}</div>`; }
-            ui.resumenPedido.innerHTML = html;
-        };
-        
-        // 🆕 LÓGICA DE SELECCIÓN INTELIGENTE
-        function toggleAllRows(e) {
-            const checked = e.target.checked;
-            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = checked);
-            updateBulkActionBar();
-        }
-
-        function updateBulkActionBar() {
-            const selected = document.querySelectorAll('.row-checkbox:checked');
-            const bar = document.getElementById('bulk-action-bar');
-            const countSpan = document.getElementById('selected-count');
-            const selector = document.getElementById('bulk-list-selector');
-            
-            if (selected.length > 0) {
-                bar.style.display = 'flex';
-                countSpan.textContent = selected.length;
-                
-                // RECOLECTAR LISTAS DISPONIBLES
-                const indices = Array.from(selected).map(cb => parseInt(cb.dataset.index));
-                const skusSeleccionados = indices.map(idx => pedidoNormalizado[idx].sku);
-                
-                const listasDisponibles = new Set();
-                skusSeleccionados.forEach(sku => {
-                    const precios = catalogoCompleto.filter(p => p.sku === sku);
-                    precios.forEach(p => { if(p.tipo_precio) listasDisponibles.add(p.tipo_precio); });
-                });
-                
-                if (listasDisponibles.size > 0) {
-                    selector.innerHTML = '<option value="">-- Seleccionar Lista a Forzar --</option>';
-                    Array.from(listasDisponibles).sort().forEach(lista => {
-                        selector.innerHTML += `<option value="${lista}">${lista}</option>`;
-                    });
-                } else {
-                    selector.innerHTML = '<option value="">-- Sin listas alternativas --</option>';
-                }
-            } else {
-                bar.style.display = 'none';
-            }
-        }
-
-        function aplicarListaMasiva() {
-            const lista = document.getElementById('bulk-list-selector').value;
-            const selectedIndices = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => parseInt(cb.dataset.index));
-            if (!lista) { alert("Por favor selecciona una lista válida."); return; }
-            selectedIndices.forEach(idx => { if (pedidoNormalizado[idx]) pedidoNormalizado[idx].listaManual = lista; });
-            ui.btnCorregir.click();
-        }
-
-        function limpiarListaMasiva() {
-            const selectedIndices = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => parseInt(cb.dataset.index));
-            selectedIndices.forEach(idx => { if (pedidoNormalizado[idx]) delete pedidoNormalizado[idx].listaManual; });
-            ui.btnCorregir.click();
-            document.getElementById('bulk-action-bar').style.display = 'none';
-        }
-
-        // LISTENERS BULK
+        // Listeners Bulk
         document.getElementById('btn-apply-bulk').addEventListener('click', aplicarListaMasiva);
         document.getElementById('btn-clear-bulk').addEventListener('click', limpiarListaMasiva);
         document.getElementById('btn-close-bulk').addEventListener('click', () => document.getElementById('bulk-action-bar').style.display='none');
-
+        
         ui.btnCopiarDiferencias.addEventListener('click', copiarDiferencias);
         ui.btnCapturarTabla.addEventListener('click', capturarTabla);
         ui.intelligentSearchInput.addEventListener('input', handleIntelligentSearch);
-        
         ui.intelligentSearchResults.addEventListener('click', (e) => {
             const formatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
             if (e.target && e.target.matches('#btn-copiar-todo-catalogo')) { let texto = "Resultados de Búsqueda:\n\n"; for (const sku in lastSearchResults) { const producto = lastSearchResults[sku]; texto += `*Producto:* ${producto.sku} - ${producto.descripcion}\n*Precios:*\n`; texto += producto.prices.map(price => `- ${price.tipo}: Neto ${price.neto ? formatter.format(price.neto) : 'N/A'} / Bruto ${price.bruto ? formatter.format(price.bruto) : 'N/A'}`).join('\n'); texto += "\n---\n"; } navigator.clipboard.writeText(texto).then(() => { const originalText = e.target.textContent; e.target.textContent = '¡Copiado!'; setTimeout(() => { e.target.textContent = originalText; }, 2000); }); }
