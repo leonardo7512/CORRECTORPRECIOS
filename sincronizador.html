@@ -71,7 +71,7 @@
         <!-- Header -->
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold mb-2">🔄 Sincronizador Inteligente v2.0</h1>
-            <p class="text-secondary">Drive → Git | Detección de Familias | Validación Avanzada</p>
+            <p class="text-secondary">Drive → Git | Validación Avanzada | Reportes Detallados</p>
         </header>
 
         <!-- Paso 1: Cargar Archivos -->
@@ -97,7 +97,7 @@
             </div>
             <button id="btn-analizar" disabled
                     class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed">
-                🔍 Analizar y Detectar Familias
+                🔍 Analizar Diferencias y Validar
             </button>
         </div>
 
@@ -130,34 +130,11 @@
             </div>
         </div>
 
-        <!-- Paso 3: Detector de Familias -->
-        <div id="panel-familias" class="panel p-6 rounded-lg shadow-md mb-6 hidden">
-            <h2 class="text-2xl font-semibold mb-4">🔍 Paso 3: Familias de Productos Detectadas</h2>
-            
-            <div class="bg-accent p-4 rounded-lg mb-4">
-                <h3 class="font-semibold mb-2">💡 ¿Qué son las familias?</h3>
-                <p class="text-sm text-secondary">
-                    El sistema detecta productos similares (ej: "RASPADOR 1" y "RASPADOR 2") y sugiere prefijos 
-                    (ej: "RP-") para que el corrector pueda sumar cantidades y aplicar precios mayoristas correctamente.
-                </p>
-            </div>
 
-            <div class="mb-4">
-                <label class="flex items-center text-sm font-medium">
-                    <input type="checkbox" id="auto-aplicar-familias" class="h-4 w-4 rounded mr-2">
-                    <span>Aplicar automáticamente prefijos sugeridos a productos nuevos</span>
-                </label>
-            </div>
 
-            <!-- Lista de Familias Detectadas -->
-            <div id="lista-familias" class="space-y-3">
-                <p class="text-secondary">Las familias detectadas aparecerán aquí...</p>
-            </div>
-        </div>
-
-        <!-- Paso 4: Vista Previa de Cambios -->
+        <!-- Paso 3: Vista Previa de Cambios -->
         <div id="panel-cambios" class="panel p-6 rounded-lg shadow-md mb-6 hidden">
-            <h2 class="text-2xl font-semibold mb-4">📊 Paso 4: Revisión de Cambios</h2>
+            <h2 class="text-2xl font-semibold mb-4">📊 Paso 3: Revisión Detallada de Cambios</h2>
             
             <!-- Resumen -->
             <div id="resumen-cambios" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
@@ -182,6 +159,57 @@
             <!-- Lista de Cambios -->
             <div id="lista-cambios" class="max-h-96 overflow-y-auto">
                 <p class="text-secondary">Los cambios aparecerán aquí...</p>
+            </div>
+        </div>
+
+        <!-- Paso 4: Vista Previa del CSV y Prefijos -->
+        <div id="panel-preview" class="panel p-6 rounded-lg shadow-md mb-6 hidden">
+            <h2 class="text-2xl font-semibold mb-4">👁️ Paso 4: Vista Previa y Prefijos</h2>
+            
+            <div class="bg-accent p-4 rounded-lg mb-4">
+                <h3 class="font-semibold mb-2">💡 Información:</h3>
+                <ul class="text-sm space-y-1 list-disc list-inside">
+                    <li>Aquí puedes ver TODOS los productos que irán al CSV final</li>
+                    <li>Los productos <span class="text-green-400 font-semibold">NUEVOS</span> pueden recibir prefijos</li>
+                    <li>Los productos <span class="text-blue-400 font-semibold">ACTUALIZADOS</span> mantienen su SKU</li>
+                    <li>Click en cualquier producto NUEVO para agregarle prefijo</li>
+                </ul>
+            </div>
+
+            <!-- Filtros de vista previa -->
+            <div class="flex gap-2 mb-4 flex-wrap items-center">
+                <button class="filtro-preview px-3 py-2 rounded text-sm font-semibold bg-blue-600" data-tipo="todos">
+                    📊 Todos
+                </button>
+                <button class="filtro-preview px-3 py-2 rounded text-sm" data-tipo="nuevos">
+                    🆕 Solo Nuevos
+                </button>
+                <button class="filtro-preview px-3 py-2 rounded text-sm" data-tipo="git-originales">
+                    📋 Git Originales
+                </button>
+                <button class="filtro-preview px-3 py-2 rounded text-sm" data-tipo="con-prefijo">
+                    🏷️ Con Prefijo
+                </button>
+                
+                <input type="text" id="buscar-preview" placeholder="🔍 Buscar SKU..."
+                       class="input-field ml-auto p-2 rounded-md text-sm" style="width: 250px;">
+            </div>
+
+            <!-- Estadísticas de vista previa -->
+            <div id="stats-preview" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4"></div>
+
+            <!-- Lista de productos con vista previa -->
+            <div id="lista-preview" class="max-h-96 overflow-y-auto border border-gray-600 rounded-lg p-3">
+                <p class="text-secondary">La vista previa aparecerá aquí...</p>
+            </div>
+
+            <div class="mt-4 flex gap-3">
+                <button id="btn-limpiar-prefijos" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">
+                    🗑️ Limpiar Todos los Prefijos
+                </button>
+                <button id="btn-aplicar-prefijo-masivo" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md">
+                    🏷️ Aplicar Prefijo a Múltiples
+                </button>
             </div>
         </div>
 
@@ -216,15 +244,83 @@
         </div>
     </div>
 
+    <!-- Modal para agregar prefijo -->
+    <div id="modal-prefijo" style="display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center;">
+        <div class="panel" style="padding: 20px; border: 1px solid var(--border-color); width: 90%; max-width: 500px; border-radius: 8px; position: relative;">
+            <span id="modal-prefijo-close" style="color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            
+            <h3 class="text-xl font-semibold mb-4">🏷️ Agregar Prefijo a SKU</h3>
+            
+            <div class="mb-4">
+                <div class="text-sm text-secondary mb-2">SKU Original:</div>
+                <div id="modal-sku-original" class="font-bold text-lg text-blue-300 mb-3"></div>
+                
+                <div id="modal-descripcion" class="text-sm text-secondary mb-4"></div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Prefijo (ej: RP-, LT-, etc.):</label>
+                <input type="text" id="input-prefijo" 
+                       class="input-field w-full p-3 rounded-md text-lg font-bold" 
+                       placeholder="XX-"
+                       maxlength="10">
+                <p class="text-xs text-secondary mt-1">Escribe solo las letras y el guión. Ej: RP-</p>
+            </div>
+
+            <div class="mb-4 p-3 rounded-lg" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);">
+                <div class="text-sm font-semibold mb-1">Vista previa:</div>
+                <div id="preview-sku-final" class="text-lg font-bold text-green-400"></div>
+            </div>
+
+            <div class="flex gap-2">
+                <button id="btn-aplicar-prefijo-modal" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md">
+                    ✅ Aplicar Prefijo
+                </button>
+                <button id="btn-quitar-prefijo-modal" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-md">
+                    🗑️ Quitar Prefijo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para prefijo masivo -->
+    <div id="modal-prefijo-masivo" style="display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center;">
+        <div class="panel" style="padding: 20px; border: 1px solid var(--border-color); width: 90%; max-width: 600px; border-radius: 8px; position: relative; max-height: 80vh; overflow-y: auto;">
+            <span id="modal-masivo-close" style="color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            
+            <h3 class="text-xl font-semibold mb-4">🏷️ Aplicar Prefijo a Múltiples Productos</h3>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Prefijo a aplicar:</label>
+                <input type="text" id="input-prefijo-masivo" 
+                       class="input-field w-full p-3 rounded-md text-lg font-bold mb-3" 
+                       placeholder="XX-"
+                       maxlength="10">
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Selecciona productos (solo NUEVOS):</label>
+                <div id="lista-productos-masivo" class="max-h-96 overflow-y-auto border border-gray-600 rounded p-2">
+                </div>
+            </div>
+
+            <button id="btn-aplicar-masivo" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md">
+                ✅ Aplicar a Seleccionados
+            </button>
+        </div>
+    </div>
+
     <script>
         let catalogoGit = [];
         let catalogoDrive = [];
         let cambiosDetectados = [];
         let erroresDetectados = [];
-        let familiasDetectadas = [];
-        let prefijosAplicados = {};
         let filtroActivo = 'todos';
         let tabErrorActiva = 'todos';
+        let prefijosAplicados = {}; // { skuOriginal: skuConPrefijo }
+        let csvPreview = []; // Vista previa del CSV final
+        let filtroPreview = 'todos';
+        let skuModalActual = null;
 
         const ui = {
             fileGit: document.getElementById('file-git'),
@@ -242,9 +338,30 @@
             listaCambios: document.getElementById('lista-cambios'),
             buscarCambios: document.getElementById('buscar-cambios'),
             logProceso: document.getElementById('log-proceso'),
-            autoAplicarFamilias: document.getElementById('auto-aplicar-familias'),
             checklistFinal: document.getElementById('checklist-final'),
-            estadisticasFinales: document.getElementById('estadisticas-finales')
+            estadisticasFinales: document.getElementById('estadisticas-finales'),
+            // Panel de vista previa
+            panelPreview: document.getElementById('panel-preview'),
+            listaPreview: document.getElementById('lista-preview'),
+            statsPreview: document.getElementById('stats-preview'),
+            buscarPreview: document.getElementById('buscar-preview'),
+            btnLimpiarPrefijos: document.getElementById('btn-limpiar-prefijos'),
+            btnAplicarPrefijoMasivo: document.getElementById('btn-aplicar-prefijo-masivo'),
+            // Modal prefijo individual
+            modalPrefijo: document.getElementById('modal-prefijo'),
+            modalPrefijoClose: document.getElementById('modal-prefijo-close'),
+            modalSkuOriginal: document.getElementById('modal-sku-original'),
+            modalDescripcion: document.getElementById('modal-descripcion'),
+            inputPrefijo: document.getElementById('input-prefijo'),
+            previewSkuFinal: document.getElementById('preview-sku-final'),
+            btnAplicarPrefijoModal: document.getElementById('btn-aplicar-prefijo-modal'),
+            btnQuitarPrefijoModal: document.getElementById('btn-quitar-prefijo-modal'),
+            // Modal prefijo masivo
+            modalPrefijoMasivo: document.getElementById('modal-prefijo-masivo'),
+            modalMasivoClose: document.getElementById('modal-masivo-close'),
+            inputPrefijoMasivo: document.getElementById('input-prefijo-masivo'),
+            listaProductosMasivo: document.getElementById('lista-productos-masivo'),
+            btnAplicarMasivo: document.getElementById('btn-aplicar-masivo')
         };
 
         // ========== UTILIDADES ==========
@@ -316,15 +433,6 @@
             }
             
             return Math.round((matches / Math.max(s1.length, s2.length)) * 100);
-        }
-
-        function extraerPalabrasClave(descripcion) {
-            return descripcion
-                .toUpperCase()
-                .replace(/[^A-Z0-9\s]/g, '')
-                .split(/\s+/)
-                .filter(p => p.length >= 3)
-                .filter(p => !['PARA', 'CON', 'SIN', 'THE', 'AND', 'POR'].includes(p));
         }
 
         // ========== PROCESADORES CSV ==========
@@ -400,61 +508,6 @@
             return productos;
         }
 
-        // ========== DETECTOR DE FAMILIAS ==========
-        function detectarFamilias() {
-            log('Detectando familias de productos...', 'info');
-            const familias = {};
-            const productosNuevos = cambiosDetectados.filter(c => c.tipo === 'nuevo');
-            
-            productosNuevos.forEach(producto => {
-                const palabrasClave = extraerPalabrasClave(producto.descripcion);
-                
-                productosNuevos.forEach(otroProducto => {
-                    if (producto.sku === otroProducto.sku) return;
-                    
-                    const otrasPalabras = extraerPalabrasClave(otroProducto.descripcion);
-                    const palabrasComunes = palabrasClave.filter(p => otrasPalabras.includes(p));
-                    
-                    if (palabrasComunes.length >= 2 || calcularSimilitud(producto.descripcion, otroProducto.descripcion) > 60) {
-                        const familiaKey = palabrasComunes.sort().join('_') || producto.descripcion.substring(0, 20);
-                        
-                        if (!familias[familiaKey]) {
-                            familias[familiaKey] = {
-                                palabrasClave: palabrasComunes,
-                                productos: [],
-                                prefijoSugerido: generarPrefijo(palabrasComunes)
-                            };
-                        }
-                        
-                        if (!familias[familiaKey].productos.find(p => p.sku === producto.sku)) {
-                            familias[familiaKey].productos.push(producto);
-                        }
-                        if (!familias[familiaKey].productos.find(p => p.sku === otroProducto.sku)) {
-                            familias[familiaKey].productos.push(otroProducto);
-                        }
-                    }
-                });
-            });
-
-            const familiasArray = Object.entries(familias)
-                .map(([key, familia]) => familia)
-                .filter(f => f.productos.length >= 2)
-                .sort((a, b) => b.productos.length - a.productos.length);
-
-            log(`✅ ${familiasArray.length} familias detectadas`, 'success');
-            return familiasArray;
-        }
-
-        function generarPrefijo(palabrasClave) {
-            if (palabrasClave.length === 0) return 'XX';
-            
-            const palabra = palabrasClave[0];
-            if (palabra.length >= 3) {
-                return palabra.substring(0, 2).toUpperCase() + '-';
-            }
-            return palabra.toUpperCase() + '-';
-        }
-
         // ========== VALIDADOR ==========
         function validarCatalogos() {
             log('Validando catálogos...', 'info');
@@ -490,7 +543,7 @@
                                 mensaje: `${cambio.sku}: Cambio >50% en ${cp.lista}`,
                                 sku: cambio.sku,
                                 icono: '⚠️',
-                                detalle: `Neto: ${cp.netoAntes} → ${cp.netoDespues}`
+                                detalle: `Neto: ${cp.netoAntes} → ${cp.netoDespues} | Bruto: ${cp.brutoAntes} → ${cp.brutoDespues}`
                             });
                         }
                     });
@@ -505,18 +558,7 @@
                     titulo: 'Productos Sin Precio',
                     mensaje: `${sinPrecio.length} productos se agregarán con precio $0`,
                     icono: '⚠️',
-                    detalle: `Se deben actualizar precios posteriormente`
-                });
-            }
-
-            // Sugerencia: Familias sin prefijo
-            if (familiasDetectadas.length > 0) {
-                errores.push({
-                    tipo: 'sugerencia',
-                    titulo: 'Familias Detectadas',
-                    mensaje: `${familiasDetectadas.length} familias podrían beneficiarse de prefijos`,
-                    icono: '💡',
-                    detalle: 'Revisa el panel de familias para aplicar prefijos'
+                    detalle: `SKUs: ${sinPrecio.map(p => p.sku).join(', ')}`
                 });
             }
 
@@ -771,7 +813,7 @@
             const nuevos = cambiosDetectados.filter(c => c.tipo === 'nuevo').length;
             const actualizados = cambiosDetectados.filter(c => c.tipo === 'actualizado').length;
             const advertencias = cambiosDetectados.filter(c => c.preciosPendientes).length;
-            const conPrefijo = Object.keys(prefijosAplicados).length;
+            const conPrecios = cambiosDetectados.filter(c => c.tipo === 'nuevo' && !c.preciosPendientes).length;
 
             ui.resumenCambios.innerHTML = `
                 <div class="badge-nuevo text-white p-4 rounded-lg text-center">
@@ -787,8 +829,8 @@
                     <div class="text-sm">Sin Precios</div>
                 </div>
                 <div class="badge-info text-white p-4 rounded-lg text-center">
-                    <div class="text-3xl font-bold">${conPrefijo}</div>
-                    <div class="text-sm">Con Prefijo</div>
+                    <div class="text-3xl font-bold">${conPrecios}</div>
+                    <div class="text-sm">Con Precios</div>
                 </div>
                 <div class="bg-accent text-white p-4 rounded-lg text-center">
                     <div class="text-3xl font-bold">${catalogoGit.length + nuevos}</div>
@@ -826,41 +868,98 @@
             cambiosFiltrados.forEach(cambio => {
                 const badgeClass = cambio.tipo === 'nuevo' ? 'badge-nuevo' : 'badge-actualizado';
                 const iconoAdvertencia = cambio.preciosPendientes ? ' ⚠️' : '';
-                const skuFinal = prefijosAplicados[cambio.sku] || cambio.sku;
-                const tienePrefijo = prefijosAplicados[cambio.sku] ? true : false;
 
                 html += `
                     <div class="bg-accent p-4 rounded-lg border-l-4 ${cambio.tipo === 'nuevo' ? 'border-green-500' : 'border-blue-500'}">
                         <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <span class="${badgeClass} text-white text-xs px-2 py-1 rounded font-semibold">
+                            <div class="flex-1">
+                                <span class="${badgeClass} text-white text-xs px-2 py-1 rounded font-semibold mr-2">
                                     ${cambio.tipo.toUpperCase()}${iconoAdvertencia}
                                 </span>
-                                ${tienePrefijo ? `
-                                    <span class="ml-2 text-xs bg-purple-600 text-white px-2 py-1 rounded">
-                                        ${cambio.sku} → ${skuFinal}
-                                    </span>
-                                ` : `
-                                    <span class="ml-2 font-bold text-blue-300">${skuFinal}</span>
-                                `}
+                                <span class="font-bold text-blue-300 text-lg">${cambio.sku}</span>
                             </div>
                         </div>
-                        <p class="text-sm mb-2">${cambio.descripcion}</p>
-                        <p class="text-xs text-secondary">${cambio.detalle}</p>
+                        <p class="text-sm mb-3 font-medium">${cambio.descripcion}</p>
                 `;
 
+                // 🆕 Información detallada para NUEVOS
+                if (cambio.tipo === 'nuevo') {
+                    html += '<div class="bg-primary p-3 rounded mb-2">';
+                    html += '<div class="text-xs font-semibold text-green-400 mb-2">📦 INFORMACIÓN DEL NUEVO PRODUCTO:</div>';
+                    
+                    if (cambio.drive && cambio.drive.precios) {
+                        html += '<div class="grid grid-cols-2 gap-2 text-xs">';
+                        cambio.drive.precios.forEach(precio => {
+                            const tienePrecios = precio.neto > 0 || precio.bruto > 0;
+                            html += `
+                                <div class="bg-accent p-2 rounded ${!tienePrecios ? 'border border-orange-500' : ''}">
+                                    <div class="font-semibold text-purple-400">${precio.tipo}</div>
+                                    <div class="${tienePrecios ? 'text-green-400' : 'text-orange-400'}">
+                                        Neto: ${tienePrecios ? formatter.format(precio.neto) : 'SIN PRECIO'}
+                                    </div>
+                                    <div class="${tienePrecios ? 'text-green-400' : 'text-orange-400'}">
+                                        Bruto: ${tienePrecios ? formatter.format(precio.bruto) : 'SIN PRECIO'}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    if (cambio.preciosPendientes) {
+                        html += '<div class="mt-2 text-xs text-orange-400 font-semibold">⚠️ Este producto se agregará con precio $0 - actualizar precios posteriormente</div>';
+                    } else {
+                        html += '<div class="mt-2 text-xs text-green-400 font-semibold">✅ Producto listo para agregar con precios</div>';
+                    }
+                    
+                    html += '</div>';
+                }
+
+                // 🆕 Información detallada para ACTUALIZADOS
                 if (cambio.cambiosPrecios && cambio.cambiosPrecios.length > 0) {
-                    html += '<div class="mt-2 text-xs space-y-1">';
+                    html += '<div class="bg-primary p-3 rounded">';
+                    html += '<div class="text-xs font-semibold text-blue-400 mb-2">🔄 CAMBIOS DE PRECIO DETECTADOS:</div>';
+                    html += '<div class="space-y-2">';
+                    
                     cambio.cambiosPrecios.forEach(cp => {
+                        const difNeto = cp.netoDespues - cp.netoAntes;
+                        const difBruto = cp.brutoDespues - cp.brutoAntes;
+                        const pctNeto = ((difNeto / cp.netoAntes) * 100).toFixed(1);
+                        const pctBruto = ((difBruto / cp.brutoAntes) * 100).toFixed(1);
+                        
+                        const colorNeto = difNeto > 0 ? 'text-green-400' : 'text-red-400';
+                        const colorBruto = difBruto > 0 ? 'text-green-400' : 'text-red-400';
+                        const iconoNeto = difNeto > 0 ? '↗' : '↘';
+                        const iconoBruto = difBruto > 0 ? '↗' : '↘';
+                        
                         html += `
-                            <div class="bg-primary p-2 rounded">
-                                <strong class="text-purple-400">${cp.lista}:</strong><br>
-                                Neto: ${formatter.format(cp.netoAntes)} → ${formatter.format(cp.netoDespues)}<br>
-                                Bruto: ${formatter.format(cp.brutoAntes)} → ${formatter.format(cp.brutoDespues)}
+                            <div class="bg-accent p-2 rounded text-xs">
+                                <div class="font-semibold text-purple-400 mb-1">${cp.lista}</div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <div class="text-secondary mb-1">Precio Neto:</div>
+                                        <div class="flex justify-between items-center">
+                                            <span>${formatter.format(cp.netoAntes)}</span>
+                                            <span class="${colorNeto} font-bold">${iconoNeto}</span>
+                                            <span class="font-bold">${formatter.format(cp.netoDespues)}</span>
+                                        </div>
+                                        <div class="${colorNeto} text-xs">(${difNeto > 0 ? '+' : ''}${pctNeto}%)</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-secondary mb-1">Precio Bruto:</div>
+                                        <div class="flex justify-between items-center">
+                                            <span>${formatter.format(cp.brutoAntes)}</span>
+                                            <span class="${colorBruto} font-bold">${iconoBruto}</span>
+                                            <span class="font-bold">${formatter.format(cp.brutoDespues)}</span>
+                                        </div>
+                                        <div class="${colorBruto} text-xs">(${difBruto > 0 ? '+' : ''}${pctBruto}%)</div>
+                                    </div>
+                                </div>
                             </div>
                         `;
                     });
-                    html += '</div>';
+                    
+                    html += '</div></div>';
                 }
 
                 html += '</div>';
@@ -872,53 +971,349 @@
                 '<p class="text-secondary text-center py-8">No hay cambios que mostrar con este filtro</p>';
         }
 
-        // ========== GENERADOR CSV ==========
-        function generarCSVActualizado() {
-            log('Generando catálogo actualizado...', 'info');
-            
-            let csvFinal = [...catalogoGit];
-            const skusExistentes = new Set(catalogoGit.map(p => p.sku));
+        // ========== GENERADOR DE VISTA PREVIA ==========
+        function generarVistaPrevia() {
+            log('Generando vista previa del CSV...', 'info');
+            csvPreview = [];
 
-            // Actualizar precios existentes
+            // 1. Copiar todos los productos Git existentes
+            catalogoGit.forEach(productoGit => {
+                csvPreview.push({
+                    sku: productoGit.sku,
+                    descripcion: productoGit.descripcion,
+                    tipo_precio: productoGit.tipo_precio,
+                    precio_neto: productoGit.precio_neto,
+                    precio_bruto: productoGit.precio_bruto,
+                    origen: 'git',
+                    actualizado: false
+                });
+            });
+
+            // 2. Actualizar precios de productos existentes
             cambiosDetectados.forEach(cambio => {
                 if (cambio.tipo === 'actualizado') {
                     cambio.drive.precios.forEach(precioDrive => {
-                        const index = csvFinal.findIndex(p => 
+                        const index = csvPreview.findIndex(p => 
                             p.sku === cambio.sku && 
                             (p.tipo_precio === precioDrive.tipo || 
                              (precioDrive.tipo.includes('MAYOR') && p.tipo_precio.includes('MAYOR')))
                         );
 
                         if (index !== -1) {
-                            csvFinal[index].precio_neto = precioDrive.neto;
-                            csvFinal[index].precio_bruto = precioDrive.bruto;
-                            log(`✓ Actualizado: ${cambio.sku} - ${precioDrive.tipo}`, 'success');
+                            csvPreview[index].precio_neto = precioDrive.neto;
+                            csvPreview[index].precio_bruto = precioDrive.bruto;
+                            csvPreview[index].actualizado = true;
                         }
                     });
                 }
             });
 
-            // Agregar productos nuevos (con prefijos aplicados)
+            // 3. Agregar productos nuevos (con prefijos si tienen)
             cambiosDetectados.forEach(cambio => {
                 if (cambio.tipo === 'nuevo') {
                     const skuFinal = prefijosAplicados[cambio.sku] || cambio.sku;
                     
                     cambio.drive.precios.forEach(precio => {
-                        csvFinal.push({
+                        csvPreview.push({
                             sku: skuFinal,
+                            skuOriginal: cambio.sku,
                             descripcion: cambio.descripcion,
                             tipo_precio: precio.tipo,
                             precio_neto: precio.neto,
-                            precio_bruto: precio.bruto
+                            precio_bruto: precio.bruto,
+                            origen: 'nuevo',
+                            actualizado: false,
+                            tienePrefijo: prefijosAplicados[cambio.sku] ? true : false,
+                            sinPrecio: (precio.neto === 0 && precio.bruto === 0)
                         });
-                        log(`✓ Agregado: ${skuFinal} - ${precio.tipo}`, 'success');
                     });
                 }
             });
 
-            // Generar CSV con estructura Git EXACTA
+            log(`✅ Vista previa generada: ${csvPreview.length} líneas`, 'success');
+            return csvPreview;
+        }
+
+        function renderStatsPreview() {
+            const total = csvPreview.length;
+            const nuevos = csvPreview.filter(p => p.origen === 'nuevo').length;
+            const conPrefijo = csvPreview.filter(p => p.tienePrefijo).length;
+            const actualizados = csvPreview.filter(p => p.actualizado).length;
+            const gitOriginales = csvPreview.filter(p => p.origen === 'git' && !p.actualizado).length;
+
+            ui.statsPreview.innerHTML = `
+                <div class="bg-accent text-white p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold">${total}</div>
+                    <div class="text-xs">Total Líneas</div>
+                </div>
+                <div class="badge-nuevo text-white p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold">${nuevos}</div>
+                    <div class="text-xs">Nuevos</div>
+                </div>
+                <div class="badge-info text-white p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold">${conPrefijo}</div>
+                    <div class="text-xs">Con Prefijo</div>
+                </div>
+                <div class="badge-actualizado text-white p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold">${actualizados}</div>
+                    <div class="text-xs">Actualizados</div>
+                </div>
+                <div class="bg-gray-600 text-white p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold">${gitOriginales}</div>
+                    <div class="text-xs">Git Sin Cambio</div>
+                </div>
+            `;
+        }
+
+        function renderPreview(filtro = 'todos', busqueda = '') {
+            let previewFiltrado = csvPreview;
+
+            // Filtro por tipo
+            if (filtro === 'nuevos') {
+                previewFiltrado = previewFiltrado.filter(p => p.origen === 'nuevo');
+            } else if (filtro === 'git-originales') {
+                previewFiltrado = previewFiltrado.filter(p => p.origen === 'git' && !p.actualizado);
+            } else if (filtro === 'con-prefijo') {
+                previewFiltrado = previewFiltrado.filter(p => p.tienePrefijo);
+            }
+
+            // Filtro por búsqueda
+            if (busqueda) {
+                const termino = busqueda.toLowerCase();
+                previewFiltrado = previewFiltrado.filter(p => 
+                    p.sku.toLowerCase().includes(termino) ||
+                    (p.skuOriginal && p.skuOriginal.toLowerCase().includes(termino))
+                );
+            }
+
+            const formatter = new Intl.NumberFormat('es-CL', {
+                style: 'currency',
+                currency: 'CLP',
+                maximumFractionDigits: 0
+            });
+
+            // Agrupar por SKU para mostrar
+            const productosPorSku = {};
+            previewFiltrado.forEach(linea => {
+                if (!productosPorSku[linea.sku]) {
+                    productosPorSku[linea.sku] = {
+                        sku: linea.sku,
+                        skuOriginal: linea.skuOriginal,
+                        descripcion: linea.descripcion,
+                        origen: linea.origen,
+                        tienePrefijo: linea.tienePrefijo,
+                        actualizado: linea.actualizado,
+                        sinPrecio: linea.sinPrecio,
+                        precios: []
+                    };
+                }
+                productosPorSku[linea.sku].precios.push({
+                    tipo: linea.tipo_precio,
+                    neto: linea.precio_neto,
+                    bruto: linea.precio_bruto
+                });
+            });
+
+            let html = '<div class="space-y-2">';
+            Object.values(productosPorSku).forEach(producto => {
+                const esNuevo = producto.origen === 'nuevo';
+                const puedeEditarPrefijo = esNuevo;
+                const borderColor = producto.tienePrefijo ? 'border-purple-500' : 
+                                   esNuevo ? 'border-green-500' : 
+                                   producto.actualizado ? 'border-blue-500' : 'border-gray-600';
+
+                html += `
+                    <div class="bg-accent p-3 rounded-lg border-l-4 ${borderColor} ${puedeEditarPrefijo ? 'cursor-pointer hover:bg-opacity-80' : ''}"
+                         ${puedeEditarPrefijo ? `onclick="abrirModalPrefijo('${producto.skuOriginal || producto.sku}')"` : ''}>
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                ${esNuevo ? '<span class="badge-nuevo text-white text-xs px-2 py-1 rounded font-semibold mr-2">NUEVO</span>' : ''}
+                                ${producto.actualizado ? '<span class="badge-actualizado text-white text-xs px-2 py-1 rounded font-semibold mr-2">ACTUALIZADO</span>' : ''}
+                                
+                                ${producto.tienePrefijo ? `
+                                    <div class="mt-1">
+                                        <span class="text-xs text-secondary">Original:</span>
+                                        <span class="text-xs text-gray-400 line-through">${producto.skuOriginal}</span>
+                                        <span class="text-xs text-secondary mx-2">→</span>
+                                        <span class="font-bold text-lg text-purple-300">${producto.sku}</span>
+                                        <span class="ml-2 text-xs bg-purple-600 text-white px-2 py-1 rounded">CON PREFIJO</span>
+                                    </div>
+                                ` : `
+                                    <span class="font-bold text-lg ${esNuevo ? 'text-green-300' : 'text-blue-300'}">${producto.sku}</span>
+                                `}
+                                
+                                ${puedeEditarPrefijo ? '<span class="ml-2 text-xs text-yellow-400">👆 Click para agregar prefijo</span>' : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="text-sm mb-2">${producto.descripcion}</div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                            ${producto.precios.map(p => `
+                                <div class="bg-primary p-2 rounded ${p.neto === 0 && p.bruto === 0 ? 'border border-orange-500' : ''}">
+                                    <div class="font-semibold text-purple-400">${p.tipo}</div>
+                                    <div class="${p.neto > 0 ? '' : 'text-orange-400'}">Neto: ${p.neto > 0 ? formatter.format(p.neto) : 'SIN PRECIO'}</div>
+                                    <div class="${p.bruto > 0 ? '' : 'text-orange-400'}">Bruto: ${p.bruto > 0 ? formatter.format(p.bruto) : 'SIN PRECIO'}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            ui.listaPreview.innerHTML = Object.keys(productosPorSku).length > 0 ? 
+                html : 
+                '<p class="text-secondary text-center py-8">No hay productos que mostrar con este filtro</p>';
+        }
+
+        // ========== MODAL DE PREFIJOS ==========
+        // ========== MODAL DE PREFIJOS ==========
+        function abrirModalPrefijo(skuOriginal) {
+            const cambio = cambiosDetectados.find(c => c.sku === skuOriginal);
+            if (!cambio) return;
+
+            skuModalActual = skuOriginal;
+            ui.modalSkuOriginal.textContent = skuOriginal;
+            ui.modalDescripcion.textContent = cambio.descripcion;
+            
+            const prefijoActual = prefijosAplicados[skuOriginal];
+            if (prefijoActual) {
+                ui.inputPrefijo.value = prefijoActual.replace(skuOriginal, '');
+                ui.previewSkuFinal.textContent = prefijoActual;
+            } else {
+                ui.inputPrefijo.value = '';
+                ui.previewSkuFinal.textContent = skuOriginal;
+            }
+
+            ui.modalPrefijo.style.display = 'flex';
+        }
+
+        function cerrarModalPrefijo() {
+            ui.modalPrefijo.style.display = 'none';
+            skuModalActual = null;
+        }
+
+        function aplicarPrefijoModal() {
+            if (!skuModalActual) return;
+
+            const prefijo = ui.inputPrefijo.value.trim().toUpperCase();
+            
+            if (prefijo) {
+                prefijosAplicados[skuModalActual] = prefijo + skuModalActual;
+                log(`✅ Prefijo aplicado: ${skuModalActual} → ${prefijosAplicados[skuModalActual]}`, 'success');
+            } else {
+                delete prefijosAplicados[skuModalActual];
+                log(`🗑️ Prefijo eliminado: ${skuModalActual}`, 'info');
+            }
+
+            generarVistaPrevia();
+            renderStatsPreview();
+            renderPreview(filtroPreview, ui.buscarPreview.value);
+            cerrarModalPrefijo();
+        }
+
+        function quitarPrefijoModal() {
+            if (!skuModalActual) return;
+
+            delete prefijosAplicados[skuModalActual];
+            log(`🗑️ Prefijo eliminado: ${skuModalActual}`, 'info');
+
+            generarVistaPrevia();
+            renderStatsPreview();
+            renderPreview(filtroPreview, ui.buscarPreview.value);
+            cerrarModalPrefijo();
+        }
+
+        function limpiarTodosPrefijos() {
+            if (Object.keys(prefijosAplicados).length === 0) {
+                alert('No hay prefijos para limpiar');
+                return;
+            }
+
+            if (confirm(`¿Seguro que quieres eliminar TODOS los prefijos (${Object.keys(prefijosAplicados).length})?`)) {
+                prefijosAplicados = {};
+                log('🗑️ Todos los prefijos eliminados', 'info');
+                
+                generarVistaPrevia();
+                renderStatsPreview();
+                renderPreview(filtroPreview, ui.buscarPreview.value);
+            }
+        }
+
+        function abrirModalMasivo() {
+            ui.inputPrefijoMasivo.value = '';
+            
+            // Listar solo productos NUEVOS
+            const nuevos = cambiosDetectados.filter(c => c.tipo === 'nuevo');
+            
+            let html = '<div class="space-y-1">';
+            nuevos.forEach(producto => {
+                const tienePrefijo = prefijosAplicados[producto.sku];
+                html += `
+                    <label class="flex items-center p-2 hover:bg-primary rounded cursor-pointer">
+                        <input type="checkbox" class="h-4 w-4 rounded mr-3" value="${producto.sku}">
+                        <div class="flex-1">
+                            <div class="font-semibold text-sm ${tienePrefijo ? 'text-purple-300' : 'text-blue-300'}">
+                                ${tienePrefijo ? prefijosAplicados[producto.sku] : producto.sku}
+                                ${tienePrefijo ? `<span class="text-xs text-gray-400 ml-2">(${producto.sku})</span>` : ''}
+                            </div>
+                            <div class="text-xs text-secondary">${producto.descripcion}</div>
+                        </div>
+                    </label>
+                `;
+            });
+            html += '</div>';
+            
+            ui.listaProductosMasivo.innerHTML = html;
+            ui.modalPrefijoMasivo.style.display = 'flex';
+        }
+
+        function cerrarModalMasivo() {
+            ui.modalPrefijoMasivo.style.display = 'none';
+        }
+
+        function aplicarPrefijoMasivo() {
+            const prefijo = ui.inputPrefijoMasivo.value.trim().toUpperCase();
+            
+            if (!prefijo) {
+                alert('Debes escribir un prefijo');
+                return;
+            }
+
+            const checkboxes = ui.listaProductosMasivo.querySelectorAll('input[type="checkbox"]:checked');
+            
+            if (checkboxes.length === 0) {
+                alert('Debes seleccionar al menos un producto');
+                return;
+            }
+
+            let count = 0;
+            checkboxes.forEach(checkbox => {
+                const sku = checkbox.value;
+                prefijosAplicados[sku] = prefijo + sku;
+                count++;
+            });
+
+            log(`✅ Prefijo "${prefijo}" aplicado a ${count} producto(s)`, 'success');
+
+            generarVistaPrevia();
+            renderStatsPreview();
+            renderPreview(filtroPreview, ui.buscarPreview.value);
+            cerrarModalMasivo();
+        }
+
+        function generarCSVActualizado() {
+            log('Generando catálogo actualizado desde vista previa...', 'info');
+            
+            if (csvPreview.length === 0) {
+                alert('Error: No hay vista previa generada');
+                return;
+            }
+
+            // Generar CSV con estructura Git EXACTA desde csvPreview
             let csvTexto = 'SKU;DESCRIPCION;TIPO_PRECIO;PRECIO_NETO;PRECIO_BRUTO\n';
-            csvFinal.forEach(producto => {
+            csvPreview.forEach(producto => {
                 const linea = [
                     producto.sku,
                     `"${producto.descripcion.replace(/"/g, '""')}"`,
@@ -943,19 +1338,24 @@
             document.body.removeChild(link);
 
             log(`✅ CSV generado: GIT${fecha}CATALOGO_ACTUALIZADO.csv`, 'success');
-            log(`📊 Total de productos: ${csvFinal.length}`, 'info');
-            log(`📊 Productos con prefijo: ${Object.keys(prefijosAplicados).length}`, 'info');
+            log(`📊 Total de líneas: ${csvPreview.length}`, 'info');
+            log(`🏷️ Productos con prefijo: ${Object.keys(prefijosAplicados).length}`, 'info');
             
             // Mostrar estadísticas finales
+            const nuevos = csvPreview.filter(p => p.origen === 'nuevo').length;
+            const actualizados = csvPreview.filter(p => p.actualizado).length;
+            const conPrefijo = csvPreview.filter(p => p.tienePrefijo).length;
+            
             ui.estadisticasFinales.innerHTML = `
                 <div class="text-sm font-semibold mb-2">✅ Catálogo Generado Exitosamente</div>
                 <div class="text-xs space-y-1">
-                    <div>📦 Total productos: ${csvFinal.length}</div>
-                    <div>🆕 Nuevos agregados: ${cambiosDetectados.filter(c => c.tipo === 'nuevo').length}</div>
-                    <div>🔄 Precios actualizados: ${cambiosDetectados.filter(c => c.tipo === 'actualizado').length}</div>
-                    <div>🏷️ SKUs con prefijo: ${Object.keys(prefijosAplicados).length}</div>
+                    <div>📦 Total líneas en catálogo: ${csvPreview.length}</div>
+                    <div>🆕 Nuevas líneas agregadas: ${nuevos}</div>
+                    <div>🔄 Líneas con precios actualizados: ${actualizados}</div>
+                    <div>🏷️ Productos con prefijo aplicado: ${conPrefijo}</div>
                     <div>✓ Formato: Compatible con Corrector de Pedidos</div>
                     <div>✓ Delimitador: ; (punto y coma)</div>
+                    <div>✓ Estructura: SKU;DESCRIPCION;TIPO_PRECIO;PRECIO_NETO;PRECIO_BRUTO</div>
                 </div>
             `;
         }
@@ -1004,15 +1404,16 @@
             renderErrores(tabErrorActiva);
             ui.panelValidacion.classList.remove('hidden');
             
-            // Paso 3: Detectar familias
-            familiasDetectadas = detectarFamilias();
-            renderFamilias();
-            ui.panelFamilias.classList.remove('hidden');
-            
-            // Paso 4: Mostrar cambios
+            // Paso 3: Mostrar cambios
             renderResumenCambios();
             renderCambios(filtroActivo);
             ui.panelCambios.classList.remove('hidden');
+            
+            // Paso 4: Generar vista previa
+            generarVistaPrevia();
+            renderStatsPreview();
+            renderPreview(filtroPreview);
+            ui.panelPreview.classList.remove('hidden');
             
             // Paso 5: Habilitar generación
             ui.panelGenerar.classList.remove('hidden');
@@ -1057,16 +1458,50 @@
             renderCambios(filtroActivo, e.target.value);
         });
 
-        // Auto-aplicar familias
-        ui.autoAplicarFamilias.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                log('🤖 Auto-aplicación de prefijos activada', 'info');
-                // Aplicar automáticamente todos los prefijos sugeridos
-                familiasDetectadas.forEach((familia, index) => {
-                    aplicarPrefijoFamilia(index, familia.prefijoSugerido);
+        // Filtros de vista previa
+        document.querySelectorAll('.filtro-preview').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filtro-preview').forEach(b => {
+                    b.classList.remove('font-semibold', 'bg-blue-600');
                 });
-                familiasDetectadas = [];
-                renderFamilias();
+                e.target.classList.add('font-semibold', 'bg-blue-600');
+                
+                filtroPreview = e.target.dataset.tipo;
+                renderPreview(filtroPreview, ui.buscarPreview.value);
+            });
+        });
+
+        ui.buscarPreview.addEventListener('input', (e) => {
+            renderPreview(filtroPreview, e.target.value);
+        });
+
+        // Botones de prefijos
+        ui.btnLimpiarPrefijos.addEventListener('click', limpiarTodosPrefijos);
+        ui.btnAplicarPrefijoMasivo.addEventListener('click', abrirModalMasivo);
+
+        // Modal prefijo individual
+        ui.modalPrefijoClose.addEventListener('click', cerrarModalPrefijo);
+        ui.btnAplicarPrefijoModal.addEventListener('click', aplicarPrefijoModal);
+        ui.btnQuitarPrefijoModal.addEventListener('click', quitarPrefijoModal);
+        
+        ui.inputPrefijo.addEventListener('input', (e) => {
+            const prefijo = e.target.value.trim().toUpperCase();
+            if (skuModalActual) {
+                ui.previewSkuFinal.textContent = prefijo ? (prefijo + skuModalActual) : skuModalActual;
+            }
+        });
+
+        // Modal prefijo masivo
+        ui.modalMasivoClose.addEventListener('click', cerrarModalMasivo);
+        ui.btnAplicarMasivo.addEventListener('click', aplicarPrefijoMasivo);
+
+        // Cerrar modales al hacer click fuera
+        window.addEventListener('click', (e) => {
+            if (e.target === ui.modalPrefijo) {
+                cerrarModalPrefijo();
+            }
+            if (e.target === ui.modalPrefijoMasivo) {
+                cerrarModalMasivo();
             }
         });
 
