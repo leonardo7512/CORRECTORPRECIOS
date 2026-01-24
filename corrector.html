@@ -3,1153 +3,1511 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector de Pedidos Pro v37.0 (Con OCR)</title>
+    <title>Sincronizador Inteligente de Catálogo v2.0 - AROMAKER</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #1a1d23; --bg-secondary: #242832; --bg-accent: #2d3748;
-            --text-primary: #e2e8f0; --text-secondary: #a0aec0; --accent-green: #48bb78;
-            --accent-blue: #4299e1; --border-color: #4a5568;
+            --bg-primary: #1a1d23;
+            --bg-secondary: #242832;
+            --bg-accent: #2d3748;
+            --text-primary: #e2e8f0;
+            --text-secondary: #a0aec0;
+            --accent-green: #48bb78;
+            --accent-blue: #4299e1;
+            --accent-orange: #ed8936;
+            --accent-red: #f56565;
+            --accent-purple: #9f7aea;
+            --border-color: #4a5568;
         }
-        body { font-family: 'Courier Prime', monospace; background-color: var(--bg-primary); color: var(--text-primary); }
-        .panel { background-color: var(--bg-secondary); } 
-        .input-area, .internal-box { background-color: var(--bg-accent); } 
-        #debug-section { background-color: var(--bg-accent); border-left: 4px solid var(--accent-green); }
-        #debug-section h3 { color: var(--accent-green); }
-        .input-field { background-color: var(--bg-accent); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.2s ease, box-shadow 0.2s ease; }
-        .input-field::placeholder { color: var(--text-secondary); }
-        .input-field:hover { border-color: var(--accent-blue); }
-        .input-field:focus { border-color: var(--accent-green); box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2); outline: none; }
-        .loader { border-top-color: var(--accent-blue); animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .disabled-section, button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .switch-group input[type="radio"] { display: none; }
-        .switch-group label { cursor: pointer; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.375rem; transition: all 0.2s ease-in-out; }
-        .switch-group input[type="radio"]:checked + label { background-color: var(--accent-blue); border-color: var(--accent-blue); }
-        .highlight-cell { border: 2px solid #f59e0b !important; font-weight: 700; }
-        #price-modal-close:hover, #price-modal-close:focus { color: var(--text-primary); text-decoration: none; }
-        .selector-manual-enabled { border-color: var(--accent-green) !important; background-color: rgba(72, 187, 120, 0.1) !important; }
-        
-        /* 🆕 ESTILOS PARA OCR */
-        .ocr-preview-container { position: relative; max-width: 100%; margin: 1rem auto; }
-        .ocr-preview-img { max-width: 100%; height: auto; border-radius: 8px; }
-        .ocr-guide-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
-        .ocr-guide-frame { border: 3px dashed var(--accent-green); position: absolute; top: 10%; left: 5%; right: 5%; bottom: 30%; background: rgba(72, 187, 120, 0.1); }
-        .ocr-tip { background: rgba(66, 153, 225, 0.9); color: white; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem; margin: 0.25rem; }
-        .ocr-progress { height: 4px; background: var(--accent-green); transition: width 0.3s ease; }
-        .detected-product { background: var(--bg-accent); padding: 0.5rem; margin: 0.25rem 0; border-radius: 4px; border-left: 3px solid var(--accent-green); }
-        .ocr-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
-        .ocr-modal-content { background-color: var(--bg-secondary); margin: 2% auto; padding: 20px; border: 1px solid var(--border-color); width: 95%; max-width: 900px; border-radius: 8px; max-height: 90vh; overflow-y: auto; }
+        body {
+            font-family: 'Courier Prime', monospace;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .panel {
+            background-color: var(--bg-secondary);
+        }
+        .input-field {
+            background-color: var(--bg-accent);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .badge-nuevo { background-color: var(--accent-green); }
+        .badge-actualizado { background-color: var(--accent-blue); }
+        .badge-error { background-color: var(--accent-red); }
+        .badge-warning { background-color: var(--accent-orange); }
+        .badge-info { background-color: var(--accent-purple); }
+        .familia-card {
+            background-color: var(--bg-accent);
+            border-left: 4px solid var(--accent-purple);
+            transition: all 0.2s ease;
+        }
+        .familia-card:hover {
+            border-left-color: var(--accent-green);
+            background-color: rgba(72, 187, 120, 0.1);
+        }
+        .error-critical { border-left: 4px solid var(--accent-red); }
+        .error-warning { border-left: 4px solid var(--accent-orange); }
+        .error-info { border-left: 4px solid var(--accent-blue); }
+        .prefix-badge {
+            background-color: var(--accent-purple);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .similarity-bar {
+            height: 4px;
+            background-color: var(--accent-green);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
-<body>
-    <div class="container mx-auto p-4 md:p-8">
+<body class="p-4">
+    <div class="container mx-auto max-w-7xl">
+        <!-- Header -->
         <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1>
-            <p class="text-secondary mt-2">Versión 37.0 - Con OCR de Fotos 📸</p>
+            <h1 class="text-4xl font-bold mb-2">🔄 Sincronizador Inteligente v2.0</h1>
+            <p class="text-secondary">Drive → Git | Validación Avanzada | Reportes Detallados</p>
         </header>
 
-        <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
-            <h2 class="text-xl font-semibold mb-4">Búsqueda Inteligente en Catálogo</h2>
-            <input type="text" id="intelligent-search-input" class="input-field w-full p-2 rounded-md" placeholder="🔍 Buscar por SKU o descripción del producto...">
-            <div id="intelligent-search-results" class="mt-4 max-h-96 overflow-y-auto pr-2">
-                <p class="text-base text-secondary">Los resultados de la búsqueda aparecerán aquí...</p>
-            </div>
-        </div>
-
-        <div id="debug-section" class="p-4 rounded-lg shadow-md mb-8">
-            <h3 class="text-lg font-semibold mb-2">🔧 Log de Procesamiento</h3>
-            <div id="debug-info" class="text-sm max-h-40 overflow-y-auto">
-                <p>El análisis del pedido aparecerá aquí...</p>
-            </div>
-        </div>
-
-        <div id="upload-section" class="panel p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-xl font-semibold mb-4">Estado del Catálogo</h2>
-            
-            <div class="mb-4 p-3 rounded-lg" style="border: 1px solid var(--border-color); background-color: rgba(66, 153, 225, 0.05);">
-                <label class="block text-sm font-medium mb-2">🌐 Fuente del Catálogo:</label>
-                <div class="flex space-x-2 switch-group flex-wrap">
-                    <input type="radio" id="fuente-cache" name="fuente-catalogo" value="cache" checked>
-                    <label for="fuente-cache">💾 Cache</label>
-                    
-                    <input type="radio" id="fuente-auto" name="fuente-catalogo" value="auto">
-                    <label for="fuente-auto">🔄 Auto</label>
-                    
-                    <input type="radio" id="fuente-git" name="fuente-catalogo" value="git">
-                    <label for="fuente-git">☁️ Git</label>
+        <!-- Paso 1: Cargar Archivos -->
+        <div class="panel p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-2xl font-semibold mb-4">📁 Paso 1: Cargar Archivos</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">
+                        Catálogo Git (Estructura Base):
+                    </label>
+                    <input type="file" id="file-git" accept=".csv" 
+                           class="input-field w-full p-2 rounded-md text-sm">
+                    <p class="text-xs text-secondary mt-1">GIT2708CATALOGO_ACTUALIZADO3.csv</p>
                 </div>
-                <p class="text-xs text-secondary mt-2" id="fuente-descripcion">
-                    💾 Cache: Más rápido, usa versión guardada (4h de validez)
-                </p>
+                <div>
+                    <label class="block text-sm font-medium mb-2">
+                        Catálogo Drive (Fuente de Datos):
+                    </label>
+                    <input type="file" id="file-drive" accept=".csv" 
+                           class="input-field w-full p-2 rounded-md text-sm">
+                    <p class="text-xs text-secondary mt-1">DRIVECATALAGO_AROMAKER.csv</p>
+                </div>
             </div>
+            <button id="btn-analizar" disabled
+                    class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed">
+                🔍 Analizar Diferencias y Validar
+            </button>
+        </div>
+
+        <!-- Paso 2: Validación y Errores -->
+        <div id="panel-validacion" class="panel p-6 rounded-lg shadow-md mb-6 hidden">
+            <h2 class="text-2xl font-semibold mb-4">⚠️ Paso 2: Validación y Errores</h2>
             
-            <div id="status-container">
-                <p id="loading-status" class="text-lg" style="color: #f59e0b;">🔄 Cargando catálogo...</p>
-                <p id="catalog-version" class="text-sm text-secondary mt-2"></p>
-                <button id="btn-refresh-catalog" class="mt-4 bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 text-sm">
-                    🔄 Actualizar Catálogo
+            <!-- Resumen de Validación -->
+            <div id="resumen-validacion" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+
+            <!-- Tabs de Categorías de Errores -->
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <button class="tab-error active px-4 py-2 rounded font-semibold" data-tipo="todos" style="background-color: var(--accent-blue);">
+                    📊 Todos
+                </button>
+                <button class="tab-error px-4 py-2 rounded" data-tipo="criticos" style="background-color: rgba(245, 101, 101, 0.2);">
+                    ❌ Críticos
+                </button>
+                <button class="tab-error px-4 py-2 rounded" data-tipo="advertencias" style="background-color: rgba(237, 137, 54, 0.2);">
+                    ⚠️ Advertencias
+                </button>
+                <button class="tab-error px-4 py-2 rounded" data-tipo="sugerencias" style="background-color: rgba(159, 122, 234, 0.2);">
+                    💡 Sugerencias
                 </button>
             </div>
-        </div>
 
-        <div id="main-interface" class="disabled-section">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="panel p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-semibold mb-4">1. Pegar Pedido y Opciones</h2>
-                    
-                    <!-- 🆕 BOTONES OCR -->
-                    <div class="mb-4 flex gap-2 flex-wrap">
-                        <button id="btn-ocr-camera" class="flex-1 bg-purple-600 text-white font-bold py-2 px-4 rounded-md hover:bg-purple-700 flex items-center justify-center gap-2">
-                            📸 Sacar Foto de Nota
-                        </button>
-                        <button id="btn-ocr-upload" class="flex-1 bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2">
-                            🖼️ Subir Imagen(es)
-                        </button>
-                    </div>
-                    <input type="file" id="ocr-file-input" accept="image/*" multiple style="display: none;">
-                    
-                    <div class="mb-4 text-center text-xs text-secondary">- O pegar manualmente -</div>
-                    
-                    <textarea id="pedido-crudo" class="input-field w-full h-40 p-3 rounded-md" placeholder="Pegue aquí el pedido en cualquier formato..."></textarea>
-                    <div class="mt-4"><label for="nv-input" class="block text-sm font-medium mb-2">Nº Nota de Venta (Opcional):</label><input type="text" id="nv-input" class="input-field w-full p-2 rounded-md" placeholder="Ej: 12345"></div>
-                    <div class="mt-4"><label class="block text-sm font-medium mb-2">Tipo de Cliente:</label><div class="flex space-x-2 switch-group"><input type="radio" id="cliente-normal" name="tipo-cliente" value="normal" checked><label for="cliente-normal">Normal</label><input type="radio" id="cliente-vip" name="tipo-cliente" value="VIP"><label for="cliente-vip">VIP</label><input type="radio" id="cliente-webalia" name="tipo-cliente" value="PRECIOS WEBALIA"><label for="cliente-webalia">Webalia</label></div></div>
-                    <div class="mt-4"><label class="block text-sm font-medium mb-2">Precios del pedido son:</label><div class="flex space-x-2 switch-group"><input type="radio" id="precio-bruto" name="tipo-precio" value="bruto" checked><label for="precio-bruto">Brutos</label><input type="radio" id="precio-neto" name="tipo-precio" value="neto"><label for="precio-neto">Netos</label></div></div>
-                    
-                    <div class="mt-4 p-3 rounded-lg" style="border: 1px solid var(--border-color); background-color: rgba(66, 153, 225, 0.05);">
-                        <label class="flex items-center text-sm font-medium mb-2">
-                            <input type="checkbox" id="forzar-lista-precio" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-2">🎯 Forzar Lista de Precio Específica</span>
-                        </label>
-                        <select id="selector-lista-precio" class="input-field w-full p-2 rounded-md mt-2" disabled>
-                            <option value="">Seleccionar lista de precio...</option>
-                        </select>
-                        <p class="text-xs text-secondary mt-1">Marca esta opción para usar una lista específica independiente de cantidades/cliente</p>
-                    </div>
-                    
-                    <div class="mt-4"><label class="flex items-center text-sm font-medium"><input type="checkbox" id="agrupar-categorias" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked><span class="ml-2">Agrupar Cantidades por Categoría</span></label></div>
-                    <button id="btn-normalizar" class="mt-6 w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-md hover:bg-gray-700">2. Normalizar Pedido</button>
-                </div>
-                <div class="panel p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-semibold mb-4">3. Verificar y Corregir</h2>
-                    <input type="text" id="filtro-pedido" class="input-field w-full p-2 mb-2 rounded-md" placeholder="🔍 Buscar por SKU o descripción...">
-                    <div id="datos-normalizados" class="internal-box w-full h-60 p-3 border border-transparent rounded-md overflow-auto"><p class="text-sm text-secondary">Aquí aparecerán los datos para editar...</p></div>
-                    <button id="btn-corregir" class="mt-6 w-full text-white font-bold py-3 px-4 rounded-md" style="background-color: var(--accent-blue);" disabled>¡Corregir Precios!</button>
-                </div>
+            <!-- Lista de Errores Categorizados -->
+            <div id="lista-errores" class="max-h-96 overflow-y-auto space-y-2">
+                <p class="text-secondary">Los errores y validaciones aparecerán aquí...</p>
             </div>
         </div>
 
-        <div id="resultados-container" class="panel mt-8 p-6 rounded-lg shadow-md hidden">
-            <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
-                 <h2 class="text-2xl font-semibold flex items-center">4. Resultados Finales<div id="loader" class="loader ease-linear rounded-full border-4 border-t-4 h-6 w-6 ml-4 hidden" style="border-color: var(--border-color);"></div></h2>
-                 <div class="flex gap-2 flex-wrap">
-                    <button id="btn-copiar-diferencias" class="hidden text-white font-bold py-2 px-4 rounded-md" style="background-color: var(--accent-blue);">Copiar Resumen</button>
-                    <button id="btn-capturar-tabla" class="hidden text-white font-bold py-2 px-4 rounded-md" style="background-color: var(--accent-green);">📷 Copiar Imagen de Tabla</button>
-                 </div>
-            </div>
-            <div id="resultados-correccion" class="overflow-x-auto"></div>
-            <div id="resumen-pedido" class="mt-6 pt-4" style="border-top: 1px solid var(--border-color);"></div>
-        </div>
-    </div>
 
-    <!-- MODAL DE PRECIOS -->
-    <div id="price-modal" style="display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center;">
-        <div id="price-modal-content" class="panel" style="padding: 20px; border: 1px solid var(--border-color); width: 90%; max-width: 500px; border-radius: 8px; position: relative;">
-            <span id="price-modal-close" style="color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-            <h3 id="price-modal-title" style="margin-top: 0; color: var(--text-primary);"></h3>
-            <div id="price-modal-body"></div>
-        </div>
-    </div>
 
-    <!-- 🆕 MODAL OCR -->
-    <div id="ocr-modal" class="ocr-modal">
-        <div class="ocr-modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold">📸 Procesamiento OCR</h2>
-                <button id="ocr-modal-close" class="text-2xl font-bold hover:text-red-500">&times;</button>
-            </div>
+        <!-- Paso 3: Vista Previa de Cambios -->
+        <div id="panel-cambios" class="panel p-6 rounded-lg shadow-md mb-6 hidden">
+            <h2 class="text-2xl font-semibold mb-4">📊 Paso 3: Revisión Detallada de Cambios</h2>
             
-            <!-- Guías para foto -->
-            <div id="ocr-guide-section" class="mb-4 p-4 rounded-lg" style="background-color: rgba(66, 153, 225, 0.1); border: 1px solid var(--accent-blue);">
-                <h3 class="text-lg font-semibold mb-2">💡 Tips para mejor resultado:</h3>
-                <ul class="text-sm space-y-1">
-                    <li>✓ <strong>Iluminación uniforme</strong> (evita sombras y reflejos)</li>
-                    <li>✓ <strong>Foto desde arriba</strong> (90°, sin ángulo)</li>
-                    <li>✓ <strong>Solo la tabla de productos</strong> (no incluyas texto de abajo)</li>
-                    <li>✓ <strong>Documento plano</strong> (sin arrugas ni dobleces)</li>
-                    <li>✓ <strong>Enfoque nítido</strong> (espera que la cámara enfoque)</li>
-                    <li>⚠️ <strong>Evita números escritos a mano</strong> (pueden confundir)</li>
+            <!-- Resumen -->
+            <div id="resumen-cambios" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
+
+            <!-- Filtros -->
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <button class="filtro-btn px-3 py-1 rounded text-sm font-semibold bg-blue-600" data-tipo="todos">
+                    Todos
+                </button>
+                <button class="filtro-btn px-3 py-1 rounded text-sm" data-tipo="nuevos">
+                    Nuevos
+                </button>
+                <button class="filtro-btn px-3 py-1 rounded text-sm" data-tipo="actualizados">
+                    Actualizados
+                </button>
+            </div>
+
+            <!-- Búsqueda -->
+            <input type="text" id="buscar-cambios" placeholder="🔍 Buscar por SKU o descripción..."
+                   class="input-field w-full p-2 rounded-md mb-4">
+
+            <!-- Lista de Cambios -->
+            <div id="lista-cambios" class="max-h-96 overflow-y-auto">
+                <p class="text-secondary">Los cambios aparecerán aquí...</p>
+            </div>
+        </div>
+
+        <!-- Paso 4: Vista Previa del CSV y Prefijos -->
+        <div id="panel-preview" class="panel p-6 rounded-lg shadow-md mb-6 hidden">
+            <h2 class="text-2xl font-semibold mb-4">👁️ Paso 4: Vista Previa y Prefijos</h2>
+            
+            <div class="bg-accent p-4 rounded-lg mb-4">
+                <h3 class="font-semibold mb-2">💡 Información:</h3>
+                <ul class="text-sm space-y-1 list-disc list-inside">
+                    <li>Aquí puedes ver TODOS los productos que irán al CSV final</li>
+                    <li>Los productos <span class="text-green-400 font-semibold">NUEVOS</span> pueden recibir prefijos</li>
+                    <li>Los productos <span class="text-blue-400 font-semibold">ACTUALIZADOS</span> mantienen su SKU</li>
+                    <li>Click en cualquier producto NUEVO para agregarle prefijo</li>
                 </ul>
-                <div class="mt-3 p-2 rounded" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);">
-                    <p class="text-xs font-semibold">🎯 Zona óptima: Solo desde "SKU" hasta la última fila de productos</p>
-                </div>
             </div>
-            
-            <!-- Vista previa y progreso -->
-            <div id="ocr-preview-section" style="display: none;">
-                <div class="ocr-preview-container">
-                    <img id="ocr-preview-img" class="ocr-preview-img" alt="Vista previa">
-                    <div class="ocr-guide-overlay">
-                        <div class="ocr-guide-frame"></div>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <div class="flex justify-between text-sm mb-1">
-                        <span id="ocr-status-text">Preparando...</span>
-                        <span id="ocr-progress-percent">0%</span>
-                    </div>
-                    <div style="background: var(--bg-accent); height: 4px; border-radius: 2px; overflow: hidden;">
-                        <div id="ocr-progress-bar" class="ocr-progress" style="width: 0%;"></div>
-                    </div>
-                </div>
+
+            <!-- Filtros de vista previa -->
+            <div class="flex gap-2 mb-4 flex-wrap items-center">
+                <button class="filtro-preview px-3 py-2 rounded text-sm font-semibold bg-blue-600" data-tipo="todos">
+                    📊 Todos
+                </button>
+                <button class="filtro-preview px-3 py-2 rounded text-sm" data-tipo="nuevos">
+                    🆕 Solo Nuevos
+                </button>
+                <button class="filtro-preview px-3 py-2 rounded text-sm" data-tipo="git-originales">
+                    📋 Git Originales
+                </button>
+                <button class="filtro-preview px-3 py-2 rounded text-sm" data-tipo="con-prefijo">
+                    🏷️ Con Prefijo
+                </button>
+                
+                <input type="text" id="buscar-preview" placeholder="🔍 Buscar SKU..."
+                       class="input-field ml-auto p-2 rounded-md text-sm" style="width: 250px;">
             </div>
-            
-            <!-- Resultados detectados -->
-            <div id="ocr-results-section" style="display: none;">
-                <h3 class="text-lg font-semibold mb-2">✅ Productos Detectados:</h3>
-                <div id="ocr-detected-products" class="max-h-96 overflow-y-auto mb-4"></div>
-                <div class="flex gap-2">
-                    <button id="btn-ocr-use-results" class="flex-1 bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">
-                        ✓ Usar Estos Productos
-                    </button>
-                    <button id="btn-ocr-retry" class="flex-1 bg-yellow-600 text-white font-bold py-2 px-4 rounded-md hover:bg-yellow-700">
-                        🔄 Intentar de Nuevo
-                    </button>
-                </div>
+
+            <!-- Estadísticas de vista previa -->
+            <div id="stats-preview" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4"></div>
+
+            <!-- Lista de productos con vista previa -->
+            <div id="lista-preview" class="max-h-96 overflow-y-auto border border-gray-600 rounded-lg p-3">
+                <p class="text-secondary">La vista previa aparecerá aquí...</p>
             </div>
+
+            <div class="mt-4 flex gap-3">
+                <button id="btn-limpiar-prefijos" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">
+                    🗑️ Limpiar Todos los Prefijos
+                </button>
+                <button id="btn-aplicar-prefijo-masivo" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md">
+                    🏷️ Aplicar Prefijo a Múltiples
+                </button>
+            </div>
+        </div>
+
+        <!-- Paso 5: Generar Catálogo -->
+        <div id="panel-generar" class="panel p-6 rounded-lg shadow-md hidden">
+            <h2 class="text-2xl font-semibold mb-4">💾 Paso 5: Generar Catálogo Actualizado</h2>
             
-            <!-- Botón para procesar -->
-            <div id="ocr-process-section" class="mt-4" style="display: none;">
-                <button id="btn-process-ocr" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-md hover:bg-purple-700">
-                    🚀 Procesar Imagen
+            <div class="bg-accent p-4 rounded-lg mb-4">
+                <h3 class="font-semibold mb-2">✅ Verificación Final:</h3>
+                <ul class="text-sm space-y-1 list-disc list-inside" id="checklist-final">
+                    <li>Estructura Git preservada (delimitador ;)</li>
+                    <li>Formato: SKU;DESCRIPCION;TIPO_PRECIO;PRECIO_NETO;PRECIO_BRUTO</li>
+                    <li>Compatible con el Corrector de Pedidos</li>
+                </ul>
+            </div>
+
+            <div id="estadisticas-finales" class="mb-4 p-3 rounded" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);">
+            </div>
+
+            <button id="btn-generar" 
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md">
+                ✅ Generar CSV Actualizado para Git
+            </button>
+        </div>
+
+        <!-- Log de Proceso -->
+        <div class="panel p-4 rounded-lg shadow-md mt-6">
+            <h3 class="text-lg font-semibold mb-2">📝 Log de Proceso</h3>
+            <div id="log-proceso" class="text-sm max-h-48 overflow-y-auto bg-accent p-3 rounded">
+                <p class="text-secondary">El log aparecerá aquí...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para agregar prefijo -->
+    <div id="modal-prefijo" style="display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center;">
+        <div class="panel" style="padding: 20px; border: 1px solid var(--border-color); width: 90%; max-width: 500px; border-radius: 8px; position: relative;">
+            <span id="modal-prefijo-close" style="color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            
+            <h3 class="text-xl font-semibold mb-4">🏷️ Agregar Prefijo a SKU</h3>
+            
+            <div class="mb-4">
+                <div class="text-sm text-secondary mb-2">SKU Original:</div>
+                <div id="modal-sku-original" class="font-bold text-lg text-blue-300 mb-3"></div>
+                
+                <div id="modal-descripcion" class="text-sm text-secondary mb-4"></div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Prefijo (ej: RP-, LT-, etc.):</label>
+                <input type="text" id="input-prefijo" 
+                       class="input-field w-full p-3 rounded-md text-lg font-bold" 
+                       placeholder="XX-"
+                       maxlength="10">
+                <p class="text-xs text-secondary mt-1">Escribe solo las letras y el guión. Ej: RP-</p>
+            </div>
+
+            <div class="mb-4 p-3 rounded-lg" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);">
+                <div class="text-sm font-semibold mb-1">Vista previa:</div>
+                <div id="preview-sku-final" class="text-lg font-bold text-green-400"></div>
+            </div>
+
+            <div class="flex gap-2">
+                <button id="btn-aplicar-prefijo-modal" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md">
+                    ✅ Aplicar Prefijo
+                </button>
+                <button id="btn-quitar-prefijo-modal" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-md">
+                    🗑️ Quitar Prefijo
                 </button>
             </div>
         </div>
     </div>
 
-<script>
-    const CATALOG_ALTERNATIVES = [
-        'https://leonardo7512.github.io/CORRECTORPRECIOS/2708CATALOGO_ACTUALIZADO3.csv',
-        './2708CATALOGO_ACTUALIZADO3.csv',
-        'https://cdn.jsdelivr.net/gh/leonardo7512/CORRECTORPRECIOS@main/2708CATALOGO_ACTUALIZADO3.csv',
-        'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv'
-    ];
-    let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
-    const CACHE_DURATION = 4 * 60 * 60 * 1000;
-    
-    // 🆕 VARIABLES OCR
-    let currentOcrImages = [];
-    let ocrWorker = null;
+    <!-- Modal para prefijo masivo -->
+    <div id="modal-prefijo-masivo" style="display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center;">
+        <div class="panel" style="padding: 20px; border: 1px solid var(--border-color); width: 90%; max-width: 600px; border-radius: 8px; position: relative; max-height: 80vh; overflow-y: auto;">
+            <span id="modal-masivo-close" style="color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            
+            <h3 class="text-xl font-semibold mb-4">🏷️ Aplicar Prefijo a Múltiples Productos</h3>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Prefijo a aplicar:</label>
+                <input type="text" id="input-prefijo-masivo" 
+                       class="input-field w-full p-3 rounded-md text-lg font-bold mb-3" 
+                       placeholder="XX-"
+                       maxlength="10">
+            </div>
 
-    // ========== FUNCIONES ORIGINALES (sin cambios) ==========
-    async function loadCatalogFromGitHub(forzarFuente = null) {
-        const statusEl = document.getElementById('loading-status');
-        const versionEl = document.getElementById('catalog-version');
-        const fuenteSeleccionada = forzarFuente || document.querySelector('input[name="fuente-catalogo"]:checked').value;
-        ui.btnRefreshCatalog.disabled = true;
-        ui.btnRefreshCatalog.innerHTML = '🔄 Actualizando...';
-        console.log(`🔄 Cargando catálogo - Fuente: ${fuenteSeleccionada}`);
-        const cachedData = localStorage.getItem('catalogoCache');
-        const cacheTime = localStorage.getItem('catalogoCacheTime');
-        const cacheValid = cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION;
-        
-        if (fuenteSeleccionada === 'cache') {
-            if (cachedData) {
-                statusEl.textContent = cacheValid ? '✅ Catálogo desde cache local (válido)' : '⚠️ Cache expirado (>4h) pero funcional';
-                statusEl.style.color = cacheValid ? 'var(--accent-green)' : '#f59e0b';
-                Papa.parse(cachedData, {
-                    delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                    complete: (results) => {
-                        const dataRows = results.data.slice(1);
-                        catalogoCompleto = procesarCatalogo(dataRows);
-                        habilitarInterfaz();
-                        const minutos = cacheValid ? Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000) : 'expirado';
-                        versionEl.textContent = `💾 Cache: ${catalogoCompleto.length} productos | Válido: ${minutos !== 'expirado' ? minutos + ' min' : 'expirado'}`;
-                        llenarSelectorListasPrecio();
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Selecciona productos (solo NUEVOS):</label>
+                <div id="lista-productos-masivo" class="max-h-96 overflow-y-auto border border-gray-600 rounded p-2">
+                </div>
+            </div>
+
+            <button id="btn-aplicar-masivo" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md">
+                ✅ Aplicar a Seleccionados
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let catalogoGit = [];
+        let catalogoDrive = [];
+        let cambiosDetectados = [];
+        let erroresDetectados = [];
+        let filtroActivo = 'todos';
+        let tabErrorActiva = 'todos';
+        let prefijosAplicados = {}; // { skuOriginal: skuConPrefijo }
+        let csvPreview = []; // Vista previa del CSV final
+        let filtroPreview = 'todos';
+        let skuModalActual = null;
+
+        const ui = {
+            fileGit: document.getElementById('file-git'),
+            fileDrive: document.getElementById('file-drive'),
+            btnAnalizar: document.getElementById('btn-analizar'),
+            btnGenerar: document.getElementById('btn-generar'),
+            panelValidacion: document.getElementById('panel-validacion'),
+            panelFamilias: document.getElementById('panel-familias'),
+            panelCambios: document.getElementById('panel-cambios'),
+            panelGenerar: document.getElementById('panel-generar'),
+            resumenValidacion: document.getElementById('resumen-validacion'),
+            listaErrores: document.getElementById('lista-errores'),
+            listaFamilias: document.getElementById('lista-familias'),
+            resumenCambios: document.getElementById('resumen-cambios'),
+            listaCambios: document.getElementById('lista-cambios'),
+            buscarCambios: document.getElementById('buscar-cambios'),
+            logProceso: document.getElementById('log-proceso'),
+            checklistFinal: document.getElementById('checklist-final'),
+            estadisticasFinales: document.getElementById('estadisticas-finales'),
+            // Panel de vista previa
+            panelPreview: document.getElementById('panel-preview'),
+            listaPreview: document.getElementById('lista-preview'),
+            statsPreview: document.getElementById('stats-preview'),
+            buscarPreview: document.getElementById('buscar-preview'),
+            btnLimpiarPrefijos: document.getElementById('btn-limpiar-prefijos'),
+            btnAplicarPrefijoMasivo: document.getElementById('btn-aplicar-prefijo-masivo'),
+            // Modal prefijo individual
+            modalPrefijo: document.getElementById('modal-prefijo'),
+            modalPrefijoClose: document.getElementById('modal-prefijo-close'),
+            modalSkuOriginal: document.getElementById('modal-sku-original'),
+            modalDescripcion: document.getElementById('modal-descripcion'),
+            inputPrefijo: document.getElementById('input-prefijo'),
+            previewSkuFinal: document.getElementById('preview-sku-final'),
+            btnAplicarPrefijoModal: document.getElementById('btn-aplicar-prefijo-modal'),
+            btnQuitarPrefijoModal: document.getElementById('btn-quitar-prefijo-modal'),
+            // Modal prefijo masivo
+            modalPrefijoMasivo: document.getElementById('modal-prefijo-masivo'),
+            modalMasivoClose: document.getElementById('modal-masivo-close'),
+            inputPrefijoMasivo: document.getElementById('input-prefijo-masivo'),
+            listaProductosMasivo: document.getElementById('lista-productos-masivo'),
+            btnAplicarMasivo: document.getElementById('btn-aplicar-masivo')
+        };
+
+        // ========== UTILIDADES ==========
+        function log(mensaje, tipo = 'info') {
+            const colores = {
+                info: 'text-blue-400',
+                success: 'text-green-400',
+                warning: 'text-orange-400',
+                error: 'text-red-400'
+            };
+            const timestamp = new Date().toLocaleTimeString();
+            ui.logProceso.innerHTML += `<p class="${colores[tipo]}">[${timestamp}] ${mensaje}</p>`;
+            ui.logProceso.scrollTop = ui.logProceso.scrollHeight;
+        }
+
+        function normalizarSKU(sku) {
+            if (!sku) return '';
+            return String(sku).toUpperCase().trim().replace(/\s+/g, '');
+        }
+
+        function limpiarPrecio(precio) {
+            if (typeof precio === 'number') return precio;
+            if (!precio || precio === '') return 0;
+            
+            const str = String(precio).trim();
+            
+            if (str.includes('Inf a MM') || 
+                str.includes('#VALUE!') || 
+                str.includes('PRECIOS VARIABLES') ||
+                str.includes('ML') ||
+                str.startsWith('🔹') ||
+                str.includes('Caja') ||
+                isNaN(parseFloat(str.replace(/[^0-9.,]/g, '')))) {
+                return 0;
+            }
+
+            try {
+                let cleanStr = str.replace(/[$\s]/g, '');
+                const lastDot = cleanStr.lastIndexOf('.');
+                const lastComma = cleanStr.lastIndexOf(',');
+                
+                if (lastComma > lastDot) {
+                    return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.'));
+                }
+                if (lastDot > lastComma) {
+                    const parts = cleanStr.split('.');
+                    if (parts.length > 1 && parts[parts.length - 1].length !== 3) {
+                        return parseFloat(cleanStr);
                     }
+                    return parseFloat(cleanStr.replace(/\./g, ''));
+                }
+                return parseFloat(cleanStr);
+            } catch (e) {
+                return 0;
+            }
+        }
+
+        function calcularSimilitud(str1, str2) {
+            const s1 = str1.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const s2 = str2.toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            if (s1 === s2) return 100;
+            
+            let matches = 0;
+            const len = Math.min(s1.length, s2.length);
+            
+            for (let i = 0; i < len; i++) {
+                if (s1[i] === s2[i]) matches++;
+            }
+            
+            return Math.round((matches / Math.max(s1.length, s2.length)) * 100);
+        }
+
+        // ========== PROCESADORES CSV ==========
+        function procesarCatalogoGit(data) {
+            log('Procesando catálogo Git...', 'info');
+            const productos = [];
+            
+            data.forEach((row, index) => {
+                if (index === 0 || row.length < 5) return;
+                
+                const sku = normalizarSKU(row[0]);
+                if (!sku) return;
+
+                productos.push({
+                    sku: sku,
+                    descripcion: row[1] ? String(row[1]).trim() : '',
+                    tipo_precio: row[2] ? String(row[2]).trim() : '',
+                    precio_neto: limpiarPrecio(row[3]),
+                    precio_bruto: limpiarPrecio(row[4]),
+                    linea_original: row
                 });
-                ui.btnRefreshCatalog.disabled = false;
-                ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
-                console.log('✅ Usando solo cache');
-                return;
-            } else {
-                statusEl.textContent = '⚠️ No hay cache, descargando desde Git...';
-                statusEl.style.color = '#f59e0b';
-            }
-        }
-        
-        if (fuenteSeleccionada === 'auto' && cacheValid) {
-            statusEl.textContent = '✅ Cache válido - sin descargas necesarias';
-            statusEl.style.color = 'var(--accent-green)';
-            Papa.parse(cachedData, {
-                delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                complete: (results) => {
-                    const dataRows = results.data.slice(1);
-                    catalogoCompleto = procesarCatalogo(dataRows);
-                    habilitarInterfaz();
-                    const minutos = Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000);
-                    versionEl.textContent = `🔄 Auto (cache): ${catalogoCompleto.length} productos | ${minutos} min restantes`;
-                    llenarSelectorListasPrecio();
-                }
-            });
-            ui.btnRefreshCatalog.disabled = false;
-            ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
-            console.log('✅ Modo auto: cache válido');
-            return;
-        }
-        
-        if (fuenteSeleccionada === 'git') {
-            statusEl.textContent = '☁️ Descargando desde Git (puede tardar)...';
-            statusEl.style.color = '#f59e0b';
-        } else {
-            statusEl.textContent = '🔄 Actualizando desde Git...';
-            statusEl.style.color = '#f59e0b';
-        }
-        
-        if (cachedData) {
-            Papa.parse(cachedData, {
-                delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                complete: (results) => {
-                    const dataRows = results.data.slice(1);
-                    catalogoCompleto = procesarCatalogo(dataRows);
-                    habilitarInterfaz();
-                    llenarSelectorListasPrecio();
-                }
-            });
-        }
-        
-        try {
-            let response = null;
-            let successUrl = null;
-            for (let urlIndex = 0; urlIndex < CATALOG_ALTERNATIVES.length; urlIndex++) {
-                const currentUrl = CATALOG_ALTERNATIVES[urlIndex];
-                console.log(`🔄 Intentando fuente ${urlIndex + 1}/${CATALOG_ALTERNATIVES.length}`);
-                try {
-                    response = await fetch(currentUrl);
-                    if (response && response.ok) {
-                        successUrl = currentUrl;
-                        console.log(`✅ Éxito con fuente ${urlIndex + 1}`);
-                        break;
-                    }
-                } catch (error) {
-                    console.log(`❌ Fuente ${urlIndex + 1} falló: ${error.message}`);
-                    if (urlIndex < CATALOG_ALTERNATIVES.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                }
-            }
-            
-            if (!response || !response.ok) {
-                throw new Error('Todas las fuentes temporalmente no disponibles');
-            }
-
-            const csvText = await response.text();
-            const isNewVersion = csvText !== cachedData;
-            localStorage.setItem('catalogoCache', csvText);
-            localStorage.setItem('catalogoCacheTime', Date.now().toString());
-            
-            Papa.parse(csvText, {
-                delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                complete: (results) => {
-                    if (!results.data || results.data.length < 2) {
-                        throw new Error("CSV inválido");
-                    }
-                    const dataRows = results.data.slice(1);
-                    catalogoCompleto = procesarCatalogo(dataRows);
-                    if (catalogoCompleto.length === 0) {
-                        throw new Error("No hay productos válidos");
-                    }
-                    statusEl.textContent = isNewVersion ? `✅ Catálogo actualizado: ${catalogoCompleto.length} productos` : `✅ Verificado: ${catalogoCompleto.length} productos (sin cambios)`;
-                    statusEl.style.color = 'var(--accent-green)';
-                    const sourceName = successUrl.includes('leonardo7512.github.io') ? 'GitHub Pages' : successUrl.startsWith('./') ? 'Local' : successUrl.includes('jsdelivr') ? 'jsDelivr' : successUrl.includes('raw.githubusercontent') ? 'GitHub Raw' : 'Externo';
-                    versionEl.textContent = `☁️ Descargado: ${sourceName} | ${catalogoCompleto.length} productos`;
-                    habilitarInterfaz();
-                    llenarSelectorListasPrecio();
-                    console.log(`✅ Descarga completada desde ${sourceName}`);
-                },
-                error: (err) => { throw new Error(`Error CSV: ${err.message}`); }
             });
 
-        } catch (error) {
-            console.error("Error al descargar:", error);
-            if (cachedData) {
-                statusEl.textContent = '⚠️ Error de descarga - usando cache';
-                statusEl.style.color = '#f59e0b';
-                versionEl.textContent = 'Modo fallback: funcionando con cache disponible';
-                if (catalogoCompleto.length === 0) {
-                    Papa.parse(cachedData, {
-                        delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                        complete: (results) => {
-                            const dataRows = results.data.slice(1);
-                            catalogoCompleto = procesarCatalogo(dataRows);
-                            habilitarInterfaz();
-                            llenarSelectorListasPrecio();
+            log(`✅ Git: ${productos.length} registros cargados`, 'success');
+            return productos;
+        }
+
+        function procesarCatalogoDrive(data) {
+            log('Procesando catálogo Drive...', 'info');
+            const productos = [];
+            
+            data.forEach((row, index) => {
+                if (index === 0 || row.length < 6) return;
+                
+                const sku = normalizarSKU(row[1]);
+                if (!sku || sku === 'NA') return;
+
+                const descripcion = row[0] ? String(row[0]).trim() : '';
+                const precioDetalleBruto = limpiarPrecio(row[2]);
+                const precioDetalleNeto = limpiarPrecio(row[3]);
+                const precioMayorBruto = limpiarPrecio(row[4]);
+                const precioMayorNeto = limpiarPrecio(row[5]);
+                const observaciones = row[6] ? String(row[6]).trim() : '';
+
+                let tipoMayor = 'MAYOR 6 UN.';
+                if (observaciones.includes('MAYOR DESDE 3')) {
+                    tipoMayor = 'MAYOR 3 UN.';
+                } else if (observaciones.includes('MAYOR DESDE 2')) {
+                    tipoMayor = 'MAYOR 2 UN.';
+                }
+
+                productos.push({
+                    sku: sku,
+                    descripcion: descripcion,
+                    precios: [
+                        {
+                            tipo: 'DETALLE',
+                            neto: precioDetalleNeto,
+                            bruto: precioDetalleBruto
+                        },
+                        {
+                            tipo: tipoMayor,
+                            neto: precioMayorNeto,
+                            bruto: precioMayorBruto
+                        }
+                    ],
+                    observaciones: observaciones,
+                    tiene_precio_unico: observaciones.includes('PRECIO UNICO')
+                });
+            });
+
+            log(`✅ Drive: ${productos.length} productos cargados`, 'success');
+            return productos;
+        }
+
+        // ========== VALIDADOR ==========
+        function validarCatalogos() {
+            log('Validando catálogos...', 'info');
+            const errores = [];
+
+            // Validar duplicados en Git
+            const skusGit = {};
+            catalogoGit.forEach(p => {
+                const key = `${p.sku}_${p.tipo_precio}`;
+                if (skusGit[key]) {
+                    errores.push({
+                        tipo: 'critico',
+                        titulo: 'SKU Duplicado en Git',
+                        mensaje: `${p.sku} tiene múltiples entradas para ${p.tipo_precio}`,
+                        sku: p.sku,
+                        icono: '❌'
+                    });
+                }
+                skusGit[key] = true;
+            });
+
+            // Validar precios inconsistentes
+            cambiosDetectados.forEach(cambio => {
+                if (cambio.tipo === 'actualizado') {
+                    cambio.cambiosPrecios.forEach(cp => {
+                        const difNeto = Math.abs(cp.netoDespues - cp.netoAntes);
+                        const difBruto = Math.abs(cp.brutoDespues - cp.brutoAntes);
+                        
+                        if (difNeto > cp.netoAntes * 0.5 || difBruto > cp.brutoAntes * 0.5) {
+                            errores.push({
+                                tipo: 'advertencia',
+                                titulo: 'Cambio de Precio Grande',
+                                mensaje: `${cambio.sku}: Cambio >50% en ${cp.lista}`,
+                                sku: cambio.sku,
+                                icono: '⚠️',
+                                detalle: `Neto: ${cp.netoAntes} → ${cp.netoDespues} | Bruto: ${cp.brutoAntes} → ${cp.brutoDespues}`
+                            });
                         }
                     });
                 }
-            } else {
-                statusEl.textContent = '❌ Error: Sin cache y sin conexión';
-                statusEl.style.color = '#ef4444';
-                versionEl.textContent = 'Reintenta cambiando la fuente o espera unos minutos';
-            }
-        } finally {
-            ui.btnRefreshCatalog.disabled = false;
-            ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
-            console.log('🏁 Carga completada');
-        }
-    }
+            });
 
-    function habilitarInterfaz() {
-        ui.mainInterface.classList.remove('disabled-section');
-        ui.intelligentSearchSection.classList.remove('disabled-section');
-        ui.debugInfo.innerHTML = `<p>Catálogo cargado: ${catalogoCompleto.length} productos.</p>`;
-    }
-
-    function llenarSelectorListasPrecio() {
-        const listasPrecio = [...new Set(catalogoCompleto.map(p => p.tipo_precio))].sort();
-        const selector = document.getElementById('selector-lista-precio');
-        selector.innerHTML = '<option value="">Seleccionar lista de precio...</option>';
-        listasPrecio.forEach(lista => {
-            if (lista && lista.trim()) {
-                selector.innerHTML += `<option value="${lista}">${lista}</option>`;
-            }
-        });
-        console.log(`✅ Selector llenado: ${listasPrecio.length} listas`);
-    }
-
-    function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
-    function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
-    function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
-    
-    function parsearPedidoTabla(texto) {
-        const lineas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        const productos = [];
-        let startIndex = 0;
-        for (let i = 0; i < lineas.length; i++) {
-            const lineaNormalizada = lineas[i].toLowerCase().replace(/\s+/g, '');
-            if (lineaNormalizada.includes('cantidad') && lineaNormalizada.includes('producto') && lineaNormalizada.includes('sku') && lineaNormalizada.includes('valor')) {
-                startIndex = i + 1; break;
-            }
-        }
-        for (let i = startIndex; i < lineas.length; i++) {
-            const linea = lineas[i];
-            const match = linea.match(/^(\d+)\s+(.+?)\s+(FC[0-9A-Z-]+)\s+(\d+)$/i);
-            if (match) {
-                const cantidad = parseInt(match[1], 10);
-                const descripcion = match[2].trim();
-                const sku = normalizarSKU(match[3]);
-                const precio = limpiarValor(match[4]);
-                if (cantidad > 0 && precio !== null && sku) {
-                    productos.push({ sku: sku, item: descripcion, cantidad: cantidad, v_unitario_usuario: precio });
-                }
-            }
-        }
-        return productos;
-    }
-    
-    function parsearPedidoUnificado(texto) { 
-        const textoNormalizado = texto.replace(/[\n\t]/g, ' ').replace(/\s{2,}/g, ' '); 
-        const productos = []; 
-        const regex = /(FC[0-9A-Z-]+)(.*?)\s*(\d+)\s*(\$[\s\d.,]+)/gi; 
-        let match; 
-        while ((match = regex.exec(textoNormalizado)) !== null) { 
-            let sku = normalizarSKU(match[1]); 
-            let item = match[2].replace(/SKU|ITEM|CANTIDAD|V\. UNITARIO|Descuento|SUBTOTAL/gi, '').trim(); 
-            let cantidad = parseInt(match[3], 10); 
-            let precio = limpiarValor(match[4]); 
-            if (item && cantidad > 0 && precio !== null) { 
-                productos.push({ sku: sku, item: item, cantidad: cantidad, v_unitario_usuario: precio }); 
-            } 
-        } 
-        return productos;
-    }
-    
-    function parsearPedidoInteligente(texto) {
-        const productosTabla = parsearPedidoTabla(texto);
-        if (productosTabla.length > 0) {
-            ui.debugInfo.innerHTML = `<p>✅ Formato tabla: ${productosTabla.length} productos.</p>`;
-            return productosTabla;
-        }
-        const productosOriginal = parsearPedidoUnificado(texto);
-        if (productosOriginal.length > 0) {
-            ui.debugInfo.innerHTML = `<p>✅ Formato original: ${productosOriginal.length} productos.</p>`;
-            return productosOriginal;
-        }
-        ui.debugInfo.innerHTML = `<p class="text-red-500">❌ Formato no válido.</p>`;
-        return [];
-    }
-    
-    function getCategoriaPrecios(d) { const match = String(d).trim().match(/(.*?)\s*-\s*/); return (match && match[1]) ? match[1].trim() : "General"; }
-    function calcularCantidadesPorCategoria(p){ const c={}; p.forEach(i=>{ const pr=catalogoCompleto.find(p=>p.sku===i.sku); const d=pr?pr.descripcion:i.item||""; c[getCategoriaPrecios(d)]=(c[getCategoriaPrecios(d)]||0)+i.cantidad }); return c }
-    
-    function obtenerMejorPrecio(sku, tipoCliente, _, cantidadTotalCategoria, listaForzada = null) { 
-        const preciosProducto = catalogoCompleto.filter(p => p.sku === sku); 
-        if (preciosProducto.length === 0) return { p: null, t: "SKU NO ENCONTRADO" }; 
-        if (listaForzada) {
-            const precioForzado = preciosProducto.find(p => p.tipo_precio === listaForzada);
-            if (precioForzado) {
-                return { p: { n: precioForzado.precio_neto, b: precioForzado.precio_bruto }, t: `${precioForzado.tipo_precio} (FORZADO)` };
-            } else {
-                return { p: null, t: `LISTA "${listaForzada}" NO DISPONIBLE` };
-            }
-        }
-        if (preciosProducto.length === 1) { 
-            const precioUnico = preciosProducto[0]; 
-            return { p: { n: precioUnico.precio_neto, b: precioUnico.precio_bruto }, t: precioUnico.tipo_precio }; 
-        } 
-        if (tipoCliente !== 'normal') { 
-            const precioEspecial = preciosProducto.find(p => p.tipo_precio.toUpperCase().trim() === tipoCliente.toUpperCase()); 
-            if (precioEspecial) return { p: { n: precioEspecial.precio_neto, b: precioEspecial.precio_bruto }, t: precioEspecial.tipo_precio }; 
-        } 
-        const tramosConMinimo = preciosProducto.map(p => { 
-            const tipo = (p.tipo_precio || '').toUpperCase(); 
-            const precio = p.precio_neto || 0; 
-            let minCantidad = 0; 
-            const matchNumero = tipo.match(/(\d+)/); 
-            if (matchNumero) { minCantidad = parseInt(matchNumero[1], 10); } 
-            else if (tipo.includes('DETALLE')) { minCantidad = 1; } 
-            else if (tipo.includes('MAYOR')) { minCantidad = 2; } 
-            if (!precio || precio === 0) { minCantidad = Infinity; } 
-            return { ...p, minCantidad: minCantidad }; 
-        }); 
-        const tramosAplicables = tramosConMinimo.filter(p => cantidadTotalCategoria >= p.minCantidad); 
-        if (tramosAplicables.length > 0) { 
-            const mejorTramo = tramosAplicables.reduce((mejor, actual) => actual.minCantidad > mejor.minCantidad ? actual : mejor); 
-            return { p: { n: mejorTramo.precio_neto, b: mejorTramo.precio_bruto }, t: mejorTramo.tipo_precio }; 
-        } 
-        const primerPrecio = preciosProducto[0]; 
-        return { p: { n: primerPrecio.precio_neto, b: primerPrecio.precio_bruto }, t: primerPrecio.tipo_precio }; 
-    }
-    
-    function corregirUnItem(i,t,n,c, agrupar, listaForzada = null){ 
-        const r={...i},pr=catalogoCompleto.find(p=>p.sku===r.sku); 
-        r.descripcion=pr?pr.descripcion:"Desc. no encontrada"; 
-        const ca=getCategoriaPrecios(r.descripcion); 
-        const ct=agrupar?(c[ca]||r.cantidad):r.cantidad; 
-        const rp=obtenerMejorPrecio(r.sku,t,r.cantidad,ct, listaForzada); 
-        let e="",cl="",pc=null,d=null,dt=0,h=false; 
-        const colorClasses={ok:'bg-green-800 bg-opacity-20',aviso:'bg-orange-800 bg-opacity-20',error:'bg-red-800 bg-opacity-20',no_encontrado:'bg-yellow-800 bg-opacity-20'}; 
-        if(!rp.p){e=rp.t;cl=colorClasses.no_encontrado;}else{pc=n?rp.p.n:rp.p.b;if(!pc||pc<=0){e="PRECIO NO DISPONIBLE";cl=colorClasses.no_encontrado}else{d=r.v_unitario_usuario-pc;dt=d*r.cantidad;if(Math.abs(d)<1.5){e=`✅ OK`;cl=colorClasses.ok}else{h=true;e=d>0?`⚠️ AVISO`:`❌ ERROR`;cl=d>0?colorClasses.aviso:colorClasses.error}}}
-        return{...r,estado:e,colorClass:cl,precioCorrecto:pc,diferencia:d,diferencia_total_linea:dt,highlight:h,categoria:ca,cantidadCategoria:ct,tipoAplicado:rp.t}
-    }
-    
-    function renderIntelligentResults(results) { const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }); let html = ''; if (Object.keys(results).length > 1) { html += `<button id="btn-copiar-todo-catalogo" class="w-full text-sm py-2 px-3 rounded mb-4" style="background-color: var(--accent-green);">Copiar Todos los Resultados</button>`; } html += '<div class="space-y-4">'; for (const sku in results) { const product = results[sku]; html += `<div class="internal-box p-3 rounded-lg"><p class="font-bold text-lg">${product.sku}</p><p class="text-base mb-2">${product.descripcion}</p><table class="w-full text-sm text-left"><thead><tr style="border-bottom: 1px solid var(--border-color);"><th class="py-1">Tipo</th><th class="py-1">Neto</th><th class="py-1">Bruto</th></tr></thead><tbody>`; product.prices.forEach(price => { html += `<tr style="border-bottom: 1px solid var(--border-color);" class="last:border-b-0"><td class="py-1 text-purple-400 font-medium">${price.tipo || 'N/A'}</td><td>${price.neto ? f.format(price.neto) : '---'}</td><td>${price.bruto ? f.format(price.bruto) : '---'}</td></tr>`; }); html += `</tbody></table><button data-sku-copia="${product.sku}" class="btn-copiar-catalogo mt-3 w-full text-sm py-1 px-3 rounded" style="background-color: var(--accent-blue);">Copiar Info de este Producto</button></div>`; } html += '</div>'; ui.intelligentSearchResults.innerHTML = html; }
-    function handleIntelligentSearch() { const term = ui.intelligentSearchInput.value.toLowerCase().trim(); if (term.length < 3) { lastSearchResults={}; ui.intelligentSearchResults.innerHTML = '<p class="text-base text-secondary">Escribe al menos 3 caracteres...</p>'; return; } lastSearchResults = catalogoCompleto.reduce((acc, p) => { if (p.sku.toLowerCase().includes(term) || p.descripcion.toLowerCase().includes(term)) { if (!acc[p.sku]) { acc[p.sku] = { sku: p.sku, descripcion: p.descripcion, prices: [] }; } acc[p.sku].prices.push({ tipo: p.tipo_precio, neto: p.precio_neto, bruto: p.precio_bruto }); } return acc; }, {}); renderIntelligentResults(lastSearchResults); }
-    const copiarDiferencias = () => { const diferencias = resultadosParaDescarga.filter(r => r.highlight === true); if (diferencias.length === 0) { alert("No hay diferencias para copiar."); return; } const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); const nv = ui.nvInput.value.trim() || 'Sin NV'; const totalDiferencia = diferencias.reduce((sum, item) => sum + (item.diferencia_total_linea || 0), 0); let texto = `*Resumen de Diferencias (NV: ${nv})*\n\n`; texto += diferencias.map(r => `SKU: ${r.sku} | Tu Precio: ${f.format(r.v_unitario_usuario)} | Correcto: ${f.format(r.precioCorrecto)} | Dif. Unitaria: ${f.format(r.diferencia)}`).join('\n'); texto += `\n\n*Diferencia Total General: ${f.format(totalDiferencia)}*`; navigator.clipboard.writeText(texto).then(() => { const btn = ui.btnCopiarDiferencias; const o = btn.textContent; btn.textContent = '¡Copiado!'; setTimeout(() => { btn.textContent = o; }, 2000); }, () => alert("Error al copiar.")); };
-    const capturarTabla = async () => { const panel = ui.resultadosContainer; if (!panel) return; const btnContainer = panel.querySelector('.flex.gap-2.flex-wrap'); btnContainer.style.display = 'none'; try { const panelStyle = window.getComputedStyle(panel); const panelBgColor = panelStyle.backgroundColor; const canvas = await html2canvas(panel, { scale: 2, backgroundColor: panelBgColor }); canvas.toBlob(async (blob) => { if (!blob) { alert('No se pudo generar la imagen para copiar.'); return; } try { if (!navigator.clipboard || !navigator.clipboard.write) { throw new Error('La API de portapapeles no es compatible o no tiene permisos en este navegador.'); } const clipboardItem = new ClipboardItem({ 'image/png': blob }); await navigator.clipboard.write([clipboardItem]); const btn = ui.btnCapturarTabla; const originalText = btn.textContent; btn.textContent = '✅ ¡Imagen Copiada!'; setTimeout(() => { btn.textContent = originalText; }, 2500); } catch (err) { alert(`No se pudo copiar la imagen al portapapeles. Causa: ${err.message}`); } }, 'image/png'); } catch (error) { alert('Hubo un problema al generar la captura de la tabla.'); } finally { btnContainer.style.display = 'flex'; } };
-    const showPriceModal = (sku) => { const allPricesForSku = catalogoCompleto.filter(p => p.sku === sku); const correctedItem = resultadosParaDescarga.find(r => r.sku === sku); if (allPricesForSku.length === 0) return; ui.priceModalTitle.textContent = `Precios para ${sku}`; const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); let contentHtml = '<ul class="list-none p-0 m-0 space-y-2">'; allPricesForSku.forEach(priceInfo => { const isApplied = correctedItem && correctedItem.tipoAplicado === priceInfo.tipo_precio; contentHtml += `<li style="padding: 8px; ${isApplied ? 'background-color: var(--accent-green); color: var(--bg-primary); border-radius: 4px;' : 'background-color: var(--bg-accent); border-radius: 4px;'}"><strong>${priceInfo.tipo_precio}</strong>: Neto ${f.format(priceInfo.precio_neto || 0)} / Bruto ${f.format(priceInfo.precio_bruto || 0)}${isApplied ? '<strong> (Aplicado)</strong>' : ''}</li>`; }); contentHtml += '</ul>'; ui.priceModalBody.innerHTML = contentHtml; ui.priceModal.style.display = 'flex'; };
-    const hidePriceModal = () => { ui.priceModal.style.display = 'none'; };
-
-    // ========== 🆕 FUNCIONES OCR ==========
-    
-    async function initOcrWorker() {
-        if (ocrWorker) return ocrWorker;
-        
-        ui.ocrStatusText.textContent = 'Inicializando motor OCR...';
-        ui.ocrProgressBar.style.width = '10%';
-        
-        ocrWorker = await Tesseract.createWorker('spa', 1, {
-            logger: (m) => {
-                if (m.status === 'recognizing text') {
-                    const progress = Math.round(m.progress * 100);
-                    ui.ocrProgressBar.style.width = `${10 + (progress * 0.8)}%`;
-                    ui.ocrProgressPercent.textContent = `${progress}%`;
-                    ui.ocrStatusText.textContent = `Reconociendo texto... ${progress}%`;
-                }
-            }
-        });
-        
-        await ocrWorker.setParameters({
-            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$.,- áéíóúñÁÉÍÓÚÑ',
-        });
-        
-        return ocrWorker;
-    }
-
-    function preprocessImage(imageElement) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        canvas.width = imageElement.naturalWidth;
-        canvas.height = imageElement.naturalHeight;
-        
-        ctx.drawImage(imageElement, 0, 0);
-        
-        // 🆕 RECORTE INTELIGENTE: Intentar detectar zona de tabla (1/3 superior de la imagen)
-        const tableHeight = Math.floor(canvas.height * 0.6); // 60% superior
-        const tableStartY = Math.floor(canvas.height * 0.15); // Comenzar desde 15% para evitar header
-        
-        const croppedCanvas = document.createElement('canvas');
-        const croppedCtx = croppedCanvas.getContext('2d');
-        croppedCanvas.width = canvas.width;
-        croppedCanvas.height = tableHeight;
-        
-        croppedCtx.drawImage(
-            canvas, 
-            0, tableStartY,           // source x, y
-            canvas.width, tableHeight, // source width, height
-            0, 0,                      // dest x, y
-            canvas.width, tableHeight  // dest width, height
-        );
-        
-        // 🆕 MEJORA DE CONTRASTE MÁS AGRESIVA
-        const imageData = croppedCtx.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
-        const data = imageData.data;
-        
-        // Paso 1: Aumentar contraste general
-        const contrastFactor = 1.5;
-        for (let i = 0; i < data.length; i += 4) {
-            data[i] = Math.min(255, Math.max(0, ((data[i] - 128) * contrastFactor) + 128));
-            data[i + 1] = Math.min(255, Math.max(0, ((data[i + 1] - 128) * contrastFactor) + 128));
-            data[i + 2] = Math.min(255, Math.max(0, ((data[i + 2] - 128) * contrastFactor) + 128));
-        }
-        
-        // Paso 2: Binarización con umbral adaptativo
-        for (let i = 0; i < data.length; i += 4) {
-            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-            const threshold = avg > 140 ? 255 : 0; // Umbral más alto para texto más limpio
-            data[i] = data[i + 1] = data[i + 2] = threshold;
-        }
-        
-        croppedCtx.putImageData(imageData, 0, 0);
-        
-        console.log(`✂️ Imagen recortada: ${canvas.width}x${canvas.height} -> ${croppedCanvas.width}x${croppedCanvas.height}`);
-        
-        return croppedCanvas;
-    }
-
-    function extractProductsFromOcrText(text) {
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        const products = [];
-        
-        console.log('📝 Texto OCR completo:', text);
-        
-        // 🆕 Detectar inicio y fin de la tabla
-        let tableStartIndex = 0;
-        let tableEndIndex = lines.length;
-        
-        for (let i = 0; i < lines.length; i++) {
-            const lineLower = lines[i].toLowerCase();
-            // Buscar header de tabla
-            if (lineLower.includes('sku') && lineLower.includes('item') && lineLower.includes('cantidad')) {
-                tableStartIndex = i + 1;
-                console.log(`📋 Inicio de tabla en línea ${i}`);
-            }
-            // Buscar fin de tabla
-            if (lineLower.includes('nota:') || lineLower.includes('neto') || lineLower.includes('forma de pago') || lineLower.includes('tesoreria')) {
-                tableEndIndex = i;
-                console.log(`📋 Fin de tabla en línea ${i}`);
-                break;
-            }
-        }
-        
-        // Procesar solo las líneas de la tabla
-        for (let i = tableStartIndex; i < tableEndIndex; i++) {
-            const line = lines[i];
-            
-            // Buscar SKU
-            const skuMatch = line.match(/FC[\s-]?(\d{5})/i);
-            if (!skuMatch) continue;
-            
-            const sku = 'FC' + skuMatch[1];
-            
-            // Construir línea completa (puede estar en múltiples líneas)
-            let fullLine = line;
-            let nextLineIndex = i + 1;
-            while (nextLineIndex < tableEndIndex && !lines[nextLineIndex].match(/FC[\s-]?\d{5}/i)) {
-                fullLine += ' ' + lines[nextLineIndex];
-                nextLineIndex++;
-            }
-            
-            console.log(`🔍 Procesando línea completa: ${fullLine}`);
-            
-            // 🆕 MEJORAR DETECCIÓN DE PRECIO
-            // Buscar patrones de precio chileno: $X.XXX,XX o $X.XXX o $XXXXX
-            const pricePatterns = [
-                /\$\s?([\d]{1,3}\.[\d]{3},[\d]{1,2})/,  // $25.202,50
-                /\$\s?([\d]{1,3}\.[\d]{3})/,            // $25.202
-                /\$\s?([\d]{4,6})/                       // $25202
-            ];
-            
-            let precio = null;
-            let precioStr = null;
-            
-            for (const pattern of pricePatterns) {
-                const match = fullLine.match(pattern);
-                if (match) {
-                    precioStr = match[1];
-                    // Normalizar: si no tiene puntos, agregarlos
-                    if (!precioStr.includes('.') && precioStr.length >= 4) {
-                        // 25202 -> 25.202
-                        const len = precioStr.length;
-                        const miles = precioStr.slice(0, -3);
-                        const cientos = precioStr.slice(-3);
-                        precioStr = miles + '.' + cientos;
-                    }
-                    precio = limpiarValor(precioStr);
-                    if (precio && precio > 10) { // Precio mínimo razonable
-                        console.log(`💰 Precio detectado: ${precioStr} -> ${precio}`);
-                        break;
-                    }
-                }
-            }
-            
-            // 🆕 MEJORAR DETECCIÓN DE CANTIDAD
-            // Buscar números pequeños (1-999) que estén ANTES del precio
-            const priceIndex = fullLine.indexOf('$');
-            const textBeforePrice = priceIndex > 0 ? fullLine.substring(0, priceIndex) : fullLine;
-            
-            // Buscar todos los números en el texto antes del precio
-            const numberMatches = textBeforePrice.match(/\b(\d{1,3})\b/g);
-            
-            let cantidad = null;
-            if (numberMatches && numberMatches.length > 0) {
-                // Tomar el último número antes del precio (generalmente es la cantidad)
-                const lastNumber = parseInt(numberMatches[numberMatches.length - 1]);
-                if (lastNumber > 0 && lastNumber <= 999) {
-                    cantidad = lastNumber;
-                    console.log(`📦 Cantidad detectada: ${cantidad}`);
-                }
-            }
-            
-            // Si no hay cantidad, asumir 1
-            if (!cantidad) {
-                cantidad = 1;
-                console.log(`📦 Cantidad no detectada, asumiendo: 1`);
-            }
-            
-            // 🆕 MEJORAR EXTRACCIÓN DE DESCRIPCIÓN
-            let description = fullLine
-                .replace(/FC[\s-]?\d{5}/gi, '') // Quitar SKU
-                .replace(/\$[\s]?[\d.,]+/g, '') // Quitar precio
-                .replace(/\bCANTIDAD\b/gi, '')  // Quitar palabra "CANTIDAD"
-                .replace(/\bV\.?\s?UNITARIO\b/gi, '') // Quitar "V. UNITARIO"
-                .replace(/\bDescuento\b/gi, '') // Quitar "Descuento"
-                .replace(/\bSUBTOTAL\b/gi, '')  // Quitar "SUBTOTAL"
-                .replace(/\s{2,}/g, ' ')        // Normalizar espacios
-                .trim();
-            
-            // Quitar el número de cantidad de la descripción
-            if (cantidad) {
-                description = description.replace(new RegExp(`\\b${cantidad}\\b`, 'g'), '').trim();
-            }
-            
-            // 🆕 VALIDACIÓN FINAL
-            const isValid = 
-                sku && 
-                cantidad && cantidad > 0 && cantidad <= 999 &&
-                precio && precio > 10 && precio < 1000000 &&
-                description && description.length > 3;
-            
-            if (isValid) {
-                products.push({
-                    sku: normalizarSKU(sku),
-                    item: description,
-                    cantidad: cantidad,
-                    v_unitario_usuario: precio
+            // Validar productos sin precio
+            const sinPrecio = cambiosDetectados.filter(c => c.preciosPendientes);
+            if (sinPrecio.length > 0) {
+                errores.push({
+                    tipo: 'advertencia',
+                    titulo: 'Productos Sin Precio',
+                    mensaje: `${sinPrecio.length} productos se agregarán con precio $0`,
+                    icono: '⚠️',
+                    detalle: `SKUs: ${sinPrecio.map(p => p.sku).join(', ')}`
                 });
-                
-                console.log(`✅ Producto válido: ${sku} | ${description} | Cant: ${cantidad} | Precio: ${precio}`);
-            } else {
-                console.log(`❌ Producto rechazado: SKU=${sku}, Cant=${cantidad}, Precio=${precio}, Desc="${description}"`);
             }
-        }
-        
-        console.log(`📊 Total productos detectados: ${products.length}`);
-        return products;
-    }
 
-    async function processOcrImages(images) {
-        ui.ocrPreviewSection.style.display = 'block';
-        ui.ocrProcessSection.style.display = 'none';
-        ui.ocrResultsSection.style.display = 'none';
-        ui.ocrProgressBar.style.width = '0%';
-        
-        try {
-            const worker = await initOcrWorker();
-            const allProducts = [];
-            
-            for (let i = 0; i < images.length; i++) {
-                ui.ocrStatusText.textContent = `Procesando imagen ${i + 1} de ${images.length}...`;
-                ui.ocrProgressBar.style.width = `${(i / images.length) * 100}%`;
-                
-                const img = images[i];
-                ui.ocrPreviewImg.src = img.dataUrl;
-                
-                const processedCanvas = preprocessImage(ui.ocrPreviewImg);
-                
-                const { data: { text } } = await worker.recognize(processedCanvas);
-                
-                const products = extractProductsFromOcrText(text);
-                allProducts.push(...products);
-                
-                console.log(`📄 Imagen ${i + 1}: ${products.length} productos detectados`);
-            }
-            
-            ui.ocrProgressBar.style.width = '100%';
-            ui.ocrStatusText.textContent = `✅ Completado: ${allProducts.length} productos detectados`;
-            
-            if (allProducts.length === 0) {
-                ui.ocrStatusText.textContent = '⚠️ No se detectaron productos válidos';
-                alert('No se pudieron detectar productos en las imágenes.\n\nConsejos:\n- Asegúrate de que la foto sea clara\n- Verifica que el texto sea legible\n- Intenta tomar la foto desde arriba sin ángulo');
-                return;
-            }
-            
-            displayDetectedProducts(allProducts);
-            
-        } catch (error) {
-            console.error('Error en OCR:', error);
-            alert('Error al procesar las imágenes. Por favor intenta de nuevo.');
-            hideOcrModal();
+            log(`✅ Validación completada: ${errores.length} alertas`, errores.length > 0 ? 'warning' : 'success');
+            return errores;
         }
-    }
 
-    function displayDetectedProducts(products) {
-        ui.ocrPreviewSection.style.display = 'none';
-        ui.ocrResultsSection.style.display = 'block';
-        
-        const formatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
-        
-        if (products.length === 0) {
-            ui.ocrDetectedProducts.innerHTML = `
-                <div class="p-4 rounded-lg" style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444;">
-                    <p class="font-semibold text-red-400">❌ No se detectaron productos válidos</p>
-                    <p class="text-sm mt-2">Posibles causas:</p>
-                    <ul class="text-sm mt-1 ml-4">
-                        <li>• Foto borrosa o con poca luz</li>
-                        <li>• Ángulo muy inclinado</li>
-                        <li>• Texto tapado o cortado</li>
-                    </ul>
+        // ========== COMPARADOR ==========
+        function analizarDiferencias() {
+            log('Analizando diferencias...', 'info');
+            const cambios = [];
+            const skusGit = new Set(catalogoGit.map(p => p.sku));
+            const skusDrive = new Set(catalogoDrive.map(p => p.sku));
+
+            catalogoDrive.forEach(prodDrive => {
+                if (!skusGit.has(prodDrive.sku)) {
+                    const tienePrecios = prodDrive.precios.some(p => p.neto > 0 || p.bruto > 0);
+                    
+                    cambios.push({
+                        tipo: 'nuevo',
+                        sku: prodDrive.sku,
+                        descripcion: prodDrive.descripcion,
+                        preciosPendientes: !tienePrecios,
+                        detalle: tienePrecios ? 
+                            'Producto nuevo con precios' : 
+                            'Producto nuevo SIN precios (se agregará con $0)',
+                        drive: prodDrive
+                    });
+                }
+            });
+
+            catalogoDrive.forEach(prodDrive => {
+                if (skusGit.has(prodDrive.sku)) {
+                    const registrosGit = catalogoGit.filter(p => p.sku === prodDrive.sku);
+                    let hayActualizacion = false;
+                    let detalles = [];
+
+                    prodDrive.precios.forEach(precioDrive => {
+                        const registroGit = registrosGit.find(r => 
+                            r.tipo_precio === precioDrive.tipo || 
+                            (precioDrive.tipo.includes('MAYOR') && r.tipo_precio.includes('MAYOR'))
+                        );
+
+                        if (registroGit) {
+                            const cambioNeto = Math.abs(registroGit.precio_neto - precioDrive.neto) > 1;
+                            const cambioBruto = Math.abs(registroGit.precio_bruto - precioDrive.bruto) > 1;
+
+                            if (cambioNeto || cambioBruto) {
+                                hayActualizacion = true;
+                                detalles.push({
+                                    lista: precioDrive.tipo,
+                                    netoAntes: registroGit.precio_neto,
+                                    netoDespues: precioDrive.neto,
+                                    brutoAntes: registroGit.precio_bruto,
+                                    brutoDespues: precioDrive.bruto
+                                });
+                            }
+                        }
+                    });
+
+                    if (hayActualizacion) {
+                        cambios.push({
+                            tipo: 'actualizado',
+                            sku: prodDrive.sku,
+                            descripcion: prodDrive.descripcion,
+                            detalle: `${detalles.length} precio(s) actualizados`,
+                            cambiosPrecios: detalles,
+                            drive: prodDrive
+                        });
+                    }
+                }
+            });
+
+            log(`✅ Análisis completado: ${cambios.length} cambios detectados`, 'success');
+            log(`  - Nuevos: ${cambios.filter(c => c.tipo === 'nuevo').length}`, 'info');
+            log(`  - Actualizados: ${cambios.filter(c => c.tipo === 'actualizado').length}`, 'info');
+            
+            return cambios;
+        }
+
+        // ========== RENDERIZADORES ==========
+        function renderResumenValidacion() {
+            const criticos = erroresDetectados.filter(e => e.tipo === 'critico').length;
+            const advertencias = erroresDetectados.filter(e => e.tipo === 'advertencia').length;
+            const sugerencias = erroresDetectados.filter(e => e.tipo === 'sugerencia').length;
+            const total = erroresDetectados.length;
+
+            ui.resumenValidacion.innerHTML = `
+                <div class="badge-error text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${criticos}</div>
+                    <div class="text-sm">Críticos</div>
+                </div>
+                <div class="badge-warning text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${advertencias}</div>
+                    <div class="text-sm">Advertencias</div>
+                </div>
+                <div class="badge-info text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${sugerencias}</div>
+                    <div class="text-sm">Sugerencias</div>
+                </div>
+                <div class="bg-accent text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${total}</div>
+                    <div class="text-sm">Total</div>
                 </div>
             `;
-            return;
         }
-        
-        let html = `
-            <div class="mb-3 p-2 rounded" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);">
-                <p class="text-sm font-semibold text-green-400">✅ ${products.length} producto(s) detectado(s) correctamente</p>
-                <p class="text-xs text-secondary mt-1">Verifica que los datos sean correctos antes de continuar</p>
-            </div>
-        `;
-        
-        products.forEach((p, index) => {
-            // Validar si el producto parece tener datos correctos
-            const priceOk = p.v_unitario_usuario > 100 && p.v_unitario_usuario < 100000;
-            const qtyOk = p.cantidad > 0 && p.cantidad <= 100;
-            const descOk = p.item && p.item.length > 5;
-            
-            const alertClass = (!priceOk || !qtyOk || !descOk) ? 'border-yellow-500' : 'border-green-600';
-            
-            html += `
-                <div class="detected-product" style="border-left: 3px solid ${!priceOk || !qtyOk ? '#f59e0b' : 'var(--accent-green)'};">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-bold text-purple-400">${p.sku}</div>
-                            <div class="text-sm ${descOk ? '' : 'text-yellow-400'}">${p.item}</div>
-                            ${!descOk ? '<div class="text-xs text-yellow-400">⚠️ Descripción muy corta</div>' : ''}
-                        </div>
-                        <div class="text-right ml-4">
-                            <div class="font-semibold ${qtyOk ? '' : 'text-yellow-400'}">
-                                Cant: ${p.cantidad}
-                                ${!qtyOk ? ' ⚠️' : ''}
-                            </div>
-                            <div class="text-sm ${priceOk ? '' : 'text-yellow-400'}">
-                                ${formatter.format(p.v_unitario_usuario)}
-                                ${!priceOk ? ' ⚠️' : ''}
+
+        function renderErrores(filtro = 'todos') {
+            let erroresFiltrados = erroresDetectados;
+
+            if (filtro !== 'todos') {
+                erroresFiltrados = erroresDetectados.filter(e => {
+                    if (filtro === 'criticos') return e.tipo === 'critico';
+                    if (filtro === 'advertencias') return e.tipo === 'advertencia';
+                    if (filtro === 'sugerencias') return e.tipo === 'sugerencia';
+                    return true;
+                });
+            }
+
+            if (erroresFiltrados.length === 0) {
+                ui.listaErrores.innerHTML = '<p class="text-secondary text-center py-8">✅ No hay errores de este tipo</p>';
+                return;
+            }
+
+            let html = '';
+            erroresFiltrados.forEach(error => {
+                const claseError = `error-${error.tipo === 'critico' ? 'critical' : error.tipo === 'advertencia' ? 'warning' : 'info'}`;
+                
+                html += `
+                    <div class="bg-accent p-3 rounded-lg ${claseError}">
+                        <div class="flex items-start gap-2">
+                            <span class="text-xl">${error.icono}</span>
+                            <div class="flex-1">
+                                <div class="font-semibold">${error.titulo}</div>
+                                <div class="text-sm text-secondary">${error.mensaje}</div>
+                                ${error.detalle ? `<div class="text-xs text-secondary mt-1">${error.detalle}</div>` : ''}
+                                ${error.sku ? `<div class="text-xs text-purple-400 mt-1">SKU: ${error.sku}</div>` : ''}
                             </div>
                         </div>
                     </div>
+                `;
+            });
+
+            ui.listaErrores.innerHTML = html;
+        }
+
+        function renderFamilias() {
+            if (familiasDetectadas.length === 0) {
+                ui.listaFamilias.innerHTML = '<p class="text-secondary text-center py-8">✅ No se detectaron familias (o todos los productos ya están en Git)</p>';
+                return;
+            }
+
+            let html = '';
+            familiasDetectadas.forEach((familia, index) => {
+                const similitudPromedio = Math.round(
+                    familia.productos.reduce((sum, p, i) => {
+                        if (i === 0) return 0;
+                        return sum + calcularSimilitud(p.descripcion, familia.productos[0].descripcion);
+                    }, 0) / (familia.productos.length - 1)
+                );
+
+                html += `
+                    <div class="familia-card p-4 rounded-lg">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <div class="font-semibold text-lg mb-1">
+                                    Familia ${index + 1}: ${familia.palabrasClave.join(' + ')}
+                                </div>
+                                <div class="text-xs text-secondary">
+                                    ${familia.productos.length} productos | Similitud: ${similitudPromedio}%
+                                </div>
+                                <div class="mt-1">
+                                    <div style="width: ${similitudPromedio}%; background-color: var(--accent-green); height: 4px; border-radius: 2px;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="prefix-badge">${familia.prefijoSugerido}</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1 mb-3">
+                            ${familia.productos.map(p => `
+                                <div class="text-sm bg-primary p-2 rounded">
+                                    <span class="text-purple-400 font-semibold">${p.sku}</span> - ${p.descripcion}
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <div class="flex gap-2">
+                            <input type="text" 
+                                   class="input-field flex-1 p-2 rounded text-sm" 
+                                   value="${familia.prefijoSugerido}" 
+                                   id="prefijo-${index}"
+                                   placeholder="Prefijo personalizado">
+                            <button class="btn-aplicar-prefijo bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-semibold"
+                                    data-familia-index="${index}">
+                                ✓ Aplicar
+                            </button>
+                            <button class="btn-ignorar-familia bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm"
+                                    data-familia-index="${index}">
+                                Ignorar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            ui.listaFamilias.innerHTML = html;
+
+            // Event listeners para botones de familias
+            document.querySelectorAll('.btn-aplicar-prefijo').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.familiaIndex);
+                    const prefijo = document.getElementById(`prefijo-${index}`).value.trim();
+                    aplicarPrefijoFamilia(index, prefijo);
+                });
+            });
+
+            document.querySelectorAll('.btn-ignorar-familia').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.familiaIndex);
+                    ignorarFamilia(index);
+                });
+            });
+        }
+
+        function aplicarPrefijoFamilia(index, prefijo) {
+            const familia = familiasDetectadas[index];
+            
+            familia.productos.forEach(producto => {
+                const cambio = cambiosDetectados.find(c => c.sku === producto.sku);
+                if (cambio && !cambio.sku.startsWith(prefijo)) {
+                    prefijosAplicados[cambio.sku] = prefijo + cambio.sku;
+                    log(`✅ Prefijo aplicado: ${cambio.sku} → ${prefijosAplicados[cambio.sku]}`, 'success');
+                }
+            });
+
+            familiasDetectadas.splice(index, 1);
+            renderFamilias();
+            renderCambios(filtroActivo);
+            
+            log(`✅ Familia procesada con prefijo: ${prefijo}`, 'success');
+        }
+
+        function ignorarFamilia(index) {
+            familiasDetectadas.splice(index, 1);
+            renderFamilias();
+            log(`ℹ️ Familia ignorada`, 'info');
+        }
+
+        function renderResumenCambios() {
+            const nuevos = cambiosDetectados.filter(c => c.tipo === 'nuevo').length;
+            const actualizados = cambiosDetectados.filter(c => c.tipo === 'actualizado').length;
+            const advertencias = cambiosDetectados.filter(c => c.preciosPendientes).length;
+            const conPrecios = cambiosDetectados.filter(c => c.tipo === 'nuevo' && !c.preciosPendientes).length;
+
+            ui.resumenCambios.innerHTML = `
+                <div class="badge-nuevo text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${nuevos}</div>
+                    <div class="text-sm">Nuevos</div>
                 </div>
-            `;
-        });
-        
-        // Agregar advertencia si hay productos sospechosos
-        const suspiciousCount = products.filter(p => 
-            p.v_unitario_usuario < 100 || p.v_unitario_usuario > 100000 || 
-            p.cantidad > 100 || 
-            !p.item || p.item.length < 5
-        ).length;
-        
-        if (suspiciousCount > 0) {
-            html += `
-                <div class="mt-3 p-2 rounded" style="background-color: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b;">
-                    <p class="text-xs text-yellow-400">⚠️ ${suspiciousCount} producto(s) con datos sospechosos (marcados con ⚠️)</p>
-                    <p class="text-xs text-secondary">Puedes continuar y editar después, o retomar la foto</p>
+                <div class="badge-actualizado text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${actualizados}</div>
+                    <div class="text-sm">Actualizados</div>
+                </div>
+                <div class="badge-warning text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${advertencias}</div>
+                    <div class="text-sm">Sin Precios</div>
+                </div>
+                <div class="badge-info text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${conPrecios}</div>
+                    <div class="text-sm">Con Precios</div>
+                </div>
+                <div class="bg-accent text-white p-4 rounded-lg text-center">
+                    <div class="text-3xl font-bold">${catalogoGit.length + nuevos}</div>
+                    <div class="text-sm">Total Final</div>
                 </div>
             `;
         }
-        
-        ui.ocrDetectedProducts.innerHTML = html;
-        
-        ui.btnOcrUseResults.onclick = () => {
-            const pedidoTexto = products.map(p => 
-                `${p.sku} ${p.item} ${p.cantidad} $${Math.round(p.v_unitario_usuario)}`
-            ).join('\n');
-            
-            ui.pedidoCrudo.value = pedidoTexto;
-            hideOcrModal();
-            ui.debugInfo.innerHTML = `<p class="text-green-400">✅ ${products.length} productos cargados desde OCR</p>`;
-            
-            setTimeout(() => {
-                ui.btnNormalizar.click();
-            }, 500);
-        };
-    }
 
-    function showOcrModal() {
-        ui.ocrModal.style.display = 'block';
-        ui.ocrGuideSection.style.display = 'block';
-        ui.ocrPreviewSection.style.display = 'none';
-        ui.ocrResultsSection.style.display = 'none';
-        ui.ocrProcessSection.style.display = 'none';
-    }
+        function renderCambios(filtro = 'todos', busqueda = '') {
+            let cambiosFiltrados = cambiosDetectados;
 
-    function hideOcrModal() {
-        ui.ocrModal.style.display = 'none';
-        currentOcrImages = [];
-    }
-
-    function handleOcrFileSelection(files) {
-        if (files.length === 0) return;
-        
-        showOcrModal();
-        currentOcrImages = [];
-        
-        const loadPromises = Array.from(files).map(file => {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    currentOcrImages.push({
-                        file: file,
-                        dataUrl: e.target.result
-                    });
-                    resolve();
-                };
-                reader.readAsDataURL(file);
-            });
-        });
-        
-        Promise.all(loadPromises).then(() => {
-            ui.ocrPreviewImg.src = currentOcrImages[0].dataUrl;
-            ui.ocrProcessSection.style.display = 'block';
-            ui.ocrGuideSection.style.display = 'none';
-        });
-    }
-
-    // ========== EVENT LISTENERS ==========
-    document.addEventListener('DOMContentLoaded', () => {
-        Object.assign(ui, {
-            priceModal: document.getElementById('price-modal'), priceModalClose: document.getElementById('price-modal-close'),
-            priceModalTitle: document.getElementById('price-modal-title'), priceModalBody: document.getElementById('price-modal-body'),
-            mainInterface:document.getElementById('main-interface'), btnNormalizar:document.getElementById('btn-normalizar'),
-            btnCorregir:document.getElementById('btn-corregir'), btnCopiarDiferencias:document.getElementById('btn-copiar-diferencias'),
-            btnCapturarTabla:document.getElementById('btn-capturar-tabla'), resultadosContainer:document.getElementById('resultados-container'),
-            resultadosCorreccion:document.getElementById('resultados-correccion'), resumenPedido:document.getElementById('resumen-pedido'),
-            loader:document.getElementById('loader'), debugInfo:document.getElementById('debug-info'), pedidoCrudo:document.getElementById('pedido-crudo'),
-            nvInput:document.getElementById('nv-input'), datosNormalizados:document.getElementById('datos-normalizados'),
-            filtroPedido:document.getElementById('filtro-pedido'), agruparCategorias:document.getElementById('agrupar-categorias'),
-            intelligentSearchSection:document.getElementById('intelligent-search-section'), intelligentSearchInput:document.getElementById('intelligent-search-input'),
-            intelligentSearchResults:document.getElementById('intelligent-search-results'),
-            btnRefreshCatalog: document.getElementById('btn-refresh-catalog'),
-            forzarListaPrecio: document.getElementById('forzar-lista-precio'),
-            selectorListaPrecio: document.getElementById('selector-lista-precio'),
-            // 🆕 OCR Elements
-            btnOcrCamera: document.getElementById('btn-ocr-camera'),
-            btnOcrUpload: document.getElementById('btn-ocr-upload'),
-            ocrFileInput: document.getElementById('ocr-file-input'),
-            ocrModal: document.getElementById('ocr-modal'),
-            ocrModalClose: document.getElementById('ocr-modal-close'),
-            ocrGuideSection: document.getElementById('ocr-guide-section'),
-            ocrPreviewSection: document.getElementById('ocr-preview-section'),
-            ocrPreviewImg: document.getElementById('ocr-preview-img'),
-            ocrResultsSection: document.getElementById('ocr-results-section'),
-            ocrDetectedProducts: document.getElementById('ocr-detected-products'),
-            ocrProcessSection: document.getElementById('ocr-process-section'),
-            btnProcessOcr: document.getElementById('btn-process-ocr'),
-            btnOcrUseResults: document.getElementById('btn-ocr-use-results'),
-            btnOcrRetry: document.getElementById('btn-ocr-retry'),
-            ocrStatusText: document.getElementById('ocr-status-text'),
-            ocrProgressBar: document.getElementById('ocr-progress-bar'),
-            ocrProgressPercent: document.getElementById('ocr-progress-percent')
-        });
-        
-        // 🆕 OCR Event Listeners
-        ui.btnOcrCamera.addEventListener('click', () => {
-            ui.ocrFileInput.setAttribute('capture', 'environment');
-            ui.ocrFileInput.click();
-        });
-        
-        ui.btnOcrUpload.addEventListener('click', () => {
-            ui.ocrFileInput.removeAttribute('capture');
-            ui.ocrFileInput.click();
-        });
-        
-        ui.ocrFileInput.addEventListener('change', (e) => {
-            handleOcrFileSelection(e.target.files);
-            e.target.value = '';
-        });
-        
-        ui.btnProcessOcr.addEventListener('click', () => {
-            if (currentOcrImages.length > 0) {
-                processOcrImages(currentOcrImages);
-            }
-        });
-        
-        ui.ocrModalClose.addEventListener('click', hideOcrModal);
-        ui.btnOcrRetry.addEventListener('click', () => {
-            hideOcrModal();
-            ui.btnOcrUpload.click();
-        });
-        
-        window.addEventListener('click', (e) => {
-            if (e.target === ui.ocrModal) {
-                hideOcrModal();
-            }
-        });
-        
-        ui.priceModalClose.addEventListener('click', hidePriceModal);
-        window.addEventListener('click', (event) => { if (event.target == ui.priceModal) { hidePriceModal(); } });
-        ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) { showPriceModal(e.target.dataset.sku); } });
-        
-        ui.btnRefreshCatalog.addEventListener('click', () => loadCatalogFromGitHub());
-
-        document.querySelectorAll('input[name="fuente-catalogo"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const desc = document.getElementById('fuente-descripcion');
-                switch(e.target.value) {
-                    case 'cache':
-                        desc.textContent = '💾 Cache: Más rápido, usa versión guardada (4h de validez)';
-                        break;
-                    case 'auto':
-                        desc.textContent = '🔄 Auto: Usa cache si es válido, sino descarga desde Git';
-                        break;
-                    case 'git':
-                        desc.textContent = '☁️ Git: Siempre descarga la última versión (⚠️ cuidado con rate limit)';
-                        break;
+            if (filtro !== 'todos') {
+                if (filtro === 'nuevos') {
+                    cambiosFiltrados = cambiosFiltrados.filter(c => c.tipo === 'nuevo');
+                } else if (filtro === 'actualizados') {
+                    cambiosFiltrados = cambiosFiltrados.filter(c => c.tipo === 'actualizado');
                 }
-            });
-        });
-
-        ui.forzarListaPrecio.addEventListener('change', function() {
-            const selector = ui.selectorListaPrecio;
-            selector.disabled = !this.checked;
-            if (this.checked) {
-                selector.classList.add('selector-manual-enabled');
-            } else {
-                selector.classList.remove('selector-manual-enabled');
-                selector.value = '';
             }
-        });
 
-        ui.btnNormalizar.addEventListener('click', () => {
-            ui.filtroPedido.value = '';
-            const texto = ui.pedidoCrudo.value;
-            if (!texto.trim()) { alert("Pegue el texto del pedido."); return; }
-            pedidoNormalizado = parsearPedidoInteligente(texto);
-            renderPedidoEditable(pedidoNormalizado);
-            ui.btnCorregir.disabled = pedidoNormalizado.length === 0;
-        });
+            if (busqueda) {
+                const termino = busqueda.toLowerCase();
+                cambiosFiltrados = cambiosFiltrados.filter(c => 
+                    c.sku.toLowerCase().includes(termino) || 
+                    c.descripcion.toLowerCase().includes(termino)
+                );
+            }
 
-        const renderPedidoEditable = (productos) => {
-            if (!productos || productos.length === 0) { ui.datosNormalizados.innerHTML = `<p class="text-sm text-secondary p-4">No hay productos que coincidan.</p>`; return; }
-            let html = `<table class="w-full text-sm"><thead><tr class="text-left"><th class="p-1">SKU</th><th class="p-1">Item</th><th class="p-1">Cant.</th><th class="p-1">Precio</th></tr></thead><tbody>`;
-            productos.forEach((producto, index) => {
-                const formatoPrecio = producto.v_unitario_usuario.toLocaleString('es-CL', {style: 'currency', currency: 'CLP'});
-                html += `<tr><td class="p-1">${producto.sku}</td><td class="p-1">${producto.item}</td><td class="p-1 bg-blue-900 rounded" contenteditable="true" data-index="${index}">${producto.cantidad}</td><td class="p-1">${formatoPrecio}</td></tr>`;
+            const formatter = new Intl.NumberFormat('es-CL', {
+                style: 'currency',
+                currency: 'CLP',
+                maximumFractionDigits: 0
             });
-            ui.datosNormalizados.innerHTML = html + '</tbody></table>';
-            ui.datosNormalizados.querySelectorAll('td[contenteditable="true"]').forEach(celda => {
-                celda.addEventListener('blur', (e) => {
-                    const index = parseInt(e.target.dataset.index);
-                    if (isNaN(index) || !pedidoNormalizado[index]) return;
-                    const nuevaCantidad = parseInt(e.target.textContent, 10);
-                    if (!isNaN(nuevaCantidad) && nuevaCantidad > 0) { pedidoNormalizado[index].cantidad = nuevaCantidad; } else { e.target.textContent = pedidoNormalizado[index].cantidad; }
+
+            let html = '<div class="space-y-3">';
+            cambiosFiltrados.forEach(cambio => {
+                const badgeClass = cambio.tipo === 'nuevo' ? 'badge-nuevo' : 'badge-actualizado';
+                const iconoAdvertencia = cambio.preciosPendientes ? ' ⚠️' : '';
+
+                html += `
+                    <div class="bg-accent p-4 rounded-lg border-l-4 ${cambio.tipo === 'nuevo' ? 'border-green-500' : 'border-blue-500'}">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <span class="${badgeClass} text-white text-xs px-2 py-1 rounded font-semibold mr-2">
+                                    ${cambio.tipo.toUpperCase()}${iconoAdvertencia}
+                                </span>
+                                <span class="font-bold text-blue-300 text-lg">${cambio.sku}</span>
+                            </div>
+                        </div>
+                        <p class="text-sm mb-3 font-medium">${cambio.descripcion}</p>
+                `;
+
+                // 🆕 Información detallada para NUEVOS
+                if (cambio.tipo === 'nuevo') {
+                    html += '<div class="bg-primary p-3 rounded mb-2">';
+                    html += '<div class="text-xs font-semibold text-green-400 mb-2">📦 INFORMACIÓN DEL NUEVO PRODUCTO:</div>';
+                    
+                    if (cambio.drive && cambio.drive.precios) {
+                        html += '<div class="grid grid-cols-2 gap-2 text-xs">';
+                        cambio.drive.precios.forEach(precio => {
+                            const tienePrecios = precio.neto > 0 || precio.bruto > 0;
+                            html += `
+                                <div class="bg-accent p-2 rounded ${!tienePrecios ? 'border border-orange-500' : ''}">
+                                    <div class="font-semibold text-purple-400">${precio.tipo}</div>
+                                    <div class="${tienePrecios ? 'text-green-400' : 'text-orange-400'}">
+                                        Neto: ${tienePrecios ? formatter.format(precio.neto) : 'SIN PRECIO'}
+                                    </div>
+                                    <div class="${tienePrecios ? 'text-green-400' : 'text-orange-400'}">
+                                        Bruto: ${tienePrecios ? formatter.format(precio.bruto) : 'SIN PRECIO'}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    if (cambio.preciosPendientes) {
+                        html += '<div class="mt-2 text-xs text-orange-400 font-semibold">⚠️ Este producto se agregará con precio $0 - actualizar precios posteriormente</div>';
+                    } else {
+                        html += '<div class="mt-2 text-xs text-green-400 font-semibold">✅ Producto listo para agregar con precios</div>';
+                    }
+                    
+                    html += '</div>';
+                }
+
+                // 🆕 Información detallada para ACTUALIZADOS
+                if (cambio.cambiosPrecios && cambio.cambiosPrecios.length > 0) {
+                    html += '<div class="bg-primary p-3 rounded">';
+                    html += '<div class="text-xs font-semibold text-blue-400 mb-2">🔄 CAMBIOS DE PRECIO DETECTADOS:</div>';
+                    html += '<div class="space-y-2">';
+                    
+                    cambio.cambiosPrecios.forEach(cp => {
+                        const difNeto = cp.netoDespues - cp.netoAntes;
+                        const difBruto = cp.brutoDespues - cp.brutoAntes;
+                        const pctNeto = ((difNeto / cp.netoAntes) * 100).toFixed(1);
+                        const pctBruto = ((difBruto / cp.brutoAntes) * 100).toFixed(1);
+                        
+                        const colorNeto = difNeto > 0 ? 'text-green-400' : 'text-red-400';
+                        const colorBruto = difBruto > 0 ? 'text-green-400' : 'text-red-400';
+                        const iconoNeto = difNeto > 0 ? '↗' : '↘';
+                        const iconoBruto = difBruto > 0 ? '↗' : '↘';
+                        
+                        html += `
+                            <div class="bg-accent p-2 rounded text-xs">
+                                <div class="font-semibold text-purple-400 mb-1">${cp.lista}</div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <div class="text-secondary mb-1">Precio Neto:</div>
+                                        <div class="flex justify-between items-center">
+                                            <span>${formatter.format(cp.netoAntes)}</span>
+                                            <span class="${colorNeto} font-bold">${iconoNeto}</span>
+                                            <span class="font-bold">${formatter.format(cp.netoDespues)}</span>
+                                        </div>
+                                        <div class="${colorNeto} text-xs">(${difNeto > 0 ? '+' : ''}${pctNeto}%)</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-secondary mb-1">Precio Bruto:</div>
+                                        <div class="flex justify-between items-center">
+                                            <span>${formatter.format(cp.brutoAntes)}</span>
+                                            <span class="${colorBruto} font-bold">${iconoBruto}</span>
+                                            <span class="font-bold">${formatter.format(cp.brutoDespues)}</span>
+                                        </div>
+                                        <div class="${colorBruto} text-xs">(${difBruto > 0 ? '+' : ''}${pctBruto}%)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div></div>';
+                }
+
+                html += '</div>';
+            });
+            html += '</div>';
+
+            ui.listaCambios.innerHTML = cambiosFiltrados.length > 0 ? 
+                html : 
+                '<p class="text-secondary text-center py-8">No hay cambios que mostrar con este filtro</p>';
+        }
+
+        // ========== GENERADOR DE VISTA PREVIA ==========
+        function generarVistaPrevia() {
+            log('Generando vista previa del CSV...', 'info');
+            csvPreview = [];
+
+            // 1. Copiar todos los productos Git existentes
+            catalogoGit.forEach(productoGit => {
+                csvPreview.push({
+                    sku: productoGit.sku,
+                    descripcion: productoGit.descripcion,
+                    tipo_precio: productoGit.tipo_precio,
+                    precio_neto: productoGit.precio_neto,
+                    precio_bruto: productoGit.precio_bruto,
+                    origen: 'git',
+                    actualizado: false
                 });
             });
-        };
 
-        ui.filtroPedido.addEventListener('input', () => {
-            const termino = ui.filtroPedido.value.toLowerCase();
-            if (!termino) { renderPedidoEditable(pedidoNormalizado); } else { const filtrados = pedidoNormalizado.filter(p => p.sku.toLowerCase().includes(termino) || p.item.toLowerCase().includes(termino)); renderPedidoEditable(filtrados); }
-        });
+            // 2. Actualizar precios de productos existentes
+            cambiosDetectados.forEach(cambio => {
+                if (cambio.tipo === 'actualizado') {
+                    cambio.drive.precios.forEach(precioDrive => {
+                        const index = csvPreview.findIndex(p => 
+                            p.sku === cambio.sku && 
+                            (p.tipo_precio === precioDrive.tipo || 
+                             (precioDrive.tipo.includes('MAYOR') && p.tipo_precio.includes('MAYOR')))
+                        );
 
-        ui.btnCorregir.addEventListener('click', () => {
-            if (pedidoNormalizado.length === 0) return;
-            const forzarLista = ui.forzarListaPrecio.checked;
-            const listaForzada = forzarLista ? ui.selectorListaPrecio.value : null;
-            if (forzarLista && !listaForzada) {
-                alert('Selecciona una lista de precio específica o desmarca la opción.');
+                        if (index !== -1) {
+                            csvPreview[index].precio_neto = precioDrive.neto;
+                            csvPreview[index].precio_bruto = precioDrive.bruto;
+                            csvPreview[index].actualizado = true;
+                        }
+                    });
+                }
+            });
+
+            // 3. Agregar productos nuevos (con prefijos si tienen)
+            cambiosDetectados.forEach(cambio => {
+                if (cambio.tipo === 'nuevo') {
+                    const skuFinal = prefijosAplicados[cambio.sku] || cambio.sku;
+                    
+                    cambio.drive.precios.forEach(precio => {
+                        csvPreview.push({
+                            sku: skuFinal,
+                            skuOriginal: cambio.sku,
+                            descripcion: cambio.descripcion,
+                            tipo_precio: precio.tipo,
+                            precio_neto: precio.neto,
+                            precio_bruto: precio.bruto,
+                            origen: 'nuevo',
+                            actualizado: false,
+                            tienePrefijo: prefijosAplicados[cambio.sku] ? true : false,
+                            sinPrecio: (precio.neto === 0 && precio.bruto === 0)
+                        });
+                    });
+                }
+            });
+
+            log(`✅ Vista previa generada: ${csvPreview.length} líneas`, 'success');
+            return csvPreview;
+        }
+
+        function renderStatsPreview() {
+            const total = csvPreview.length;
+            const nuevos = csvPreview.filter(p => p.origen === 'nuevo').length;
+            const conPrefijo = csvPreview.filter(p => p.tienePrefijo).length;
+            const actualizados = csvPreview.filter(p => p.actualizado).length;
+            const gitOriginales = csvPreview.filter(p => p.origen === 'git' && !p.actualizado).length;
+
+            ui.statsPreview.innerHTML = `
+                <div class="bg-accent text-white p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold">${total}</div>
+                    <div class="text-xs">Total Líneas</div>
+                </div>
+                <div class="badge-nuevo text-white p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold">${nuevos}</div>
+                    <div class="text-xs">Nuevos</div>
+                </div>
+                <div class="badge-info text-white p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold">${conPrefijo}</div>
+                    <div class="text-xs">Con Prefijo</div>
+                </div>
+                <div class="badge-actualizado text-white p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold">${actualizados}</div>
+                    <div class="text-xs">Actualizados</div>
+                </div>
+                <div class="bg-gray-600 text-white p-3 rounded-lg text-center">
+                    <div class="text-2xl font-bold">${gitOriginales}</div>
+                    <div class="text-xs">Git Sin Cambio</div>
+                </div>
+            `;
+        }
+
+        function renderPreview(filtro = 'todos', busqueda = '') {
+            let previewFiltrado = csvPreview;
+
+            // Filtro por tipo
+            if (filtro === 'nuevos') {
+                previewFiltrado = previewFiltrado.filter(p => p.origen === 'nuevo');
+            } else if (filtro === 'git-originales') {
+                previewFiltrado = previewFiltrado.filter(p => p.origen === 'git' && !p.actualizado);
+            } else if (filtro === 'con-prefijo') {
+                previewFiltrado = previewFiltrado.filter(p => p.tienePrefijo);
+            }
+
+            // Filtro por búsqueda
+            if (busqueda) {
+                const termino = busqueda.toLowerCase();
+                previewFiltrado = previewFiltrado.filter(p => 
+                    p.sku.toLowerCase().includes(termino) ||
+                    (p.skuOriginal && p.skuOriginal.toLowerCase().includes(termino))
+                );
+            }
+
+            const formatter = new Intl.NumberFormat('es-CL', {
+                style: 'currency',
+                currency: 'CLP',
+                maximumFractionDigits: 0
+            });
+
+            // Agrupar por SKU para mostrar
+            const productosPorSku = {};
+            previewFiltrado.forEach(linea => {
+                if (!productosPorSku[linea.sku]) {
+                    productosPorSku[linea.sku] = {
+                        sku: linea.sku,
+                        skuOriginal: linea.skuOriginal,
+                        descripcion: linea.descripcion,
+                        origen: linea.origen,
+                        tienePrefijo: linea.tienePrefijo,
+                        actualizado: linea.actualizado,
+                        sinPrecio: linea.sinPrecio,
+                        precios: []
+                    };
+                }
+                productosPorSku[linea.sku].precios.push({
+                    tipo: linea.tipo_precio,
+                    neto: linea.precio_neto,
+                    bruto: linea.precio_bruto
+                });
+            });
+
+            let html = '<div class="space-y-2">';
+            Object.values(productosPorSku).forEach(producto => {
+                const esNuevo = producto.origen === 'nuevo';
+                const puedeEditarPrefijo = esNuevo;
+                const borderColor = producto.tienePrefijo ? 'border-purple-500' : 
+                                   esNuevo ? 'border-green-500' : 
+                                   producto.actualizado ? 'border-blue-500' : 'border-gray-600';
+
+                html += `
+                    <div class="bg-accent p-3 rounded-lg border-l-4 ${borderColor} ${puedeEditarPrefijo ? 'cursor-pointer hover:bg-opacity-80' : ''}"
+                         ${puedeEditarPrefijo ? `onclick="abrirModalPrefijo('${producto.skuOriginal || producto.sku}')"` : ''}>
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                ${esNuevo ? '<span class="badge-nuevo text-white text-xs px-2 py-1 rounded font-semibold mr-2">NUEVO</span>' : ''}
+                                ${producto.actualizado ? '<span class="badge-actualizado text-white text-xs px-2 py-1 rounded font-semibold mr-2">ACTUALIZADO</span>' : ''}
+                                
+                                ${producto.tienePrefijo ? `
+                                    <div class="mt-1">
+                                        <span class="text-xs text-secondary">Original:</span>
+                                        <span class="text-xs text-gray-400 line-through">${producto.skuOriginal}</span>
+                                        <span class="text-xs text-secondary mx-2">→</span>
+                                        <span class="font-bold text-lg text-purple-300">${producto.sku}</span>
+                                        <span class="ml-2 text-xs bg-purple-600 text-white px-2 py-1 rounded">CON PREFIJO</span>
+                                    </div>
+                                ` : `
+                                    <span class="font-bold text-lg ${esNuevo ? 'text-green-300' : 'text-blue-300'}">${producto.sku}</span>
+                                `}
+                                
+                                ${puedeEditarPrefijo ? '<span class="ml-2 text-xs text-yellow-400">👆 Click para agregar prefijo</span>' : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="text-sm mb-2">${producto.descripcion}</div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                            ${producto.precios.map(p => `
+                                <div class="bg-primary p-2 rounded ${p.neto === 0 && p.bruto === 0 ? 'border border-orange-500' : ''}">
+                                    <div class="font-semibold text-purple-400">${p.tipo}</div>
+                                    <div class="${p.neto > 0 ? '' : 'text-orange-400'}">Neto: ${p.neto > 0 ? formatter.format(p.neto) : 'SIN PRECIO'}</div>
+                                    <div class="${p.bruto > 0 ? '' : 'text-orange-400'}">Bruto: ${p.bruto > 0 ? formatter.format(p.bruto) : 'SIN PRECIO'}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            ui.listaPreview.innerHTML = Object.keys(productosPorSku).length > 0 ? 
+                html : 
+                '<p class="text-secondary text-center py-8">No hay productos que mostrar con este filtro</p>';
+        }
+
+        // ========== MODAL DE PREFIJOS ==========
+        // ========== MODAL DE PREFIJOS ==========
+        function abrirModalPrefijo(skuOriginal) {
+            const cambio = cambiosDetectados.find(c => c.sku === skuOriginal);
+            if (!cambio) return;
+
+            skuModalActual = skuOriginal;
+            ui.modalSkuOriginal.textContent = skuOriginal;
+            ui.modalDescripcion.textContent = cambio.descripcion;
+            
+            const prefijoActual = prefijosAplicados[skuOriginal];
+            if (prefijoActual) {
+                ui.inputPrefijo.value = prefijoActual.replace(skuOriginal, '');
+                ui.previewSkuFinal.textContent = prefijoActual;
+            } else {
+                ui.inputPrefijo.value = '';
+                ui.previewSkuFinal.textContent = skuOriginal;
+            }
+
+            ui.modalPrefijo.style.display = 'flex';
+        }
+
+        function cerrarModalPrefijo() {
+            ui.modalPrefijo.style.display = 'none';
+            skuModalActual = null;
+        }
+
+        function aplicarPrefijoModal() {
+            if (!skuModalActual) return;
+
+            const prefijo = ui.inputPrefijo.value.trim().toUpperCase();
+            
+            if (prefijo) {
+                prefijosAplicados[skuModalActual] = prefijo + skuModalActual;
+                log(`✅ Prefijo aplicado: ${skuModalActual} → ${prefijosAplicados[skuModalActual]}`, 'success');
+            } else {
+                delete prefijosAplicados[skuModalActual];
+                log(`🗑️ Prefijo eliminado: ${skuModalActual}`, 'info');
+            }
+
+            generarVistaPrevia();
+            renderStatsPreview();
+            renderPreview(filtroPreview, ui.buscarPreview.value);
+            cerrarModalPrefijo();
+        }
+
+        function quitarPrefijoModal() {
+            if (!skuModalActual) return;
+
+            delete prefijosAplicados[skuModalActual];
+            log(`🗑️ Prefijo eliminado: ${skuModalActual}`, 'info');
+
+            generarVistaPrevia();
+            renderStatsPreview();
+            renderPreview(filtroPreview, ui.buscarPreview.value);
+            cerrarModalPrefijo();
+        }
+
+        function limpiarTodosPrefijos() {
+            if (Object.keys(prefijosAplicados).length === 0) {
+                alert('No hay prefijos para limpiar');
                 return;
             }
-            ui.resultadosContainer.classList.remove('hidden');
-            ui.loader.classList.remove('hidden');
-            ui.btnCopiarDiferencias.classList.add('hidden');
-            ui.btnCapturarTabla.classList.add('hidden');
-            setTimeout(() => {
-                try {
-                    const esNeto = document.querySelector('input[name="tipo-precio"]:checked').value === 'neto';
-                    const tipoCliente = document.querySelector('input[name="tipo-cliente"]:checked').value;
-                    const agrupar = ui.agruparCategorias.checked;
-                    resultadosParaDescarga = pedidoNormalizado.map(item => corregirUnItem(item, tipoCliente, esNeto, calcularCantidadesPorCategoria(pedidoNormalizado), agrupar, listaForzada));
-                    renderResultados(resultadosParaDescarga);
-                    const diferenciaTotalGeneral = resultadosParaDescarga.reduce((sum, r) => sum + (r.diferencia_total_linea || 0), 0);
-                    const infoPrecios = esNeto ? 'Netos (sin IVA)' : 'Brutos (con IVA)';
-                    const infoListaForzada = listaForzada ? ` | Lista Forzada: ${listaForzada}` : '';
-                    renderResumen(pedidoNormalizado.length, calcularCantidadesPorCategoria(pedidoNormalizado), diferenciaTotalGeneral, infoPrecios + infoListaForzada);
-                    ui.btnCopiarDiferencias.classList.remove('hidden');
-                    ui.btnCapturarTabla.classList.remove('hidden');
-                } catch (e) { console.error(e); alert("Error inesperado al procesar: " + e.message); } finally { ui.loader.classList.add('hidden'); }
-            }, 100);
-        });
 
-        const renderResultados = (resultados) => {
-            const formatter = new Intl.NumberFormat('es-CL', {style: 'currency', currency: 'CLP'});
-            let html = `<table class="min-w-full"><thead style="background-color:rgba(45,55,72,0.5);"><tr>`;
-            ["SKU", "Item", "Cant.", "Categoría", "Tu Precio", "Estado", "Precio Correcto", "Tipo Aplicado", "Dif. Unitaria"].forEach(col => { html += `<th class="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">${col}</th>`; });
-            html += `</tr></thead><tbody style="border-top:1px solid var(--border-color);">`;
-            resultados.forEach(producto => {
-                const diferencia = producto.diferencia !== null ? (producto.diferencia > 0 ? '+' : '') + formatter.format(producto.diferencia) : 'N/A';
-                const categoria = producto.categoria ? `${producto.categoria} (${producto.cantidadCategoria}u)` : 'N/A';
-                html += `<tr class="${producto.colorClass}" style="border-bottom:1px solid var(--border-color);">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium sku-clickable" style="cursor: pointer; text-decoration: underline; color: var(--accent-blue);" data-sku="${producto.sku}">${producto.sku}</td>
-                    <td class="px-6 py-4">${producto.descripcion}</td>
-                    <td class="px-6 py-4">${producto.cantidad}</td>
-                    <td class="px-6 py-4 font-semibold" style="color:var(--accent-blue);">${categoria}</td>
-                    <td class="px-6 py-4">${formatter.format(producto.v_unitario_usuario)}</td>
-                    <td class="px-6 py-4 font-semibold">${producto.estado}</td>
-                    <td class="px-6 py-4 ${producto.highlight ? 'highlight-cell' : ''}">${producto.precioCorrecto ? formatter.format(producto.precioCorrecto) : 'N/A'}</td>
-                    <td class="px-6 py-4 text-xs text-purple-400 font-medium">${producto.tipoAplicado || 'N/A'}</td>
-                    <td class="px-6 py-4">${diferencia}</td>
-                </tr>`;
+            if (confirm(`¿Seguro que quieres eliminar TODOS los prefijos (${Object.keys(prefijosAplicados).length})?`)) {
+                prefijosAplicados = {};
+                log('🗑️ Todos los prefijos eliminados', 'info');
+                
+                generarVistaPrevia();
+                renderStatsPreview();
+                renderPreview(filtroPreview, ui.buscarPreview.value);
+            }
+        }
+
+        function abrirModalMasivo() {
+            ui.inputPrefijoMasivo.value = '';
+            
+            // Listar solo productos NUEVOS
+            const nuevos = cambiosDetectados.filter(c => c.tipo === 'nuevo');
+            
+            let html = '<div class="space-y-1">';
+            nuevos.forEach(producto => {
+                const tienePrefijo = prefijosAplicados[producto.sku];
+                html += `
+                    <label class="flex items-center p-2 hover:bg-primary rounded cursor-pointer">
+                        <input type="checkbox" class="h-4 w-4 rounded mr-3" value="${producto.sku}">
+                        <div class="flex-1">
+                            <div class="font-semibold text-sm ${tienePrefijo ? 'text-purple-300' : 'text-blue-300'}">
+                                ${tienePrefijo ? prefijosAplicados[producto.sku] : producto.sku}
+                                ${tienePrefijo ? `<span class="text-xs text-gray-400 ml-2">(${producto.sku})</span>` : ''}
+                            </div>
+                            <div class="text-xs text-secondary">${producto.descripcion}</div>
+                        </div>
+                    </label>
+                `;
             });
-            ui.resultadosCorreccion.innerHTML = html + '</tbody></table>';
-        };
+            html += '</div>';
+            
+            ui.listaProductosMasivo.innerHTML = html;
+            ui.modalPrefijoMasivo.style.display = 'flex';
+        }
 
-        const renderResumen = (totalProductos, categorias, diferenciaTotalGeneral, tipoPrecios) => {
-            const formatter = new Intl.NumberFormat('es-CL', {style: 'currency', currency: 'CLP'});
-            let html = `<h3 class="text-lg font-semibold mb-2">Resumen</h3><ul class="list-disc list-inside space-y-1"><li><strong>Productos:</strong> ${totalProductos}</li><li><strong>Precios Verificados:</strong> ${tipoPrecios}</li><li><strong>Categorías:</strong></li>`;
-            for (const categoria in categorias) { html += `<li class="ml-4"><strong>${categoria}:</strong> ${categorias[categoria]} u.</li>`; }
-            html += `</ul>`;
-            if (Math.abs(diferenciaTotalGeneral) > 0) { const colorClass = diferenciaTotalGeneral > 0 ? 'text-orange-400' : 'text-red-400'; html += `<div class="mt-4 font-semibold text-lg ${colorClass}">Diferencia Total: ${(diferenciaTotalGeneral > 0 ? '+' : '') + formatter.format(diferenciaTotalGeneral)}</div>`; } else { html += `<div class="mt-4 font-semibold text-lg" style="color:var(--accent-green);">Diferencia Total: ${formatter.format(0)}</div>`; }
-            ui.resumenPedido.innerHTML = html;
-        };
+        function cerrarModalMasivo() {
+            ui.modalPrefijoMasivo.style.display = 'none';
+        }
 
-        ui.btnCopiarDiferencias.addEventListener('click', copiarDiferencias);
-        ui.btnCapturarTabla.addEventListener('click', capturarTabla);
-        ui.intelligentSearchInput.addEventListener('input', handleIntelligentSearch);
-        
-        ui.intelligentSearchResults.addEventListener('click', (e) => {
-            const formatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
-            if (e.target && e.target.matches('#btn-copiar-todo-catalogo')) { let texto = "Resultados de Búsqueda:\n\n"; for (const sku in lastSearchResults) { const producto = lastSearchResults[sku]; texto += `*Producto:* ${producto.sku} - ${producto.descripcion}\n*Precios:*\n`; texto += producto.prices.map(price => `- ${price.tipo}: Neto ${price.neto ? formatter.format(price.neto) : 'N/A'} / Bruto ${price.bruto ? formatter.format(price.bruto) : 'N/A'}`).join('\n'); texto += "\n---\n"; } navigator.clipboard.writeText(texto).then(() => { const originalText = e.target.textContent; e.target.textContent = '¡Copiado!'; setTimeout(() => { e.target.textContent = originalText; }, 2000); }); }
-            if (e.target && e.target.matches('.btn-copiar-catalogo')) { const sku = e.target.dataset.skuCopia; const productos = catalogoCompleto.filter(p => p.sku === sku); if (productos.length > 0) { let texto = `*Producto:* ${productos[0].sku} - ${productos[0].descripcion}\n\n*Lista de Precios:*\n`; texto += productos.map(p => `- ${p.tipo_precio}: Neto ${p.precio_neto ? formatter.format(p.precio_neto) : 'N/A'} / Bruto ${p.precio_bruto ? formatter.format(p.precio_bruto) : 'N/A'}`).join('\n'); navigator.clipboard.writeText(texto).then(() => { const originalText = e.target.textContent; e.target.textContent = '¡Copiado!'; setTimeout(() => { e.target.textContent = originalText; }, 2000); }); } }
+        function aplicarPrefijoMasivo() {
+            const prefijo = ui.inputPrefijoMasivo.value.trim().toUpperCase();
+            
+            if (!prefijo) {
+                alert('Debes escribir un prefijo');
+                return;
+            }
+
+            const checkboxes = ui.listaProductosMasivo.querySelectorAll('input[type="checkbox"]:checked');
+            
+            if (checkboxes.length === 0) {
+                alert('Debes seleccionar al menos un producto');
+                return;
+            }
+
+            let count = 0;
+            checkboxes.forEach(checkbox => {
+                const sku = checkbox.value;
+                prefijosAplicados[sku] = prefijo + sku;
+                count++;
+            });
+
+            log(`✅ Prefijo "${prefijo}" aplicado a ${count} producto(s)`, 'success');
+
+            generarVistaPrevia();
+            renderStatsPreview();
+            renderPreview(filtroPreview, ui.buscarPreview.value);
+            cerrarModalMasivo();
+        }
+
+        function generarCSVActualizado() {
+            log('Generando catálogo actualizado desde vista previa...', 'info');
+            
+            if (csvPreview.length === 0) {
+                alert('Error: No hay vista previa generada');
+                return;
+            }
+
+            // Generar CSV con estructura Git EXACTA desde csvPreview
+            let csvTexto = 'SKU;DESCRIPCION;TIPO_PRECIO;PRECIO_NETO;PRECIO_BRUTO\n';
+            csvPreview.forEach(producto => {
+                const linea = [
+                    producto.sku,
+                    `"${producto.descripcion.replace(/"/g, '""')}"`,
+                    producto.tipo_precio,
+                    producto.precio_neto || 0,
+                    producto.precio_bruto || 0
+                ].join(';');
+                csvTexto += linea + '\n';
+            });
+
+            // Descargar archivo
+            const blob = new Blob([csvTexto], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const fecha = new Date().toISOString().split('T')[0].replace(/-/g, '');
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `GIT${fecha}CATALOGO_ACTUALIZADO.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            log(`✅ CSV generado: GIT${fecha}CATALOGO_ACTUALIZADO.csv`, 'success');
+            log(`📊 Total de líneas: ${csvPreview.length}`, 'info');
+            log(`🏷️ Productos con prefijo: ${Object.keys(prefijosAplicados).length}`, 'info');
+            
+            // Mostrar estadísticas finales
+            const nuevos = csvPreview.filter(p => p.origen === 'nuevo').length;
+            const actualizados = csvPreview.filter(p => p.actualizado).length;
+            const conPrefijo = csvPreview.filter(p => p.tienePrefijo).length;
+            
+            ui.estadisticasFinales.innerHTML = `
+                <div class="text-sm font-semibold mb-2">✅ Catálogo Generado Exitosamente</div>
+                <div class="text-xs space-y-1">
+                    <div>📦 Total líneas en catálogo: ${csvPreview.length}</div>
+                    <div>🆕 Nuevas líneas agregadas: ${nuevos}</div>
+                    <div>🔄 Líneas con precios actualizados: ${actualizados}</div>
+                    <div>🏷️ Productos con prefijo aplicado: ${conPrefijo}</div>
+                    <div>✓ Formato: Compatible con Corrector de Pedidos</div>
+                    <div>✓ Delimitador: ; (punto y coma)</div>
+                    <div>✓ Estructura: SKU;DESCRIPCION;TIPO_PRECIO;PRECIO_NETO;PRECIO_BRUTO</div>
+                </div>
+            `;
+        }
+
+        // ========== EVENT LISTENERS ==========
+        ui.fileGit.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                Papa.parse(file, {
+                    delimiter: ';',
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        catalogoGit = procesarCatalogoGit(results.data);
+                        verificarHabilitarAnalisis();
+                    }
+                });
+            }
         });
 
-        loadCatalogFromGitHub();
-    });
-</script>
+        ui.fileDrive.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                Papa.parse(file, {
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        catalogoDrive = procesarCatalogoDrive(results.data);
+                        verificarHabilitarAnalisis();
+                    }
+                });
+            }
+        });
+
+        function verificarHabilitarAnalisis() {
+            if (catalogoGit.length > 0 && catalogoDrive.length > 0) {
+                ui.btnAnalizar.disabled = false;
+            }
+        }
+
+        ui.btnAnalizar.addEventListener('click', () => {
+            // Paso 1: Analizar diferencias
+            cambiosDetectados = analizarDiferencias();
+            
+            // Paso 2: Validar
+            erroresDetectados = validarCatalogos();
+            renderResumenValidacion();
+            renderErrores(tabErrorActiva);
+            ui.panelValidacion.classList.remove('hidden');
+            
+            // Paso 3: Mostrar cambios
+            renderResumenCambios();
+            renderCambios(filtroActivo);
+            ui.panelCambios.classList.remove('hidden');
+            
+            // Paso 4: Generar vista previa
+            generarVistaPrevia();
+            renderStatsPreview();
+            renderPreview(filtroPreview);
+            ui.panelPreview.classList.remove('hidden');
+            
+            // Paso 5: Habilitar generación
+            ui.panelGenerar.classList.remove('hidden');
+            
+            // Scroll suave al resultado
+            setTimeout(() => {
+                ui.panelValidacion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 200);
+        });
+
+        ui.btnGenerar.addEventListener('click', generarCSVActualizado);
+
+        // Tabs de errores
+        document.querySelectorAll('.tab-error').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab-error').forEach(t => {
+                    t.classList.remove('active');
+                    t.style.backgroundColor = 'rgba(66, 153, 225, 0.2)';
+                });
+                e.target.classList.add('active');
+                e.target.style.backgroundColor = 'var(--accent-blue)';
+                
+                tabErrorActiva = e.target.dataset.tipo;
+                renderErrores(tabErrorActiva);
+            });
+        });
+
+        // Filtros de cambios
+        document.querySelectorAll('.filtro-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filtro-btn').forEach(b => {
+                    b.classList.remove('font-semibold', 'bg-blue-600');
+                });
+                e.target.classList.add('font-semibold', 'bg-blue-600');
+                
+                filtroActivo = e.target.dataset.tipo;
+                renderCambios(filtroActivo, ui.buscarCambios.value);
+            });
+        });
+
+        ui.buscarCambios.addEventListener('input', (e) => {
+            renderCambios(filtroActivo, e.target.value);
+        });
+
+        // Filtros de vista previa
+        document.querySelectorAll('.filtro-preview').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filtro-preview').forEach(b => {
+                    b.classList.remove('font-semibold', 'bg-blue-600');
+                });
+                e.target.classList.add('font-semibold', 'bg-blue-600');
+                
+                filtroPreview = e.target.dataset.tipo;
+                renderPreview(filtroPreview, ui.buscarPreview.value);
+            });
+        });
+
+        ui.buscarPreview.addEventListener('input', (e) => {
+            renderPreview(filtroPreview, e.target.value);
+        });
+
+        // Botones de prefijos
+        ui.btnLimpiarPrefijos.addEventListener('click', limpiarTodosPrefijos);
+        ui.btnAplicarPrefijoMasivo.addEventListener('click', abrirModalMasivo);
+
+        // Modal prefijo individual
+        ui.modalPrefijoClose.addEventListener('click', cerrarModalPrefijo);
+        ui.btnAplicarPrefijoModal.addEventListener('click', aplicarPrefijoModal);
+        ui.btnQuitarPrefijoModal.addEventListener('click', quitarPrefijoModal);
+        
+        ui.inputPrefijo.addEventListener('input', (e) => {
+            const prefijo = e.target.value.trim().toUpperCase();
+            if (skuModalActual) {
+                ui.previewSkuFinal.textContent = prefijo ? (prefijo + skuModalActual) : skuModalActual;
+            }
+        });
+
+        // Modal prefijo masivo
+        ui.modalMasivoClose.addEventListener('click', cerrarModalMasivo);
+        ui.btnAplicarMasivo.addEventListener('click', aplicarPrefijoMasivo);
+
+        // Cerrar modales al hacer click fuera
+        window.addEventListener('click', (e) => {
+            if (e.target === ui.modalPrefijo) {
+                cerrarModalPrefijo();
+            }
+            if (e.target === ui.modalPrefijoMasivo) {
+                cerrarModalMasivo();
+            }
+        });
+
+        // Inicialización
+        log('✅ Sistema de sincronización inteligente listo', 'success');
+        log('📋 Carga ambos archivos para comenzar', 'info');
+    </script>
 </body>
 </html>
