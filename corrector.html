@@ -3,233 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector Pro v43.1 (Key Integrada)</title>
+    <title>Corrector Pro v44.0 (OCR Dual: Local + IA)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #1a1d23; 
-            --bg-secondary: #242832; 
-            --bg-accent: #2d3748;
-            --text-primary: #e2e8f0; 
-            --text-secondary: #a0aec0; 
-            --accent-green: #48bb78;
-            --accent-blue: #4299e1; 
-            --border-color: #4a5568;
+            --bg-primary: #1a1d23; --bg-secondary: #242832; --bg-accent: #2d3748;
+            --text-primary: #e2e8f0; --text-secondary: #a0aec0; --accent-green: #48bb78;
+            --accent-blue: #4299e1; --border-color: #4a5568;
         }
-        body { 
-            font-family: 'Courier Prime', monospace; 
-            background-color: var(--bg-primary); 
-            color: var(--text-primary); 
-        }
-        .panel { 
-            background-color: var(--bg-secondary); 
-        } 
-        .input-area, .internal-box { 
-            background-color: var(--bg-accent); 
-        } 
-        #debug-section { 
-            background-color: var(--bg-accent); 
-            border-left: 4px solid var(--accent-green); 
-        }
-        #debug-section h3 { 
-            color: var(--accent-green); 
-        }
-        .input-field { 
-            background-color: var(--bg-accent); 
-            border: 1px solid var(--border-color); 
-            color: var(--text-primary); 
-            transition: border-color 0.2s ease, box-shadow 0.2s ease; 
-        }
-        .input-field::placeholder { 
-            color: var(--text-secondary); 
-        }
-        .input-field:hover { 
-            border-color: var(--accent-blue); 
-        }
-        .input-field:focus { 
-            border-color: var(--accent-green); 
-            box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2); 
-            outline: none; 
-        }
-        .loader { 
-            border-top-color: var(--accent-blue); 
-            animation: spin 1s linear infinite; 
-        }
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
-        }
-        .disabled-section, button:disabled { 
-            opacity: 0.5; 
-            cursor: not-allowed; 
-        }
-        .switch-group input[type="radio"] { 
-            display: none; 
-        }
-        .switch-group label { 
-            cursor: pointer; 
-            padding: 0.5rem 1rem; 
-            border: 1px solid var(--border-color); 
-            border-radius: 0.375rem; 
-            transition: all 0.2s ease-in-out; 
-        }
-        .switch-group input[type="radio"]:checked + label { 
-            background-color: var(--accent-blue); 
-            border-color: var(--accent-blue); 
-        }
-        .highlight-cell { 
-            border: 2px solid #f59e0b !important; 
-            font-weight: 700; 
-        }
-        #price-modal-close:hover, #price-modal-close:focus { 
-            color: var(--text-primary); 
-            text-decoration: none; 
-        }
-        .selector-manual-enabled { 
-            border-color: var(--accent-green) !important; 
-            background-color: rgba(72, 187, 120, 0.1) !important; 
-        }
+        body { font-family: 'Courier Prime', monospace; background-color: var(--bg-primary); color: var(--text-primary); }
+        .panel { background-color: var(--bg-secondary); } 
+        .input-area, .internal-box { background-color: var(--bg-accent); } 
+        #debug-section { background-color: var(--bg-accent); border-left: 4px solid var(--accent-green); }
+        #debug-section h3 { color: var(--accent-green); }
+        .input-field { background-color: var(--bg-accent); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .input-field::placeholder { color: var(--text-secondary); }
+        .input-field:hover { border-color: var(--accent-blue); }
+        .input-field:focus { border-color: var(--accent-green); box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2); outline: none; }
+        .loader { border-top-color: var(--accent-blue); animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .disabled-section, button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .switch-group input[type="radio"] { display: none; }
+        .switch-group label { cursor: pointer; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.375rem; transition: all 0.2s ease-in-out; }
+        .switch-group input[type="radio"]:checked + label { background-color: var(--accent-blue); border-color: var(--accent-blue); }
+        .highlight-cell { border: 2px solid #f59e0b !important; font-weight: 700; }
+        #price-modal-close:hover, #price-modal-close:focus { color: var(--text-primary); text-decoration: none; }
+        .selector-manual-enabled { border-color: var(--accent-green) !important; background-color: rgba(72, 187, 120, 0.1) !important; }
         
-        /* ESTILOS OCR */
-        .ocr-preview-container { 
-            position: relative; 
-            max-width: 100%; 
-            margin: 1rem auto; 
-        }
-        .ocr-preview-img { 
-            max-width: 100%; 
-            height: auto; 
-            border-radius: 8px; 
-        }
-        .ocr-guide-overlay { 
-            position: absolute; 
-            top: 0; left: 0; right: 0; bottom: 0; 
-            pointer-events: none; 
-        }
-        .ocr-guide-frame { 
-            border: 3px dashed var(--accent-green); 
-            position: absolute; 
-            top: 10%; left: 5%; right: 5%; bottom: 30%; 
-            background: rgba(72, 187, 120, 0.1); 
-        }
-        .ocr-tip { 
-            background: rgba(66, 153, 225, 0.9); 
-            color: white; 
-            padding: 0.5rem 1rem; 
-            border-radius: 4px; 
-            font-size: 0.875rem; 
-            margin: 0.25rem; 
-        }
-        .ocr-progress { 
-            height: 4px; 
-            background: var(--accent-green); 
-            transition: width 0.3s ease; 
-        }
-        .detected-product { 
-            background: var(--bg-accent); 
-            padding: 0.5rem; 
-            margin: 0.25rem 0; 
-            border-radius: 4px; 
-            border-left: 3px solid var(--accent-green); 
-        }
-        .ocr-modal { 
-            display: none; 
-            position: fixed; 
-            z-index: 1000; 
-            left: 0; top: 0; 
-            width: 100%; height: 100%; 
-            overflow: auto; 
-            background-color: rgba(0,0,0,0.8); 
-        }
-        .ocr-modal-content { 
-            background-color: var(--bg-secondary); 
-            margin: 2% auto; 
-            padding: 20px; 
-            border: 1px solid var(--border-color); 
-            width: 95%; max-width: 900px; 
-            border-radius: 8px; 
-            max-height: 90vh; 
-            overflow-y: auto; 
-        }
+        /* ESTILOS PARA OCR */
+        .ocr-preview-container { position: relative; max-width: 100%; margin: 1rem auto; }
+        .ocr-preview-img { max-width: 100%; height: auto; border-radius: 8px; }
+        .ocr-guide-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
+        .ocr-guide-frame { border: 3px dashed var(--accent-green); position: absolute; top: 10%; left: 5%; right: 5%; bottom: 30%; background: rgba(72, 187, 120, 0.1); }
+        .ocr-tip { background: rgba(66, 153, 225, 0.9); color: white; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem; margin: 0.25rem; }
+        .ocr-progress { height: 4px; background: var(--accent-green); transition: width 0.3s ease; }
+        .detected-product { background: var(--bg-accent); padding: 0.5rem; margin: 0.25rem 0; border-radius: 4px; border-left: 3px solid var(--accent-green); }
+        .ocr-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
+        .ocr-modal-content { background-color: var(--bg-secondary); margin: 2% auto; padding: 20px; border: 1px solid var(--border-color); width: 95%; max-width: 900px; border-radius: 8px; max-height: 90vh; overflow-y: auto; }
 
-        /* ESTILOS BARRA MASIVA */
-        #bulk-action-bar { 
-            position: fixed; 
-            bottom: 20px; left: 50%; 
-            transform: translateX(-50%); 
-            background-color: var(--bg-secondary); 
-            border: 1px solid var(--accent-blue); 
-            padding: 15px; 
-            border-radius: 12px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.7); 
-            z-index: 999; 
-            display: none; 
-            align-items: center; 
-            gap: 15px; 
-            width: 90%; max-width: 800px; 
-            animation: slideUp 0.3s ease-out; 
+        /* ESTILOS PARA BARRA MASIVA */
+        #bulk-action-bar {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background-color: var(--bg-secondary); border: 1px solid var(--accent-blue);
+            padding: 15px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+            z-index: 999; display: none; align-items: center; gap: 15px; width: 90%; max-width: 800px;
+            animation: slideUp 0.3s ease-out;
         }
-        @keyframes slideUp { 
-            from { transform: translate(-50%, 100%); opacity: 0; } 
-            to { transform: translate(-50%, 0); opacity: 1; } 
-        }
-        .checkbox-custom { 
-            width: 18px; height: 18px; 
-            cursor: pointer; 
-            accent-color: var(--accent-blue); 
-        }
-
-        /* ESTILOS QR LOCAL */
-        #qr-modal { 
-            display: none; 
-            position: fixed; 
-            z-index: 3000; 
-            left: 0; top: 0; 
-            width: 100%; height: 100%; 
-            background-color: rgba(0,0,0,0.95); 
-            align-items: center; 
-            justify-content: center; 
-            flex-direction: column; 
-        }
-        #qr-container { 
-            background: white; 
-            padding: 0; 
-            border-radius: 12px; 
-            width: 100%; 
-            max-width: 400px; 
-            position: relative; 
-            overflow: hidden; 
-        }
-        #reader { 
-            width: 100%; 
-        }
-        #qr-close-btn { 
-            position: absolute; 
-            top: 10px; right: 10px; 
-            z-index: 10; 
-            background: rgba(0,0,0,0.5); 
-            color: white; 
-            border-radius: 50%; 
-            width: 30px; height: 30px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            cursor: pointer; 
-            font-weight: bold; 
-        }
+        @keyframes slideUp { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        .checkbox-custom { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue); }
     </style>
 </head>
 <body>
     <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1>
-            <p class="text-secondary mt-2">Versión 43.1 - Key Integrada ✅</p>
+            <p class="text-secondary mt-2">Versión 44.0 - IA Integrada & OCR Dual 🧠</p>
         </header>
 
         <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
@@ -279,21 +112,20 @@
                 <div class="panel p-6 rounded-lg shadow-md">
                     <h2 class="text-xl font-semibold mb-4">1. Pegar Pedido y Opciones</h2>
                     
-                    <div class="mb-4 p-3 rounded-lg border border-gray-600 bg-gray-800" style="opacity: 0.7;">
-                        <label class="block text-xs font-medium mb-1 text-green-400">✅ API Key Integrada (Sistema):</label>
-                        <input type="password" id="groq-api-key" class="input-field w-full p-1 text-sm rounded-md bg-gray-900 text-gray-500" readonly value="INTEGRADA_EN_CODIGO">
-                        <p class="text-[10px] text-gray-500 mt-1">Tu llave está segura en el código. Lista para usar IA.</p>
+                    <div class="mb-4 p-3 rounded-lg border border-gray-600 bg-gray-800" style="opacity: 0.8;">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-medium text-green-400">✅ API Key IA (Sistema):</label>
+                            <span class="text-[10px] text-gray-400">gsk_...reiFz</span>
+                        </div>
+                        <input type="password" id="groq-api-key" class="input-field w-full p-1 mt-1 text-sm rounded-md bg-gray-900 text-gray-500 cursor-not-allowed" readonly value="INTEGRADA_EN_CODIGO">
                     </div>
 
                     <div class="mb-4 flex gap-2 flex-wrap">
-                        <button id="btn-scan-qr" class="flex-1 bg-teal-600 text-white font-bold py-2 px-4 rounded-md hover:bg-teal-700 flex items-center justify-center gap-2">
-                            📱 QR
-                        </button>
                         <button id="btn-ocr-camera" class="flex-1 bg-purple-600 text-white font-bold py-2 px-4 rounded-md hover:bg-purple-700 flex items-center justify-center gap-2">
                             📸 Foto Nota
                         </button>
                         <button id="btn-ocr-upload" class="flex-1 bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2">
-                            🖼️ Subir
+                            🖼️ Subir Imagen
                         </button>
                     </div>
                     <input type="file" id="ocr-file-input" accept="image/*" multiple style="display: none;">
@@ -376,10 +208,10 @@
             </div>
             
             <div id="ocr-guide-section" class="mb-4 p-4 rounded-lg" style="background-color: rgba(66, 153, 225, 0.1); border: 1px solid var(--accent-blue);">
-                <h3 class="text-lg font-semibold mb-2">💡 Opciones de Lectura:</h3>
-                <ul class="text-sm space-y-1">
-                    <li>🔹 <strong>Normal (Tesseract):</strong> Rápido, local, para fotos claras y rectas.</li>
-                    <li>🔸 <strong>IA (Groq Vision):</strong> Usa tu API Key. Lee tablas difíciles, sombras y manuscritos.</li>
+                <h3 class="text-lg font-semibold mb-2">💡 Selecciona el método:</h3>
+                <ul class="text-sm space-y-2">
+                    <li class="flex items-center"><span class="text-xl mr-2">🔹</span> <strong>Normal (Tesseract):</strong> Gratis, Local, Rápido. Para fotos nítidas.</li>
+                    <li class="flex items-center"><span class="text-xl mr-2">🧠</span> <strong>IA (Groq Vision):</strong> Inteligente. Lee tablas complejas, sombras y manuscritos.</li>
                 </ul>
             </div>
             
@@ -414,22 +246,14 @@
                 </div>
             </div>
             
-            <div id="ocr-process-section" class="mt-4 flex gap-2" style="display: none;">
-                <button id="btn-process-ocr" class="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700" title="Usa Tesseract (Gratis, Local)">
-                    🚀 Procesar Normal
+            <div id="ocr-process-section" class="mt-4 flex gap-2 flex-col sm:flex-row" style="display: none;">
+                <button id="btn-process-ocr" class="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 transition-colors" title="Usa Tesseract (Gratis, Local)">
+                    🚀 Procesar Normal (Local)
                 </button>
-                <button id="btn-process-groq" class="flex-1 bg-orange-600 text-white font-bold py-3 px-4 rounded-md hover:bg-orange-700" title="Usa API Key (Internet)">
+                <button id="btn-process-groq" class="flex-1 bg-orange-600 text-white font-bold py-3 px-4 rounded-md hover:bg-orange-700 transition-colors" title="Usa Inteligencia Artificial">
                     🧠 Procesar con IA (Groq)
                 </button>
             </div>
-        </div>
-    </div>
-
-    <div id="qr-modal">
-        <div id="qr-container">
-            <div id="qr-close-btn">&times;</div>
-            <div id="reader"></div>
-            <p class="text-center text-black font-bold mt-2">Apunta al código QR</p>
         </div>
     </div>
 
@@ -452,7 +276,6 @@
     // VARIABLES OCR
     let currentOcrImages = [];
     let ocrWorker = null;
-    let html5QrCode = null;
 
     // ========== CARGA DE DATOS ==========
     async function loadCatalogFromGitHub(forzarFuente = null) {
@@ -977,48 +800,6 @@
     function hideOcrModal() { ui.ocrModal.style.display = 'none'; currentOcrImages = []; }
     function handleOcrFileSelection(files) { if (files.length === 0) return; showOcrModal(); currentOcrImages = []; const loadPromises = Array.from(files).map(file => { return new Promise((resolve) => { const reader = new FileReader(); reader.onload = (e) => { currentOcrImages.push({ file: file, dataUrl: e.target.result }); resolve(); }; reader.readAsDataURL(file); }); }); Promise.all(loadPromises).then(() => { ui.ocrPreviewImg.src = currentOcrImages[0].dataUrl; ui.ocrProcessSection.style.display = 'flex'; ui.ocrGuideSection.style.display = 'none'; }); }
 
-    // ========== 🆕 LOGICA QR (LOCAL) ==========
-    function startQrScanner() {
-        document.getElementById('qr-modal').style.display = 'flex';
-        // Verificar si la librería cargó
-        if (typeof Html5Qrcode === 'undefined') { alert("Error: La librería QR no cargó. Verifica tu conexión."); return; }
-        
-        html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-        
-        html5QrCode.start(
-            { facingMode: "environment" }, // Cámara trasera
-            config,
-            (decodedText, decodedResult) => {
-                console.log(`QR Leído: ${decodedText}`);
-                ui.pedidoCrudo.value = decodedText; // Pegar texto
-                stopQrScanner();
-                
-                // Efecto visual
-                ui.pedidoCrudo.style.borderColor = "var(--accent-green)";
-                setTimeout(() => ui.pedidoCrudo.style.borderColor = "var(--border-color)", 1000);
-            },
-            (errorMessage) => {
-                // Error frame, ignorar
-            }
-        ).catch(err => {
-            console.error(err);
-            alert("No se pudo iniciar la cámara. Asegúrate de estar en HTTPS y dar permisos.");
-            document.getElementById('qr-modal').style.display = 'none';
-        });
-    }
-
-    function stopQrScanner() {
-        if (html5QrCode) {
-            html5QrCode.stop().then(() => {
-                document.getElementById('qr-modal').style.display = 'none';
-                html5QrCode.clear();
-            }).catch(err => console.error(err));
-        } else {
-            document.getElementById('qr-modal').style.display = 'none';
-        }
-    }
-
     // ========== EVENT LISTENERS ==========
     document.addEventListener('DOMContentLoaded', () => {
         Object.assign(ui, {
@@ -1047,9 +828,7 @@
             
             btnOcrUseResults: document.getElementById('btn-ocr-use-results'), btnOcrRetry: document.getElementById('btn-ocr-retry'),
             ocrStatusText: document.getElementById('ocr-status-text'), ocrProgressBar: document.getElementById('ocr-progress-bar'),
-            ocrProgressPercent: document.getElementById('ocr-progress-percent'),
-            // QR UI
-            btnScanQr: document.getElementById('btn-scan-qr')
+            ocrProgressPercent: document.getElementById('ocr-progress-percent')
         });
         
         // Listeners OCR
@@ -1057,16 +836,13 @@
         ui.btnOcrUpload.addEventListener('click', () => { ui.ocrFileInput.removeAttribute('capture'); ui.ocrFileInput.click(); });
         ui.ocrFileInput.addEventListener('change', (e) => { handleOcrFileSelection(e.target.files); e.target.value = ''; });
         
+        // 🆕 Lógica de botones OCR
         ui.btnProcessOcr.addEventListener('click', () => { if (currentOcrImages.length > 0) processOcrImages(currentOcrImages); });
         ui.btnProcessGroq.addEventListener('click', () => { if (currentOcrImages.length > 0) processWithGroq(currentOcrImages); });
 
         ui.ocrModalClose.addEventListener('click', hideOcrModal);
         ui.btnOcrRetry.addEventListener('click', () => { hideOcrModal(); ui.btnOcrUpload.click(); });
         window.addEventListener('click', (e) => { if (e.target === ui.ocrModal) hideOcrModal(); });
-
-        // Listener QR
-        ui.btnScanQr.addEventListener('click', startQrScanner);
-        document.getElementById('qr-close-btn').addEventListener('click', stopQrScanner);
         
         ui.priceModalClose.addEventListener('click', hidePriceModal);
         window.addEventListener('click', (event) => { if (event.target == ui.priceModal) hidePriceModal(); });
