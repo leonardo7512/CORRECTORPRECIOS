@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrector Pro v45.0 (Gestión de Lotes)</title>
+    <title>Corrector Pro v44.0 (OCR Dual: Local + IA)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -35,19 +35,16 @@
         #price-modal-close:hover, #price-modal-close:focus { color: var(--text-primary); text-decoration: none; }
         .selector-manual-enabled { border-color: var(--accent-green) !important; background-color: rgba(72, 187, 120, 0.1) !important; }
         
-        /* ESTILOS PARA OCR Y LOTES */
+        /* ESTILOS PARA OCR */
         .ocr-preview-container { position: relative; max-width: 100%; margin: 1rem auto; }
         .ocr-preview-img { max-width: 100%; height: auto; border-radius: 8px; }
+        .ocr-guide-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
+        .ocr-guide-frame { border: 3px dashed var(--accent-green); position: absolute; top: 10%; left: 5%; right: 5%; bottom: 30%; background: rgba(72, 187, 120, 0.1); }
+        .ocr-tip { background: rgba(66, 153, 225, 0.9); color: white; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem; margin: 0.25rem; }
         .ocr-progress { height: 4px; background: var(--accent-green); transition: width 0.3s ease; }
         .detected-product { background: var(--bg-accent); padding: 0.5rem; margin: 0.25rem 0; border-radius: 4px; border-left: 3px solid var(--accent-green); }
         .ocr-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
         .ocr-modal-content { background-color: var(--bg-secondary); margin: 2% auto; padding: 20px; border: 1px solid var(--border-color); width: 95%; max-width: 900px; border-radius: 8px; max-height: 90vh; overflow-y: auto; }
-
-        /* Estilos para la lista de imágenes en lote */
-        .batch-item { display: flex; align-items: center; gap: 10px; background: var(--bg-accent); padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-color); }
-        .batch-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
-        .batch-input { flex-grow: 1; padding: 8px; border-radius: 4px; background: var(--bg-secondary); border: 1px solid var(--border-color); color: white; }
-        .batch-status { font-size: 0.8rem; color: var(--text-secondary); }
 
         /* ESTILOS PARA BARRA MASIVA */
         #bulk-action-bar {
@@ -64,8 +61,8 @@
 <body>
     <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold">Corrector Pro v45.0</h1>
-            <p class="text-secondary mt-2">Gestión de Lotes & OCR Avanzado 📦</p>
+            <h1 class="text-3xl md:text-4xl font-bold">Corrector de Pedidos Profesional</h1>
+            <p class="text-secondary mt-2">Versión 44.0 - IA Integrada & OCR Dual 🧠</p>
         </header>
 
         <div id="intelligent-search-section" class="panel p-6 rounded-lg shadow-md mb-8 disabled-section">
@@ -115,12 +112,20 @@
                 <div class="panel p-6 rounded-lg shadow-md">
                     <h2 class="text-xl font-semibold mb-4">1. Pegar Pedido y Opciones</h2>
                     
+                    <div class="mb-4 p-3 rounded-lg border border-gray-600 bg-gray-800" style="opacity: 0.8;">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-medium text-green-400">✅ API Key IA (Sistema):</label>
+                            <span class="text-[10px] text-gray-400">gsk_...reiFz</span>
+                        </div>
+                        <input type="password" id="groq-api-key" class="input-field w-full p-1 mt-1 text-sm rounded-md bg-gray-900 text-gray-500 cursor-not-allowed" readonly value="INTEGRADA_EN_CODIGO">
+                    </div>
+
                     <div class="mb-4 flex gap-2 flex-wrap">
                         <button id="btn-ocr-camera" class="flex-1 bg-purple-600 text-white font-bold py-2 px-4 rounded-md hover:bg-purple-700 flex items-center justify-center gap-2">
                             📸 Foto Nota
                         </button>
                         <button id="btn-ocr-upload" class="flex-1 bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2">
-                            🖼️ Subir Lote (Varias)
+                            🖼️ Subir Imagen
                         </button>
                     </div>
                     <input type="file" id="ocr-file-input" accept="image/*" multiple style="display: none;">
@@ -128,8 +133,7 @@
                     <div class="mb-4 text-center text-xs text-secondary">- O pegar manualmente -</div>
                     
                     <textarea id="pedido-crudo" class="input-field w-full h-40 p-3 rounded-md" placeholder="Pegue aquí el pedido en cualquier formato..."></textarea>
-                    
-                    <div class="mt-4"><label for="nv-input" class="block text-sm font-medium mb-2">Nº Nota Global (Opcional):</label><input type="text" id="nv-input" class="input-field w-full p-2 rounded-md" placeholder="Ej: 12345"></div>
+                    <div class="mt-4"><label for="nv-input" class="block text-sm font-medium mb-2">Nº Nota de Venta (Opcional):</label><input type="text" id="nv-input" class="input-field w-full p-2 rounded-md" placeholder="Ej: 12345"></div>
                     <div class="mt-4"><label class="block text-sm font-medium mb-2">Tipo de Cliente:</label><div class="flex space-x-2 switch-group"><input type="radio" id="cliente-normal" name="tipo-cliente" value="normal" checked><label for="cliente-normal">Normal</label><input type="radio" id="cliente-vip" name="tipo-cliente" value="VIP"><label for="cliente-vip">VIP</label><input type="radio" id="cliente-webalia" name="tipo-cliente" value="PRECIOS WEBALIA"><label for="cliente-webalia">Webalia</label></div></div>
                     <div class="mt-4"><label class="block text-sm font-medium mb-2">Precios del pedido son:</label><div class="flex space-x-2 switch-group"><input type="radio" id="precio-bruto" name="tipo-precio" value="bruto" checked><label for="precio-bruto">Brutos</label><input type="radio" id="precio-neto" name="tipo-precio" value="neto"><label for="precio-neto">Netos</label></div></div>
                     
@@ -141,6 +145,7 @@
                         <select id="selector-lista-precio" class="input-field w-full p-2 rounded-md mt-2" disabled>
                             <option value="">Seleccionar lista de precio...</option>
                         </select>
+                        <p class="text-xs text-secondary mt-1">Marca esta opción para usar una lista específica independiente de cantidades/cliente</p>
                     </div>
                     
                     <div class="mt-4"><label class="flex items-center text-sm font-medium"><input type="checkbox" id="agrupar-categorias" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked><span class="ml-2">Agrupar Cantidades por Categoría</span></label></div>
@@ -150,17 +155,6 @@
                     <h2 class="text-xl font-semibold mb-4">3. Verificar y Corregir</h2>
                     <input type="text" id="filtro-pedido" class="input-field w-full p-2 mb-2 rounded-md" placeholder="🔍 Buscar por SKU o descripción...">
                     <div id="datos-normalizados" class="internal-box w-full h-60 p-3 border border-transparent rounded-md overflow-auto"><p class="text-sm text-secondary">Aquí aparecerán los datos para editar...</p></div>
-                    
-                    <div class="mb-4 mt-4 p-3 rounded-lg border border-dashed border-gray-500 bg-gray-800 bg-opacity-50">
-                        <label class="flex items-center text-sm font-medium text-purple-300">
-                            <input type="checkbox" id="procesar-por-lotes" class="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer">
-                            <span class="ml-2 cursor-pointer">📦 Procesar Lotes Independientes</span>
-                        </label>
-                        <p class="text-[10px] text-gray-400 mt-1 ml-7">
-                            Si se detectan múltiples notas (identificadas en el OCR), calcula precios y volúmenes por separado para cada una.
-                        </p>
-                    </div>
-
                     <button id="btn-corregir" class="mt-6 w-full text-white font-bold py-3 px-4 rounded-md" style="background-color: var(--accent-blue);" disabled>¡Corregir Precios!</button>
                 </div>
             </div>
@@ -209,18 +203,25 @@
     <div id="ocr-modal" class="ocr-modal">
         <div class="ocr-modal-content">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold">📸 Preparación de Lote</h2>
+                <h2 class="text-2xl font-bold">📸 Procesamiento de Imagen</h2>
                 <button id="ocr-modal-close" class="text-2xl font-bold hover:text-red-500">&times;</button>
             </div>
             
-            <div id="ocr-guide-section" class="mb-4">
-                <p class="text-sm mb-2 text-secondary">Identifica cada imagen antes de procesar para separar los pedidos.</p>
-                <div id="ocr-batch-list" class="max-h-60 overflow-y-auto mb-4 p-2 border border-gray-600 rounded">
-                    </div>
+            <div id="ocr-guide-section" class="mb-4 p-4 rounded-lg" style="background-color: rgba(66, 153, 225, 0.1); border: 1px solid var(--accent-blue);">
+                <h3 class="text-lg font-semibold mb-2">💡 Selecciona el método:</h3>
+                <ul class="text-sm space-y-2">
+                    <li class="flex items-center"><span class="text-xl mr-2">🔹</span> <strong>Normal (Tesseract):</strong> Gratis, Local, Rápido. Para fotos nítidas.</li>
+                    <li class="flex items-center"><span class="text-xl mr-2">🧠</span> <strong>IA (Groq Vision):</strong> Inteligente. Lee tablas complejas, sombras y manuscritos.</li>
+                </ul>
             </div>
             
             <div id="ocr-preview-section" style="display: none;">
-                <img id="ocr-preview-img" class="ocr-preview-img hidden" alt="Vista previa">
+                <div class="ocr-preview-container">
+                    <img id="ocr-preview-img" class="ocr-preview-img" alt="Vista previa">
+                    <div class="ocr-guide-overlay">
+                        <div class="ocr-guide-frame"></div>
+                    </div>
+                </div>
                 <div class="mt-4">
                     <div class="flex justify-between text-sm mb-1">
                         <span id="ocr-status-text">Listo para procesar...</span>
@@ -233,21 +234,21 @@
             </div>
             
             <div id="ocr-results-section" style="display: none;">
-                <h3 class="text-lg font-semibold mb-2">✅ Resumen de Detección:</h3>
+                <h3 class="text-lg font-semibold mb-2">✅ Productos Detectados:</h3>
                 <div id="ocr-detected-products" class="max-h-96 overflow-y-auto mb-4"></div>
                 <div class="flex gap-2">
                     <button id="btn-ocr-use-results" class="flex-1 bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">
-                        ✓ Transferir al Editor
+                        ✓ Usar Estos Productos
                     </button>
                     <button id="btn-ocr-retry" class="flex-1 bg-yellow-600 text-white font-bold py-2 px-4 rounded-md hover:bg-yellow-700">
-                        🔄 Reiniciar
+                        🔄 Intentar de Nuevo
                     </button>
                 </div>
             </div>
             
-            <div id="ocr-process-section" class="mt-4 flex gap-2 flex-col sm:flex-row">
+            <div id="ocr-process-section" class="mt-4 flex gap-2 flex-col sm:flex-row" style="display: none;">
                 <button id="btn-process-ocr" class="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 transition-colors" title="Usa Tesseract (Gratis, Local)">
-                    🚀 Procesar (Local/Tesseract)
+                    🚀 Procesar Normal (Local)
                 </button>
                 <button id="btn-process-groq" class="flex-1 bg-orange-600 text-white font-bold py-3 px-4 rounded-md hover:bg-orange-700 transition-colors" title="Usa Inteligencia Artificial">
                     🧠 Procesar con IA (Groq)
@@ -272,8 +273,8 @@
     let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
     const CACHE_DURATION = 4 * 60 * 60 * 1000;
     
-    // VARIABLES OCR Y LOTES
-    let currentBatchImages = []; // Array de objetos { file, id, dataUrl }
+    // VARIABLES OCR
+    let currentOcrImages = [];
     let ocrWorker = null;
 
     // ========== CARGA DE DATOS ==========
@@ -343,84 +344,53 @@
     function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
     function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
     
-    // ============================================
-    // PARSERS (Actualizados para soportar LOTES)
-    // ============================================
-    
-    // Este parser se encarga de leer el texto y separar por etiquetas "--- ORIGEN: ..."
-    function parsearPedidoUnificado(texto) { 
-        const lineas = texto.split('\n');
+    // PARSERS
+    function parsearPedidoTabla(texto) {
+        const lineas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         const productos = [];
-        let currentGroup = "GENERAL"; // Grupo por defecto
-
-        // Regex para buscar productos (flexible)
-        // Busca: FC... luego texto... luego numeros... luego precio
-        const regexProducto = /(FC[0-9A-Z-]+)(.*?)\s*(\d+)\s*(\$[\s\d.,]+)/i; 
-        
-        lineas.forEach(linea => {
-            const lineaClean = linea.trim();
-            if(!lineaClean) return;
-
-            // Detectar cambio de grupo (Lote)
-            // Ejemplo: --- ORIGEN: Nota 12345 ---
-            if (lineaClean.includes('--- ORIGEN:')) {
-                currentGroup = lineaClean.replace(/-/g, '').replace('ORIGEN:', '').trim();
-                return;
+        let startIndex = 0;
+        for (let i = 0; i < lineas.length; i++) {
+            const lineaNormalizada = lineas[i].toLowerCase().replace(/\s+/g, '');
+            if (lineaNormalizada.includes('cantidad') && lineaNormalizada.includes('producto') && lineaNormalizada.includes('sku') && lineaNormalizada.includes('valor')) {
+                startIndex = i + 1; break;
             }
-
-            const textoNormalizado = lineaClean.replace(/[\t]/g, ' ').replace(/\s{2,}/g, ' '); 
-            
-            const match = regexProducto.exec(textoNormalizado);
-            if (match) {
-                 let precio = limpiarValor(match[4]); 
-                 if (precio !== null) { 
-                     productos.push({ 
-                         sku: normalizarSKU(match[1]), 
-                         item: match[2].replace(/SKU|ITEM|CANTIDAD|V\. UNITARIO|Descuento|SUBTOTAL/gi, '').trim(), 
-                         cantidad: parseInt(match[3], 10), 
-                         v_unitario_usuario: precio,
-                         grupo: currentGroup // <--- AQUI ASIGNAMOS EL GRUPO
-                     }); 
-                 } 
-            }
-        });
-        
-        // Fallback: Si no extrajo nada (quizás formato tabla pegado manual sin etiquetas), usar lógica antigua
-        if (productos.length === 0 && !texto.includes('--- ORIGEN:')) {
-             const textoRaw = texto.replace(/[\n\t]/g, ' ').replace(/\s{2,}/g, ' '); 
-             const regexGlobal = /(FC[0-9A-Z-]+)(.*?)\s*(\d+)\s*(\$[\s\d.,]+)/gi; 
-             let match; 
-             while ((match = regexGlobal.exec(textoRaw)) !== null) { 
-                let precio = limpiarValor(match[4]);
-                if (precio !== null) productos.push({ sku: normalizarSKU(match[1]), item: match[2].trim(), cantidad: parseInt(match[3], 10), v_unitario_usuario: precio, grupo: "MANUAL" });
-             }
         }
-        
+        for (let i = startIndex; i < lineas.length; i++) {
+            const linea = lineas[i];
+            const match = linea.match(/^(\d+)\s+(.+?)\s+(FC[0-9A-Z-]+)\s+(\d+)$/i);
+            if (match) {
+                const cantidad = parseInt(match[1], 10);
+                const precio = limpiarValor(match[4]);
+                if (cantidad > 0 && precio !== null && match[3]) {
+                    productos.push({ sku: normalizarSKU(match[3]), item: match[2].trim(), cantidad: cantidad, v_unitario_usuario: precio });
+                }
+            }
+        }
+        return productos;
+    }
+    
+    function parsearPedidoUnificado(texto) { 
+        const textoNormalizado = texto.replace(/[\n\t]/g, ' ').replace(/\s{2,}/g, ' '); 
+        const productos = []; 
+        const regex = /(FC[0-9A-Z-]+)(.*?)\s*(\d+)\s*(\$[\s\d.,]+)/gi; 
+        let match; 
+        while ((match = regex.exec(textoNormalizado)) !== null) { 
+            let precio = limpiarValor(match[4]); 
+            if (precio !== null) { 
+                productos.push({ sku: normalizarSKU(match[1]), item: match[2].replace(/SKU|ITEM|CANTIDAD|V\. UNITARIO|Descuento|SUBTOTAL/gi, '').trim(), cantidad: parseInt(match[3], 10), v_unitario_usuario: precio }); 
+            } 
+        } 
         return productos;
     }
     
     function parsearPedidoInteligente(texto) {
-        // En esta version v45, centralizamos la logica en el unificado que maneja grupos
+        const productosTabla = parsearPedidoTabla(texto);
+        if (productosTabla.length > 0) return productosTabla;
         return parsearPedidoUnificado(texto);
     }
     
     function getCategoriaPrecios(d) { const match = String(d).trim().match(/(.*?)\s*-\s*/); return (match && match[1]) ? match[1].trim() : "General"; }
-    
-    // MODIFICAMOS EL CÁLCULO DE CANTIDADES PARA SOPORTAR LOTES
-    function calcularCantidadesPorCategoria(p, usarLotesIndependientes){ 
-        const c={}; 
-        p.forEach(i => { 
-            const pr = catalogoCompleto.find(x => x.sku === i.sku); 
-            const catNombre = getCategoriaPrecios(pr ? pr.descripcion : i.item || ""); 
-            
-            // Si "usarLotesIndependientes" es true, la clave es "CATEGORIA|GRUPO"
-            // Si es false, la clave es solo "CATEGORIA" (comportamiento original, suma todo)
-            const key = usarLotesIndependientes ? `${catNombre}|${i.grupo||'GENERAL'}` : catNombre;
-            
-            c[key] = (c[key]||0) + i.cantidad 
-        }); 
-        return c;
-    }
+    function calcularCantidadesPorCategoria(p){ const c={}; p.forEach(i=>{ const pr=catalogoCompleto.find(p=>p.sku===i.sku); const d=pr?pr.descripcion:i.item||""; c[getCategoriaPrecios(d)]=(c[getCategoriaPrecios(d)]||0)+i.cantidad }); return c }
     
     // ========== LOGICA PRECIOS ==========
     function obtenerMejorPrecio(sku, tipoCliente, _, cantidadTotalCategoria, listaForzada = null) { 
@@ -462,38 +432,34 @@
         return { p: { n: primerPrecio.precio_neto, b: primerPrecio.precio_bruto }, t: primerPrecio.tipo_precio }; 
     }
     
-    // ACTUALIZAMOS LA FUNCIÓN DE CORRECCIÓN
-    function corregirUnItem(i, t, n, c, agrupar, listaForzadaGlobal = null, usarLotesIndependientes = false){ 
-        const r={...i}, pr=catalogoCompleto.find(p=>p.sku===r.sku); 
-        r.descripcion = pr ? pr.descripcion : "Desc. no encontrada"; 
-        
-        const catNombre = getCategoriaPrecios(r.descripcion);
-        
-        // Clave para buscar la cantidad total acumulada
-        const keyVolumen = usarLotesIndependientes ? `${catNombre}|${i.grupo||'GENERAL'}` : catNombre;
-        
-        // Cantidad total a considerar para el precio (si agrupa categorias o solo cantidad individual)
-        const ct = agrupar ? (c[keyVolumen]||r.cantidad) : r.cantidad; 
+    function corregirUnItem(i, t, n, c, agrupar, listaForzadaGlobal = null){ 
+        const r={...i},pr=catalogoCompleto.find(p=>p.sku===r.sku); 
+        r.descripcion=pr?pr.descripcion:"Desc. no encontrada"; 
+        const ca=getCategoriaPrecios(r.descripcion); 
+        const ct=agrupar?(c[ca]||r.cantidad):r.cantidad; 
         
         const listaEfectiva = i.listaManual || listaForzadaGlobal;
-        const rp = obtenerMejorPrecio(r.sku, t, r.cantidad, ct, listaEfectiva); 
+        const rp=obtenerMejorPrecio(r.sku,t,r.cantidad,ct, listaEfectiva); 
         
         let e="",cl="",pc=null,d=null,dt=0,h=false; 
         const colorClasses={ok:'bg-green-800 bg-opacity-20',aviso:'bg-orange-800 bg-opacity-20',error:'bg-red-800 bg-opacity-20',no_encontrado:'bg-yellow-800 bg-opacity-20 border-l-4 border-yellow-500'}; 
         
-        if(!rp.p){ e=rp.t; cl=colorClasses.no_encontrado; h=true; } 
-        else { 
-            pc=n?rp.p.n:rp.p.b; 
-            if(!pc||pc<=0){ e="PRECIO NO DISPONIBLE"; cl=colorClasses.no_encontrado; } 
-            else { 
-                d=r.v_unitario_usuario-pc; dt=d*r.cantidad; 
-                if(Math.abs(d)<1.5){ e=`✅ OK`; cl=colorClasses.ok; } 
-                else { h=true; e=d>0?`⚠️ AVISO`:`❌ ERROR`; cl=d>0?colorClasses.aviso:colorClasses.error; } 
-            } 
+        if(!rp.p){
+            e=rp.t; cl=colorClasses.no_encontrado; h=true;
+        } else {
+            pc=n?rp.p.n:rp.p.b;
+            if(!pc||pc<=0){
+                e="PRECIO NO DISPONIBLE"; cl=colorClasses.no_encontrado;
+            } else {
+                d=r.v_unitario_usuario-pc; dt=d*r.cantidad;
+                if(Math.abs(d)<1.5){
+                    e=`✅ OK`; cl=colorClasses.ok;
+                } else {
+                    h=true; e=d>0?`⚠️ AVISO`:`❌ ERROR`; cl=d>0?colorClasses.aviso:colorClasses.error;
+                }
+            }
         }
-        
-        // Retornamos también el grupo para pintarlo en la tabla
-        return{...r, estado:e, colorClass:cl, precioCorrecto:pc, diferencia:d, diferencia_total_linea:dt, highlight:h, categoria:catNombre, cantidadCategoria:ct, tipoAplicado:rp.t, isManual: !!i.listaManual, grupo: i.grupo || 'GENERAL'} 
+        return{...r,estado:e,colorClass:cl,precioCorrecto:pc,diferencia:d,diferencia_total_linea:dt,highlight:h,categoria:ca,cantidadCategoria:ct,tipoAplicado:rp.t, isManual: !!i.listaManual}
     }
     
     // ========== RENDERIZADO ==========
@@ -506,15 +472,7 @@
         });
         html += `</tr></thead><tbody style="border-top:1px solid var(--border-color);">`;
         
-        let ultimoGrupo = "";
-
         resultados.forEach((producto, idx) => {
-             // DETECTAR CAMBIO DE GRUPO E INSERTAR FILA SEPARADORA
-            if (producto.grupo && producto.grupo !== ultimoGrupo) {
-                html += `<tr class="bg-gray-700"><td colspan="10" class="px-4 py-2 font-bold text-xs text-blue-300 uppercase tracking-widest text-center">📄 ${producto.grupo}</td></tr>`;
-                ultimoGrupo = producto.grupo;
-            }
-
             const diferencia = producto.diferencia !== null ? (producto.diferencia > 0 ? '+' : '') + formatter.format(producto.diferencia) : 'N/A';
             const categoria = producto.categoria ? `${producto.categoria} (${producto.cantidadCategoria}u)` : 'N/A';
             const manualBadge = producto.isManual ? `<span class="inline-block bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded ml-1 tracking-wider font-bold">MANUAL</span>` : '';
@@ -538,8 +496,8 @@
 
     const renderResumen = (totalProductos, categorias, diferenciaTotalGeneral, tipoPrecios) => {
         const formatter = new Intl.NumberFormat('es-CL', {style: 'currency', currency: 'CLP'});
-        let html = `<h3 class="text-lg font-semibold mb-2">Resumen Global</h3><ul class="list-disc list-inside space-y-1"><li><strong>Total Productos:</strong> ${totalProductos}</li><li><strong>Precios Verificados:</strong> ${tipoPrecios}</li><li><strong>Volúmenes calculados:</strong></li>`;
-        for (const categoriaKey in categorias) { html += `<li class="ml-4"><strong>${categoriaKey}:</strong> ${categorias[categoriaKey]} u.</li>`; }
+        let html = `<h3 class="text-lg font-semibold mb-2">Resumen</h3><ul class="list-disc list-inside space-y-1"><li><strong>Productos:</strong> ${totalProductos}</li><li><strong>Precios Verificados:</strong> ${tipoPrecios}</li><li><strong>Categorías:</strong></li>`;
+        for (const categoria in categorias) { html += `<li class="ml-4"><strong>${categoria}:</strong> ${categorias[categoria]} u.</li>`; }
         html += `</ul>`;
         if (Math.abs(diferenciaTotalGeneral) > 0) { const colorClass = diferenciaTotalGeneral > 0 ? 'text-orange-400' : 'text-red-400'; html += `<div class="mt-4 font-semibold text-lg ${colorClass}">Diferencia Total: ${(diferenciaTotalGeneral > 0 ? '+' : '') + formatter.format(diferenciaTotalGeneral)}</div>`; } 
         else { html += `<div class="mt-4 font-semibold text-lg" style="color:var(--accent-green);">Diferencia Total: ${formatter.format(0)}</div>`; }
@@ -614,109 +572,80 @@
     const showPriceModal = (sku) => { const allPricesForSku = catalogoCompleto.filter(p => p.sku === sku); const correctedItem = resultadosParaDescarga.find(r => r.sku === sku); if (allPricesForSku.length === 0) return; ui.priceModalTitle.textContent = `Precios para ${sku}`; const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); let contentHtml = '<ul class="list-none p-0 m-0 space-y-2">'; allPricesForSku.forEach(priceInfo => { const isApplied = correctedItem && correctedItem.tipoAplicado === priceInfo.tipo_precio; contentHtml += `<li style="padding: 8px; ${isApplied ? 'background-color: var(--accent-green); color: var(--bg-primary); border-radius: 4px;' : 'background-color: var(--bg-accent); border-radius: 4px;'}"><strong>${priceInfo.tipo_precio}</strong>: Neto ${f.format(priceInfo.precio_neto || 0)} / Bruto ${f.format(priceInfo.precio_bruto || 0)}${isApplied ? '<strong> (Aplicado)</strong>' : ''}</li>`; }); contentHtml += '</ul>'; ui.priceModalBody.innerHTML = contentHtml; ui.priceModal.style.display = 'flex'; };
     const hidePriceModal = () => { ui.priceModal.style.display = 'none'; };
 
-    // ============================================
-    // FUNCIONES OCR Y PREPROCESAMIENTO
-    // ============================================
+    // ========== FUNCIONES OCR ORIGINALES (Tesseract) ==========
     async function initOcrWorker() {
         if (ocrWorker) return ocrWorker;
         ui.ocrStatusText.textContent = 'Inicializando Tesseract (Local)...';
+        ui.ocrProgressBar.style.width = '10%';
         ocrWorker = await Tesseract.createWorker('spa', 1, {
-            logger: (m) => { if (m.status === 'recognizing text') { const progress = Math.round(m.progress * 100); ui.ocrProgressBar.style.width = `${10 + (progress * 0.8)}%`; ui.ocrProgressPercent.textContent = `${progress}%`; ui.ocrStatusText.textContent = `Tesseract procesando... ${progress}%`; } }
+            logger: (m) => {
+                if (m.status === 'recognizing text') {
+                    const progress = Math.round(m.progress * 100);
+                    ui.ocrProgressBar.style.width = `${10 + (progress * 0.8)}%`;
+                    ui.ocrProgressPercent.textContent = `${progress}%`;
+                    ui.ocrStatusText.textContent = `Tesseract procesando... ${progress}%`;
+                }
+            }
         });
-        await ocrWorker.setParameters({ tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$.,- áéíóúñÁÉÍÓÚÑ' });
+        await ocrWorker.setParameters({
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$.,- áéíóúñÁÉÍÓÚÑ',
+        });
         return ocrWorker;
     }
 
     function preprocessImage(imageElement) {
-        const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
-        canvas.width = imageElement.naturalWidth; canvas.height = imageElement.naturalHeight;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = imageElement.naturalWidth;
+        canvas.height = imageElement.naturalHeight;
         ctx.drawImage(imageElement, 0, 0);
-        // Recorte 60% superior para evitar ruido de pie de página
-        const tableHeight = Math.floor(canvas.height * 0.6); const tableStartY = Math.floor(canvas.height * 0.15);
-        const croppedCanvas = document.createElement('canvas'); const croppedCtx = croppedCanvas.getContext('2d');
-        croppedCanvas.width = canvas.width; croppedCanvas.height = tableHeight;
+        
+        // Recorte
+        const tableHeight = Math.floor(canvas.height * 0.6);
+        const tableStartY = Math.floor(canvas.height * 0.15);
+        const croppedCanvas = document.createElement('canvas');
+        const croppedCtx = croppedCanvas.getContext('2d');
+        croppedCanvas.width = canvas.width;
+        croppedCanvas.height = tableHeight;
         croppedCtx.drawImage(canvas, 0, tableStartY, canvas.width, tableHeight, 0, 0, canvas.width, tableHeight);
-        // Filtro alto contraste
-        const imageData = croppedCtx.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height); const data = imageData.data;
-        for (let i = 0; i < data.length; i += 4) { const avg = (data[i] + data[i + 1] + data[i + 2]) / 3; const threshold = avg > 140 ? 255 : 0; data[i] = data[i + 1] = data[i + 2] = threshold; }
+        
+        // Filtros
+        const imageData = croppedCtx.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
+        const data = imageData.data;
+        const contrastFactor = 1.5;
+        for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.min(255, Math.max(0, ((data[i] - 128) * contrastFactor) + 128));
+            data[i + 1] = Math.min(255, Math.max(0, ((data[i + 1] - 128) * contrastFactor) + 128));
+            data[i + 2] = Math.min(255, Math.max(0, ((data[i + 2] - 128) * contrastFactor) + 128));
+        }
+        for (let i = 0; i < data.length; i += 4) {
+            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+            const threshold = avg > 140 ? 255 : 0; 
+            data[i] = data[i + 1] = data[i + 2] = threshold;
+        }
         croppedCtx.putImageData(imageData, 0, 0);
         return croppedCanvas;
     }
 
-    // ============================================
-    // GESTIÓN DE LOTES Y RESULTADOS
-    // ============================================
-    let resultadosPorLote = []; 
-
-    function displayDetectedProductsBatch(lotes) {
-        ui.ocrPreviewSection.style.display = 'none'; 
-        ui.ocrResultsSection.style.display = 'block';
-        const formatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
-        
-        let html = '';
-        let totalProductos = 0;
-
-        lotes.forEach(lote => {
-            if(lote.products.length === 0) return;
-            totalProductos += lote.products.length;
-            
-            // Encabezado del Lote
-            html += `<div class="mt-4 mb-2 p-2 bg-gray-700 rounded border-l-4 border-blue-500 font-bold text-white flex justify-between">
-                        <span>📄 ${lote.id}</span>
-                        <span class="text-xs bg-blue-600 px-2 rounded flex items-center">${lote.products.length} items</span>
-                     </div>`;
-            
-            lote.products.forEach(p => {
-                const priceOk = p.v_unitario_usuario > 100;
-                html += `<div class="detected-product ml-2" style="border-left: 3px solid ${!priceOk ? '#f59e0b' : 'var(--accent-green)'};">
-                            <div class="flex justify-between items-start">
-                                <div class="flex-1"><div class="font-bold text-purple-400">${p.sku}</div><div class="text-sm">${p.item}</div></div>
-                                <div class="text-right ml-4"><div>x${p.cantidad}</div><div>${formatter.format(p.v_unitario_usuario)}</div></div>
-                            </div>
-                         </div>`;
-            });
-        });
-
-        if (totalProductos === 0) html = `<p class="text-red-400">❌ No se detectaron productos en ninguna foto.</p>`;
-        
-        ui.ocrDetectedProducts.innerHTML = html;
-
-        ui.btnOcrUseResults.onclick = () => { 
-            let textoFinal = "";
-            lotes.forEach(lote => {
-                if(lote.products.length > 0) {
-                    textoFinal += `\n--- ORIGEN: ${lote.id} ---\n`; 
-                    textoFinal += lote.products.map(p => `${p.sku} ${p.item} ${p.cantidad} $${Math.round(p.v_unitario_usuario)}`).join('\n');
-                    textoFinal += `\n`;
-                }
-            });
-            
-            ui.pedidoCrudo.value = textoFinal.trim(); 
-            hideOcrModal(); 
-            setTimeout(() => ui.btnNormalizar.click(), 500); 
-        };
-    }
-
-    // ============================================
-    // PROCESAMIENTO IA Y LOCAL (Adapado a lotes)
-    // ============================================
-    async function processWithGroq() {
-        if(currentBatchImages.length === 0) return;
-
+    // ========== 🆕 NUEVA FUNCIÓN: PROCESAMIENTO CON GROQ AI ==========
+    async function processWithGroq(images) {
+        // Usa la constante definida arriba
         const apiKey = GROQ_API_KEY_INTEGRATED;
-        ui.ocrPreviewSection.style.display = 'block'; ui.ocrProcessSection.style.display = 'none'; ui.ocrGuideSection.style.display = 'none';
-        ui.ocrStatusText.textContent = "🧠 IA Analizando Lote...";
-        resultadosPorLote = [];
+        
+        ui.ocrPreviewSection.style.display = 'block';
+        ui.ocrProcessSection.style.display = 'none';
+        ui.ocrResultsSection.style.display = 'none';
+        ui.ocrProgressBar.style.width = '20%';
+        ui.ocrStatusText.textContent = "🧠 Conectando con Inteligencia Artificial (Groq)...";
+
+        const allProducts = [];
 
         try {
-            for (let i = 0; i < currentBatchImages.length; i++) {
-                const batchItem = currentBatchImages[i];
-                // Obtenemos el ID manual que escribió el usuario en el modal
-                const manualId = document.getElementById(`batch-id-${i}`).value || `Foto ${i+1}`;
+            for (let i = 0; i < images.length; i++) {
+                const img = images[i];
+                ui.ocrPreviewImg.src = img.dataUrl;
                 
-                ui.ocrStatusText.textContent = `🧠 Analizando: ${manualId}...`;
-                ui.ocrPreviewImg.src = batchItem.dataUrl;
-                const base64Content = batchItem.dataUrl.split(',')[1];
+                const base64Content = img.dataUrl.split(',')[1];
 
                 const payload = {
                     "messages": [
@@ -724,83 +653,88 @@
                             "role": "user",
                             "content": [
                                 { "type": "text", "text": "Analiza esta imagen de un pedido. Extrae los productos en una tabla con formato CSV (sin encabezados). Columnas: SKU, DESCRIPCION, CANTIDAD, PRECIO_UNITARIO. Si el SKU no es visible, intenta deducirlo o déjalo vacío. Solo devuelve el texto CSV, nada más." },
-                                { "type": "image_url", "image_url": { "url": `data:image/jpeg;base64,${base64Content}` } }
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": `data:image/jpeg;base64,${base64Content}`
+                                    }
+                                }
                             ]
                         }
                     ],
                     "model": "llama-3.2-11b-vision-preview",
-                    "temperature": 0.1, "max_completion_tokens": 1024, "top_p": 1, "stream": false
+                    "temperature": 0.1,
+                    "max_completion_tokens": 1024,
+                    "top_p": 1,
+                    "stream": false,
+                    "stop": null
                 };
 
                 const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                    method: "POST", headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Content-Type": "application/json"
+                    },
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) throw new Error("Error API Groq");
+                if (!response.ok) throw new Error("Error en API Groq: " + response.statusText);
+
                 const json = await response.json();
                 const content = json.choices[0].message.content;
+                
+                console.log("🤖 Respuesta Groq:", content);
+                
                 const products = extractProductsFromGroqText(content);
-                resultadosPorLote.push({ id: manualId, products: products });
+                allProducts.push(...products);
                 
-                ui.ocrProgressBar.style.width = `${((i+1)/currentBatchImages.length)*100}%`;
+                ui.ocrProgressBar.style.width = `${((i+1)/images.length)*100}%`;
             }
-            ui.ocrStatusText.textContent = "✅ Análisis Finalizado.";
-            displayDetectedProductsBatch(resultadosPorLote);
+            
+            ui.ocrStatusText.textContent = "✅ IA Finalizó el análisis.";
+            displayDetectedProducts(allProducts);
 
-        } catch (e) { console.error(e); alert("Error IA: " + e.message + ". Usando Local."); processOcrImages(); }
-    }
-
-    async function processOcrImages() {
-        if(currentBatchImages.length === 0) return;
-        
-        ui.ocrPreviewSection.style.display = 'block'; ui.ocrProcessSection.style.display = 'none'; ui.ocrGuideSection.style.display = 'none';
-        ui.ocrProgressBar.style.width = '0%';
-        resultadosPorLote = [];
-
-        try {
-            const worker = await initOcrWorker();
-            for (let i = 0; i < currentBatchImages.length; i++) {
-                const batchItem = currentBatchImages[i];
-                const manualId = document.getElementById(`batch-id-${i}`).value || `Foto ${i+1}`;
-                
-                ui.ocrStatusText.textContent = `Procesando Tesseract: ${manualId}...`;
-                ui.ocrProgressBar.style.width = `${(i / currentBatchImages.length) * 100}%`;
-                
-                ui.ocrPreviewImg.src = batchItem.dataUrl;
-                // Esperar a que la imagen cargue en el elemento oculto antes de enviarla al canvas
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                const processedCanvas = preprocessImage(ui.ocrPreviewImg);
-                const { data: { text } } = await worker.recognize(processedCanvas);
-                
-                const products = extractProductsFromOcrText(text);
-                resultadosPorLote.push({ id: manualId, products: products });
-            }
-            ui.ocrProgressBar.style.width = '100%'; 
-            ui.ocrStatusText.textContent = `✅ Completado.`;
-            displayDetectedProductsBatch(resultadosPorLote);
-        } catch (error) { alert('Error Tesseract.'); hideOcrModal(); }
+        } catch (e) {
+            console.error(e);
+            alert("Error con la IA: " + e.message + "\n\nSe usará el método normal.");
+            ui.ocrProcessSection.style.display = 'flex';
+        }
     }
 
     function extractProductsFromGroqText(text) {
-        const lines = text.split('\n'); const products = [];
+        const lines = text.split('\n');
+        const products = [];
+        
         lines.forEach(line => {
             const cleanLine = line.replace(/[^\w\s,.;$áéíóúñÁÉÍÓÚÑ-]/g, '').trim();
             if (cleanLine.length < 5) return;
+
             const parts = cleanLine.split(/,|;/);
+            
             if (parts.length >= 3) {
                 let sku = parts.find(p => p.toUpperCase().includes('FC')) || '';
                 let precio = parts.find(p => p.includes('$') || (parseInt(p) > 1000));
                 let cantidad = parts.find(p => parseInt(p) > 0 && parseInt(p) < 1000 && !p.includes('$'));
                 let desc = parts.find(p => p.length > 5 && p !== sku && p !== precio);
+
                 if (sku) sku = normalizarSKU(sku);
                 if (precio) precio = limpiarValor(precio);
                 if (cantidad) cantidad = parseInt(cantidad.replace(/\D/g,''));
-                if (precio && cantidad) { products.push({ sku: sku || '??', item: desc || 'Item IA', cantidad: cantidad, v_unitario_usuario: precio }); }
+                
+                if (precio && cantidad) {
+                    products.push({ sku: sku || '??', item: desc || 'Item detectado por IA', cantidad: cantidad, v_unitario_usuario: precio });
+                }
             } else {
                 const match = cleanLine.match(/(FC\d+)?\s*(.*?)\s+(\d+)\s+(\$?\d+)/i);
-                if (match) { products.push({ sku: match[1] ? normalizarSKU(match[1]) : '', item: match[2].trim(), cantidad: parseInt(match[3]), v_unitario_usuario: limpiarValor(match[4]) }); }
+                if (match) {
+                    products.push({
+                        sku: match[1] ? normalizarSKU(match[1]) : '',
+                        item: match[2].trim(),
+                        cantidad: parseInt(match[3]),
+                        v_unitario_usuario: limpiarValor(match[4])
+                    });
+                }
             }
         });
         return products;
@@ -810,7 +744,11 @@
         const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         const products = [];
         let tableStartIndex = 0; let tableEndIndex = lines.length;
-        for (let i = 0; i < lines.length; i++) { const lineLower = lines[i].toLowerCase(); if (lineLower.includes('sku') && lineLower.includes('item') && lineLower.includes('cantidad')) tableStartIndex = i + 1; if (lineLower.includes('nota:') || lineLower.includes('neto')) { tableEndIndex = i; break; } }
+        for (let i = 0; i < lines.length; i++) {
+            const lineLower = lines[i].toLowerCase();
+            if (lineLower.includes('sku') && lineLower.includes('item') && lineLower.includes('cantidad')) tableStartIndex = i + 1;
+            if (lineLower.includes('nota:') || lineLower.includes('neto')) { tableEndIndex = i; break; }
+        }
         for (let i = tableStartIndex; i < tableEndIndex; i++) {
             const line = lines[i]; const skuMatch = line.match(/FC[\s-]?(\d{5})/i); if (!skuMatch) continue; const sku = 'FC' + skuMatch[1];
             let fullLine = line; let nextLineIndex = i + 1;
@@ -827,41 +765,40 @@
         return products;
     }
 
-    function showOcrModal() { ui.ocrModal.style.display = 'block'; ui.ocrGuideSection.style.display = 'block'; ui.ocrPreviewSection.style.display = 'none'; ui.ocrResultsSection.style.display = 'none'; ui.ocrProcessSection.style.display = 'flex'; }
-    function hideOcrModal() { ui.ocrModal.style.display = 'none'; currentBatchImages = []; }
-    
-    // GESTIÓN DE SELECCIÓN DE IMÁGENES
-    function handleOcrFileSelection(files) { 
-        if (files.length === 0) return; 
-        showOcrModal(); 
-        currentBatchImages = []; 
-        const listContainer = document.getElementById('ocr-batch-list');
-        listContainer.innerHTML = '';
-        
-        const loadPromises = Array.from(files).map((file, index) => { 
-            return new Promise((resolve) => { 
-                const reader = new FileReader(); 
-                reader.onload = (e) => { 
-                    const dataUrl = e.target.result;
-                    currentBatchImages.push({ file: file, id: index, dataUrl: dataUrl }); 
-                    
-                    // Renderizar miniatura e input en el modal
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'batch-item';
-                    itemDiv.innerHTML = `
-                        <img src="${dataUrl}" class="batch-thumb">
-                        <div class="flex-grow">
-                            <label class="block text-xs text-gray-400 mb-1">Identificador de Nota/Foto:</label>
-                            <input type="text" id="batch-id-${index}" class="batch-input w-full" value="Foto ${index+1}">
-                        </div>
-                    `;
-                    listContainer.appendChild(itemDiv);
-                    resolve(); 
-                }; 
-                reader.readAsDataURL(file); 
-            }); 
-        }); 
+    async function processOcrImages(images) {
+        ui.ocrPreviewSection.style.display = 'block'; ui.ocrProcessSection.style.display = 'none'; ui.ocrResultsSection.style.display = 'none'; ui.ocrProgressBar.style.width = '0%';
+        try {
+            const worker = await initOcrWorker(); const allProducts = [];
+            for (let i = 0; i < images.length; i++) {
+                ui.ocrStatusText.textContent = `Procesando imagen ${i + 1} de ${images.length}...`;
+                ui.ocrProgressBar.style.width = `${(i / images.length) * 100}%`;
+                const img = images[i]; ui.ocrPreviewImg.src = img.dataUrl;
+                const processedCanvas = preprocessImage(ui.ocrPreviewImg);
+                const { data: { text } } = await worker.recognize(processedCanvas);
+                allProducts.push(...extractProductsFromOcrText(text));
+            }
+            ui.ocrProgressBar.style.width = '100%'; ui.ocrStatusText.textContent = `✅ Completado: ${allProducts.length} productos detectados`;
+            if (allProducts.length === 0) { alert('No se detectaron productos.'); return; }
+            displayDetectedProducts(allProducts);
+        } catch (error) { alert('Error al procesar.'); hideOcrModal(); }
     }
+
+    function displayDetectedProducts(products) {
+        ui.ocrPreviewSection.style.display = 'none'; ui.ocrResultsSection.style.display = 'block';
+        const formatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
+        if (products.length === 0) { ui.ocrDetectedProducts.innerHTML = `<p class="text-red-400">❌ No se detectaron productos</p>`; return; }
+        let html = `<div class="mb-3 p-2 rounded" style="background-color: rgba(72, 187, 120, 0.1); border: 1px solid var(--accent-green);"><p class="text-sm font-semibold text-green-400">✅ ${products.length} producto(s) detectado(s) correctamente</p></div>`;
+        products.forEach((p) => {
+            const priceOk = p.v_unitario_usuario > 100 && p.v_unitario_usuario < 100000; const qtyOk = p.cantidad > 0 && p.cantidad <= 100;
+            html += `<div class="detected-product" style="border-left: 3px solid ${!priceOk || !qtyOk ? '#f59e0b' : 'var(--accent-green)'};"><div class="flex justify-between items-start"><div class="flex-1"><div class="font-bold text-purple-400">${p.sku}</div><div class="text-sm">${p.item}</div></div><div class="text-right ml-4"><div>Cant: ${p.cantidad}</div><div>${formatter.format(p.v_unitario_usuario)}</div></div></div></div>`;
+        });
+        ui.ocrDetectedProducts.innerHTML = html;
+        ui.btnOcrUseResults.onclick = () => { ui.pedidoCrudo.value = products.map(p => `${p.sku} ${p.item} ${p.cantidad} $${Math.round(p.v_unitario_usuario)}`).join('\n'); hideOcrModal(); setTimeout(() => ui.btnNormalizar.click(), 500); };
+    }
+
+    function showOcrModal() { ui.ocrModal.style.display = 'block'; ui.ocrGuideSection.style.display = 'block'; ui.ocrPreviewSection.style.display = 'none'; ui.ocrResultsSection.style.display = 'none'; ui.ocrProcessSection.style.display = 'flex'; }
+    function hideOcrModal() { ui.ocrModal.style.display = 'none'; currentOcrImages = []; }
+    function handleOcrFileSelection(files) { if (files.length === 0) return; showOcrModal(); currentOcrImages = []; const loadPromises = Array.from(files).map(file => { return new Promise((resolve) => { const reader = new FileReader(); reader.onload = (e) => { currentOcrImages.push({ file: file, dataUrl: e.target.result }); resolve(); }; reader.readAsDataURL(file); }); }); Promise.all(loadPromises).then(() => { ui.ocrPreviewImg.src = currentOcrImages[0].dataUrl; ui.ocrProcessSection.style.display = 'flex'; ui.ocrGuideSection.style.display = 'none'; }); }
 
     // ========== EVENT LISTENERS ==========
     document.addEventListener('DOMContentLoaded', () => {
@@ -885,18 +822,23 @@
             ocrPreviewSection: document.getElementById('ocr-preview-section'), ocrPreviewImg: document.getElementById('ocr-preview-img'),
             ocrResultsSection: document.getElementById('ocr-results-section'), ocrDetectedProducts: document.getElementById('ocr-detected-products'),
             ocrProcessSection: document.getElementById('ocr-process-section'), 
-            btnProcessOcr: document.getElementById('btn-process-ocr'), btnProcessGroq: document.getElementById('btn-process-groq'),
+            // 🆕 Botones Duales
+            btnProcessOcr: document.getElementById('btn-process-ocr'),
+            btnProcessGroq: document.getElementById('btn-process-groq'),
+            
             btnOcrUseResults: document.getElementById('btn-ocr-use-results'), btnOcrRetry: document.getElementById('btn-ocr-retry'),
             ocrStatusText: document.getElementById('ocr-status-text'), ocrProgressBar: document.getElementById('ocr-progress-bar'),
             ocrProgressPercent: document.getElementById('ocr-progress-percent')
         });
         
+        // Listeners OCR
         ui.btnOcrCamera.addEventListener('click', () => { ui.ocrFileInput.setAttribute('capture', 'environment'); ui.ocrFileInput.click(); });
         ui.btnOcrUpload.addEventListener('click', () => { ui.ocrFileInput.removeAttribute('capture'); ui.ocrFileInput.click(); });
         ui.ocrFileInput.addEventListener('change', (e) => { handleOcrFileSelection(e.target.files); e.target.value = ''; });
         
-        ui.btnProcessOcr.addEventListener('click', processOcrImages);
-        ui.btnProcessGroq.addEventListener('click', processWithGroq);
+        // 🆕 Lógica de botones OCR
+        ui.btnProcessOcr.addEventListener('click', () => { if (currentOcrImages.length > 0) processOcrImages(currentOcrImages); });
+        ui.btnProcessGroq.addEventListener('click', () => { if (currentOcrImages.length > 0) processWithGroq(currentOcrImages); });
 
         ui.ocrModalClose.addEventListener('click', hideOcrModal);
         ui.btnOcrRetry.addEventListener('click', () => { hideOcrModal(); ui.btnOcrUpload.click(); });
@@ -927,7 +869,7 @@
         ui.btnNormalizar.addEventListener('click', () => {
             ui.filtroPedido.value = ''; const texto = ui.pedidoCrudo.value;
             if (!texto.trim()) { alert("Pegue el texto del pedido."); return; }
-            pedidoNormalizado = parsearPedidoUnificado(texto);
+            pedidoNormalizado = parsearPedidoInteligente(texto);
             renderPedidoEditable(pedidoNormalizado);
             ui.btnCorregir.disabled = pedidoNormalizado.length === 0;
         });
@@ -965,28 +907,18 @@
                     const tipoCliente = document.querySelector('input[name="tipo-cliente"]:checked').value;
                     const agrupar = ui.agruparCategorias.checked;
                     const listaForzada = ui.forzarListaPrecio.checked ? ui.selectorListaPrecio.value : null;
-                    
-                    // NUEVO: LEER CHECKBOX DE LOTES
-                    const checkLotes = document.getElementById('procesar-por-lotes');
-                    const usarLotes = checkLotes ? checkLotes.checked : false;
-
-                    const cantidadesCalculadas = calcularCantidadesPorCategoria(pedidoNormalizado, usarLotes);
-                    resultadosParaDescarga = pedidoNormalizado.map(item => corregirUnItem(item, tipoCliente, esNeto, cantidadesCalculadas, agrupar, listaForzada, usarLotes));
-                    
+                    resultadosParaDescarga = pedidoNormalizado.map(item => corregirUnItem(item, tipoCliente, esNeto, calcularCantidadesPorCategoria(pedidoNormalizado), agrupar, listaForzada));
                     renderResultados(resultadosParaDescarga);
-                    
                     const diferenciaTotalGeneral = resultadosParaDescarga.reduce((sum, r) => sum + (r.diferencia_total_linea || 0), 0);
                     const infoPrecios = esNeto ? 'Netos (sin IVA)' : 'Brutos (con IVA)';
                     const infoListaForzada = listaForzada ? ` | Lista Forzada: ${listaForzada}` : '';
-                    const infoLotes = usarLotes ? ' | 📦 Por Lotes' : ' | 📦 Lote Unificado';
-                    
-                    renderResumen(pedidoNormalizado.length, cantidadesCalculadas, diferenciaTotalGeneral, infoPrecios + infoListaForzada + infoLotes);
-                    
+                    renderResumen(pedidoNormalizado.length, calcularCantidadesPorCategoria(pedidoNormalizado), diferenciaTotalGeneral, infoPrecios + infoListaForzada);
                     ui.btnCopiarDiferencias.classList.remove('hidden'); ui.btnCapturarTabla.classList.remove('hidden');
                 } catch (e) { console.error(e); alert("Error inesperado al procesar: " + e.message); } finally { ui.loader.classList.add('hidden'); }
             }, 100);
         });
 
+        // Listeners Bulk
         document.getElementById('btn-apply-bulk').addEventListener('click', aplicarListaMasiva);
         document.getElementById('btn-clear-bulk').addEventListener('click', limpiarListaMasiva);
         document.getElementById('btn-close-bulk').addEventListener('click', () => document.getElementById('bulk-action-bar').style.display='none');
