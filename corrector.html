@@ -413,7 +413,17 @@
 
         const usarCache = (motivo) => {
             if (!cachedRaw) return false;
-            catalogoCompleto = JSON.parse(cachedRaw);
+            try {
+                const parsed = JSON.parse(cachedRaw);
+                if (!Array.isArray(parsed) || parsed.length === 0 || !parsed[0].sku) throw new Error('formato de cache inesperado');
+                catalogoCompleto = parsed;
+            } catch (e) {
+                // Cache de una versión anterior (CSV plano, no JSON) o corrupto — se descarta y se sigue con la carga en vivo
+                console.warn('Cache local con formato viejo/corrupto, se descarta:', e.message);
+                localStorage.removeItem('catalogoCache');
+                localStorage.removeItem('catalogoCacheTime');
+                return false;
+            }
             reindexCatalogo();
             habilitarInterfaz();
             const totalSkus = new Set(catalogoCompleto.map(p => p.sku)).size;
@@ -426,8 +436,8 @@
             return true;
         };
 
-        if (fuenteSeleccionada === 'cache' && cachedRaw) { usarCache('💾 Cache Local'); return; }
-        if (fuenteSeleccionada === 'auto' && cacheValid) { usarCache('🔄 Cache Auto'); return; }
+        if (fuenteSeleccionada === 'cache' && cachedRaw) { if (usarCache('💾 Cache Local')) return; }
+        if (fuenteSeleccionada === 'auto' && cacheValid) { if (usarCache('🔄 Cache Auto')) return; }
 
         statusEl.textContent = '🔗 Conectando a Google Sheets...';
         statusEl.style.color = '';
