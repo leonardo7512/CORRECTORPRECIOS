@@ -266,13 +266,20 @@
     // ============================================
     let groqApiKeySession = null;
 
-    // 📊 CONEXIÓN EN VIVO A GOOGLE SHEETS
+    // 📊 CONEXIÓN EN VIVO A GOOGLE SHEETS — mismas URLs exactas que ya usan
+    // AROCHECK.js / cotizadoraromaker.js / ModuloDocumentos.js en producción
     const SHEETS_CONFIG = {
-        principal: { id: '1G-YTvarwG14zc0s7EcLKtvHnBBM7uXiCbFTNttDrqDg', tab: 'Precios Aromaker' },
-        excepciones: { id: '171l6JpmS2b1Aq-WDXLiq8d4SMJM75oUXf6Y8xhpd2Jk', tab: 'CATALOGO_LIMPIO' }
+        principal: { id: '1G-YTvarwG14zc0s7EcLKtvHnBBM7uXiCbFTNttDrqDg', gid: '468760285' },
+        excepciones: { id: '171l6JpmS2b1Aq-WDXLiq8d4SMJM75oUXf6Y8xhpd2Jk', gid: '1973237883' }
     };
     function urlHojaCSV(cfg) {
-        return `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(cfg.tab)}`;
+        return `https://docs.google.com/spreadsheets/d/${cfg.id}/export?format=csv&gid=${cfg.gid}`;
+    }
+    // fetch con tiempo límite — para que nunca se quede pegado en "Conectando..." sin avisar
+    function fetchConTimeout(url, ms = 15000) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), ms);
+        return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
     }
     let catalogoCompleto = [], catalogoPorSKU = new Map(), pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
     const CACHE_DURATION = 4 * 60 * 60 * 1000;
@@ -426,8 +433,8 @@
         statusEl.style.color = '';
         try {
             const [respPrincipal, respExcepciones] = await Promise.all([
-                fetch(urlHojaCSV(SHEETS_CONFIG.principal)),
-                fetch(urlHojaCSV(SHEETS_CONFIG.excepciones))
+                fetchConTimeout(urlHojaCSV(SHEETS_CONFIG.principal)),
+                fetchConTimeout(urlHojaCSV(SHEETS_CONFIG.excepciones))
             ]);
             if (!respPrincipal.ok) throw new Error('No se pudo conectar a la hoja principal (revisa que esté compartida como "cualquiera con el enlace puede ver")');
             const csvPrincipal = await respPrincipal.text();
