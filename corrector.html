@@ -348,30 +348,53 @@
         return filas;
     }
 
-    // Catálogo de excepciones (CATALOGO_LIMPIO): fila 0 = encabezado, fila 1+ = datos
-    // CATEGORIA(0) SKU(1) DESCRIPCION(2) PRECIO_DETALLE(3) PRECIO_MAYOR(4) UMBRAL_MAYOR(5) PRECIO_VIP(6) NOTAS(7) PRECIO_WEBALIA(8, opcional — mismo criterio que PRECIO_VIP)
-    // Misma regla que ya usan AROCHECK.js / ModuloDocumentos.js / cotizadoraromaker.js:
+    // Catálogo de excepciones (CATALOGO_LIMPIO): busca columnas por NOMBRE de encabezado
+    // (no por posición fija) — mismo criterio que ya usan AROCHECK.js / ModuloDocumentos.js /
+    // cotizadoraromaker.js. Así se puede agregar PRECIO_WEBALIA en cualquier posición sin romper nada.
     //  - Para las 3 familias de excepción (Lata Sani-Air Hogar, Lata Auto, Tabletas): esta hoja
     //    es la ÚNICA fuente de Detalle/Mayor (el catálogo principal las excluye a propósito).
-    //  - Para cualquier otro SKU que aparezca aquí (un "precio especial" puntual): el catálogo
-    //    principal sigue mandando para Detalle/Mayor — de acá solo se "rescata" VIP/Webalia
-    //    como fila adicional, sin tocar Detalle/Mayor (evita el bug ya corregido en producción
-    //    donde el VIP de FC12115 se perdía por pisar la fila completa en vez de por campo).
+    //  - Para cualquier SKU (sea o no de esas 3 familias): si trae PRECIO_VIP o PRECIO_WEBALIA,
+    //    se agrega como fila adicional. 🐛 fix: antes el "continue" de las 3 familias saltaba
+    //    esta parte, por lo que su VIP quedaba ignorado (caso detectado: FC11604 Bubble Gum).
+    function encontrarIndiceColumnaExc(header, nombres) {
+        for (let i = 0; i < header.length; i++) {
+            const h = normalizarTextoCatalogo(header[i]);
+            if (nombres.some(n => h === normalizarTextoCatalogo(n))) return i;
+        }
+        return -1;
+    }
     function parsearCatalogoExcepciones(csvText) {
         const filas = [];
         const data = Papa.parse(csvText, { skipEmptyLines: false }).data;
-        for (let i = 1; i < data.length; i++) {
+        let idxHeader = -1;
+        for (let i = 0; i < Math.min(data.length, 5); i++) {
+            if (encontrarIndiceColumnaExc(data[i] || [], ['sku']) !== -1) { idxHeader = i; break; }
+        }
+        if (idxHeader === -1) return filas;
+        const header = data[idxHeader];
+        const iCategoria = encontrarIndiceColumnaExc(header, ['categoria']);
+        const iSku = encontrarIndiceColumnaExc(header, ['sku']);
+        const iDescripcion = encontrarIndiceColumnaExc(header, ['descripcion']);
+        const iPrecioDetalle = encontrarIndiceColumnaExc(header, ['precio_detalle', 'precio detalle']);
+        const iPrecioMayor = encontrarIndiceColumnaExc(header, ['precio_mayor', 'precio mayor']);
+        const iUmbral = encontrarIndiceColumnaExc(header, ['umbral_mayor', 'umbral mayor']);
+        const iPrecioVip = encontrarIndiceColumnaExc(header, ['precio_vip', 'precio vip']);
+        const iNotas = encontrarIndiceColumnaExc(header, ['notas']);
+        const iPrecioWebalia = encontrarIndiceColumnaExc(header, ['precio_webalia', 'precio webalia']);
+        if (iSku === -1) return filas;
+
+        for (let i = idxHeader + 1; i < data.length; i++) {
             const row = data[i];
-            if (!row || row.length < 3) continue;
-            const sku = normalizarSKU(row[1]);
+            if (!row) continue;
+            const sku = normalizarSKU(row[iSku]);
             if (!sku) continue;
-            const descripcion = (row[2] || '').trim();
-            const categoria = (row[0] || '').trim();
-            const precioDetalle = limpiarValor(row[3]) || 0;
-            const precioMayor = limpiarValor(row[4]) || 0;
-            const precioVip = limpiarValor(row[6]) || 0;
-            const notas = (row[7] || '').trim();
-            const precioWebalia = limpiarValor(row[8]) || 0;
+            const descripcion = iDescripcion !== -1 ? (row[iDescripcion] || '').trim() : '';
+            const categoria = iCategoria !== -1 ? (row[iCategoria] || '').trim() : '';
+            const precioDetalle = iPrecioDetalle !== -1 ? (limpiarValor(row[iPrecioDetalle]) || 0) : 0;
+            const precioMayor = iPrecioMayor !== -1 ? (limpiarValor(row[iPrecioMayor]) || 0) : 0;
+            const precioVip = iPrecioVip !== -1 ? (limpiarValor(row[iPrecioVip]) || 0) : 0;
+            const notas = iNotas !== -1 ? (row[iNotas] || '').trim() : '';
+            const precioWebalia = iPrecioWebalia !== -1 ? (limpiarValor(row[iPrecioWebalia]) || 0) : 0;
 
             if (esFamiliaExcluidaDePrincipal(categoria)) {
                 // Esta hoja ES la fuente para estas 3 familias — mismo tratamiento que el catálogo principal
@@ -382,15 +405,27 @@
                     filas.push({ sku, descripcion, categoria, tipo_precio: 'DETALLE', precio_bruto: precioDetalle, precio_neto: Math.round(precioDetalle / 1.19) });
                 }
                 if (precioMayor > 0) {
-                    const matchUmbral = notas.match(/MAYOR DESDE (\d+)/i);
-                    const umbral = matchUmbral ? matchUmbral[1] : ((row[5] || '').trim() || '6');
+                    const matchUmbral = notas.match(/MAYOR DESDE (\d+)/i) || notas.match(/MAYOR\s*(\d+)/i);
+                    const umbral = matchUmbral ? matchUmbral[1] : ((iUmbral !== -1 ? (row[iUmbral] || '').trim() : '') || '6');
                     filas.push({ sku, descripcion, categoria, tipo_precio: `MAYOR ${umbral} UN.`, precio_bruto: precioMayor, precio_neto: Math.round(precioMayor / 1.19) });
                 }
-                continue;
+                // 🐛 fix: sin "continue" acá — VIP/Webalia se revisan siempre, también para estas 3 familias
             }
 
-            // SKU puntual con precio especial: NO se toca Detalle/Mayor (manda el catálogo principal),
-            // solo se agregan filas VIP / Webalia si vienen con valor.
+            // Precio especial: se agrega como fila(s) adicional(es) para CUALQUIER SKU que lo traiga
+            // (sea o no de las 3 familias), sin tocar su Detalle/Mayor normal.
+            // Si trae Detalle/Mayor propios (ej. FC10697), son un tramo VIP completo con su propio
+            // umbral — no un precio plano — por eso se etiquetan "VIP DETALLE"/"VIP MAYOR X UN.",
+            // igual que el catálogo principal pero solo visibles para el tipo de cliente VIP.
+            if (!esFamiliaExcluidaDePrincipal(categoria)) {
+                if (precioDetalle > 0) {
+                    filas.push({ sku, descripcion, categoria, tipo_precio: 'VIP DETALLE', precio_bruto: precioDetalle, precio_neto: Math.round(precioDetalle / 1.19) });
+                }
+                if (precioMayor > 0) {
+                    const umbral = (iUmbral !== -1 ? (row[iUmbral] || '').trim() : '') || '2';
+                    filas.push({ sku, descripcion, categoria, tipo_precio: `VIP MAYOR ${umbral} UN.`, precio_bruto: precioMayor, precio_neto: Math.round(precioMayor / 1.19) });
+                }
+            }
             if (precioVip > 0) {
                 filas.push({ sku, descripcion, categoria, tipo_precio: 'VIP', precio_bruto: precioVip, precio_neto: Math.round(precioVip / 1.19) });
             }
@@ -553,6 +588,17 @@
     function calcularCantidadesPorCategoria(p){ const c={}; p.forEach(i=>{ const pr=preciosDe(i.sku)[0]; const cat=categoriaDeProducto(pr, pr?pr.descripcion:i.item); c[cat]=(c[cat]||0)+i.cantidad }); return c }
     
     // ========== LOGICA PRECIOS ==========
+    function extraerMinCantidad(tipoPrecioTexto) {
+        const tipo = (tipoPrecioTexto || '').toUpperCase();
+        const matchNumero = tipo.match(/(\d+)/);
+        if (matchNumero) return parseInt(matchNumero[1], 10);
+        if (tipo.includes('MAYOR')) return 2;
+        return 1;
+    }
+    function esTipoPrecioClienteEspecial(tipoPrecioTexto) {
+        return /^(VIP|PRECIOS WEBALIA)\b/i.test((tipoPrecioTexto || '').trim());
+    }
+
     function obtenerMejorPrecio(sku, tipoCliente, _, cantidadTotalCategoria, listaForzada = null) { 
         const preciosProducto = preciosDe(sku); 
         
@@ -572,23 +618,34 @@
             return { p: { n: precioUnico.precio_neto, b: precioUnico.precio_bruto }, t: precioUnico.tipo_precio }; 
         } 
         if (tipoCliente !== 'normal') { 
+            // 1) Tramos propios del tipo de cliente (ej. "VIP DETALLE", "VIP MAYOR 3 UN.") — mismo
+            // criterio de cantidad que los tramos normales, pero solo entre las filas de ese cliente.
+            const prefijo = tipoCliente.toUpperCase() + ' ';
+            const tramosCliente = preciosProducto
+                .filter(p => (p.tipo_precio || '').toUpperCase().startsWith(prefijo))
+                .map(p => ({ ...p, minCantidad: extraerMinCantidad(p.tipo_precio) }));
+            const tramosClienteAplicables = tramosCliente.filter(p => cantidadTotalCategoria >= p.minCantidad);
+            if (tramosClienteAplicables.length > 0) {
+                const mejor = tramosClienteAplicables.reduce((m, a) => a.minCantidad > m.minCantidad ? a : m);
+                return { p: { n: mejor.precio_neto, b: mejor.precio_bruto }, t: mejor.tipo_precio };
+            }
+            // 2) Precio plano exacto (ej. "VIP" o "PRECIOS WEBALIA" sin tramos)
             const precioEspecial = preciosProducto.find(p => p.tipo_precio.toUpperCase().trim() === tipoCliente.toUpperCase()); 
             if (precioEspecial) return { p: { n: precioEspecial.precio_neto, b: precioEspecial.precio_bruto }, t: precioEspecial.tipo_precio }; 
+            // 3) Si no hay nada especial para este SKU, sigue abajo y usa el precio normal
         } 
-        const tramosConMinimo = preciosProducto.map(p => { 
-            const tipo = (p.tipo_precio || '').toUpperCase(); 
-            let minCantidad = 1; 
-            const matchNumero = tipo.match(/(\d+)/); 
-            if (matchNumero) { minCantidad = parseInt(matchNumero[1], 10); } 
-            else if (tipo.includes('MAYOR')) { minCantidad = 2; } 
-            return { ...p, minCantidad: minCantidad }; 
-        }); 
+        // Tramos normales — se excluyen filas de cliente especial para que un cliente Normal
+        // nunca reciba por accidente un tramo VIP/Webalia.
+        const tramosConMinimo = preciosProducto
+            .filter(p => !esTipoPrecioClienteEspecial(p.tipo_precio))
+            .map(p => ({ ...p, minCantidad: extraerMinCantidad(p.tipo_precio) })); 
         const tramosAplicables = tramosConMinimo.filter(p => cantidadTotalCategoria >= p.minCantidad); 
         if (tramosAplicables.length > 0) { 
             const mejorTramo = tramosAplicables.reduce((mejor, actual) => actual.minCantidad > mejor.minCantidad ? actual : mejor); 
             return { p: { n: mejorTramo.precio_neto, b: mejorTramo.precio_bruto }, t: mejorTramo.tipo_precio }; 
         } 
-        const primerPrecio = preciosProducto[0]; 
+        if (tramosConMinimo.length === 0) return { p: null, t: "SIN PRECIO NORMAL DISPONIBLE (solo hay precios de cliente especial)" };
+        const primerPrecio = tramosConMinimo[0]; 
         return { p: { n: primerPrecio.precio_neto, b: primerPrecio.precio_bruto }, t: primerPrecio.tipo_precio }; 
     }
     
