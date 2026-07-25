@@ -90,8 +90,8 @@
                     <label for="fuente-cache">💾 Cache</label>
                     <input type="radio" id="fuente-auto" name="fuente-catalogo" value="auto">
                     <label for="fuente-auto">🔄 Auto</label>
-                    <input type="radio" id="fuente-git" name="fuente-catalogo" value="git">
-                    <label for="fuente-git">☁️ Git</label>
+                    <input type="radio" id="fuente-sheets" name="fuente-catalogo" value="sheets">
+                    <label for="fuente-sheets">🔗 Google Sheets</label>
                 </div>
                 <p class="text-xs text-secondary mt-2" id="fuente-descripcion">
                     💾 Cache: Más rápido, usa versión guardada (4h de validez)
@@ -259,66 +259,208 @@
 
 <script>
     // ============================================
-    // 🔑 TU API KEY INTEGRADA
+    // 🔑 API KEY DE GROQ
+    // Ya no va hardcodeada: quedaba expuesta en el código fuente público
+    // de GitHub Pages. Se pide una vez por sesión y se guarda solo en
+    // memoria del navegador (nunca en el código ni en localStorage).
     // ============================================
-    const GROQ_API_KEY_INTEGRATED = "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";
-    // ============================================
+    let groqApiKeySession = null;
 
-    const CATALOG_ALTERNATIVES = [
-        'https://leonardo7512.github.io/CORRECTORPRECIOS/2708CATALOGO_ACTUALIZADO3.csv',
-        './2708CATALOGO_ACTUALIZADO3.csv',
-        'https://cdn.jsdelivr.net/gh/leonardo7512/CORRECTORPRECIOS@main/2708CATALOGO_ACTUALIZADO3.csv',
-        'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv'
-    ];
-    let catalogoCompleto = [], pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
+    // 📊 CONEXIÓN EN VIVO A GOOGLE SHEETS
+    const SHEETS_CONFIG = {
+        principal: { id: '1G-YTvarwG14zc0s7EcLKtvHnBBM7uXiCbFTNttDrqDg', tab: 'Precios Aromaker' },
+        excepciones: { id: '171l6JpmS2b1Aq-WDXLiq8d4SMJM75oUXf6Y8xhpd2Jk', tab: 'CATALOGO_LIMPIO' }
+    };
+    function urlHojaCSV(cfg) {
+        return `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(cfg.tab)}`;
+    }
+    let catalogoCompleto = [], catalogoPorSKU = new Map(), pedidoNormalizado = [], resultadosParaDescarga = [], lastSearchResults = {}, ui = {};
     const CACHE_DURATION = 4 * 60 * 60 * 1000;
+    function reindexCatalogo() {
+        catalogoPorSKU = new Map();
+        catalogoCompleto.forEach(p => {
+            if (!catalogoPorSKU.has(p.sku)) catalogoPorSKU.set(p.sku, []);
+            catalogoPorSKU.get(p.sku).push(p);
+        });
+    }
+    function preciosDe(sku) { return catalogoPorSKU.get(sku) || []; }
     
     // VARIABLES OCR
     let currentOcrImages = [];
     let ocrWorker = null;
 
-    // ========== CARGA DE DATOS ==========
-    async function loadCatalogFromGitHub(forzarFuente = null) {
+    // ========== CARGA DE DATOS (Google Sheets en vivo) ==========
+
+    // Las 3 familias de excepción (Lata Sani Air Hogar, Lata Auto, Tabletas) vienen SIEMPRE
+    // del Catálogo Excepciones, nunca del principal — misma regla exacta que usan
+    // AROCHECK.js / ModuloDocumentos.js / cotizadoraromaker.js (Sheets trae datos
+    // incorrectos para estas 3 familias específicas en la pestaña "Precios Aromaker").
+    function normalizarTextoCatalogo(s) {
+        return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+    function esFamiliaExcluidaDePrincipal(categoria) {
+        const c = normalizarTextoCatalogo(categoria);
+        if (/lata sani.?air hogar/.test(c)) return true;
+        if (/lata auto/.test(c)) return true;
+        if (/tabletas aromaticas/.test(c)) return true;
+        return false;
+    }
+
+    // Catálogo principal ("Precios Aromaker"): fila 0 = banner decorativo, fila 1 = encabezados reales, fila 2+ = datos
+    // D=CATEGORIA, E=DESCRIPCION, F=SKU, G=PRECIO DETALLE(bruto), H=NETO Detalle, I=PRECIO MAYOR(bruto), J=NETO Mayor, K=IMAGEN, L=OBSERVACIONES
+    function parsearCatalogoPrincipal(csvText) {
+        const filas = [];
+        const data = Papa.parse(csvText, { skipEmptyLines: false }).data;
+        for (let i = 2; i < data.length; i++) {
+            const row = data[i];
+            if (!row || row.length < 12) continue;
+            const categoria = (row[3] || '').trim();
+            const descripcion = (row[4] || '').trim();
+            const sku = normalizarSKU(row[5]);
+            if (!sku) continue;
+            if (esFamiliaExcluidaDePrincipal(categoria)) continue; // viene solo de Excepciones
+            const detalleBruto = limpiarValor(row[6]) || 0;
+            const detalleNeto = limpiarValor(row[7]) || 0;
+            const mayorBruto = limpiarValor(row[8]) || 0;
+            const mayorNeto = limpiarValor(row[9]) || 0;
+            const observaciones = (row[11] || '').trim();
+
+            if (observaciones.toUpperCase().includes('PRECIO UNICO')) {
+                filas.push({ sku, descripcion, categoria, tipo_precio: 'PRECIO UNICO', precio_neto: detalleNeto, precio_bruto: detalleBruto });
+                continue;
+            }
+            if (detalleBruto > 0) {
+                filas.push({ sku, descripcion, categoria, tipo_precio: 'DETALLE', precio_neto: detalleNeto, precio_bruto: detalleBruto });
+            }
+            if (mayorBruto > 0) {
+                const matchUmbral = observaciones.match(/MAYOR DESDE (\d+)/i);
+                const umbral = matchUmbral ? matchUmbral[1] : '6';
+                filas.push({ sku, descripcion, categoria, tipo_precio: `MAYOR ${umbral} UN.`, precio_neto: mayorNeto, precio_bruto: mayorBruto });
+            }
+        }
+        return filas;
+    }
+
+    // Catálogo de excepciones (CATALOGO_LIMPIO): fila 0 = encabezado, fila 1+ = datos
+    // CATEGORIA(0) SKU(1) DESCRIPCION(2) PRECIO_DETALLE(3) PRECIO_MAYOR(4) UMBRAL_MAYOR(5) PRECIO_VIP(6) NOTAS(7) PRECIO_WEBALIA(8, opcional — mismo criterio que PRECIO_VIP)
+    // Misma regla que ya usan AROCHECK.js / ModuloDocumentos.js / cotizadoraromaker.js:
+    //  - Para las 3 familias de excepción (Lata Sani-Air Hogar, Lata Auto, Tabletas): esta hoja
+    //    es la ÚNICA fuente de Detalle/Mayor (el catálogo principal las excluye a propósito).
+    //  - Para cualquier otro SKU que aparezca aquí (un "precio especial" puntual): el catálogo
+    //    principal sigue mandando para Detalle/Mayor — de acá solo se "rescata" VIP/Webalia
+    //    como fila adicional, sin tocar Detalle/Mayor (evita el bug ya corregido en producción
+    //    donde el VIP de FC12115 se perdía por pisar la fila completa en vez de por campo).
+    function parsearCatalogoExcepciones(csvText) {
+        const filas = [];
+        const data = Papa.parse(csvText, { skipEmptyLines: false }).data;
+        for (let i = 1; i < data.length; i++) {
+            const row = data[i];
+            if (!row || row.length < 3) continue;
+            const sku = normalizarSKU(row[1]);
+            if (!sku) continue;
+            const descripcion = (row[2] || '').trim();
+            const categoria = (row[0] || '').trim();
+            const precioDetalle = limpiarValor(row[3]) || 0;
+            const precioMayor = limpiarValor(row[4]) || 0;
+            const precioVip = limpiarValor(row[6]) || 0;
+            const notas = (row[7] || '').trim();
+            const precioWebalia = limpiarValor(row[8]) || 0;
+
+            if (esFamiliaExcluidaDePrincipal(categoria)) {
+                // Esta hoja ES la fuente para estas 3 familias — mismo tratamiento que el catálogo principal
+                if (/escalonad/i.test(notas)) {
+                    filas.push({ sku, descripcion, categoria, tipo_precio: '⚠️ TRAMOS ADICIONALES (revisar manual)', precio_neto: 0, precio_bruto: 0 });
+                }
+                if (precioDetalle > 0) {
+                    filas.push({ sku, descripcion, categoria, tipo_precio: 'DETALLE', precio_bruto: precioDetalle, precio_neto: Math.round(precioDetalle / 1.19) });
+                }
+                if (precioMayor > 0) {
+                    const matchUmbral = notas.match(/MAYOR DESDE (\d+)/i);
+                    const umbral = matchUmbral ? matchUmbral[1] : ((row[5] || '').trim() || '6');
+                    filas.push({ sku, descripcion, categoria, tipo_precio: `MAYOR ${umbral} UN.`, precio_bruto: precioMayor, precio_neto: Math.round(precioMayor / 1.19) });
+                }
+                continue;
+            }
+
+            // SKU puntual con precio especial: NO se toca Detalle/Mayor (manda el catálogo principal),
+            // solo se agregan filas VIP / Webalia si vienen con valor.
+            if (precioVip > 0) {
+                filas.push({ sku, descripcion, categoria, tipo_precio: 'VIP', precio_bruto: precioVip, precio_neto: Math.round(precioVip / 1.19) });
+            }
+            if (precioWebalia > 0) {
+                filas.push({ sku, descripcion, categoria, tipo_precio: 'PRECIOS WEBALIA', precio_bruto: precioWebalia, precio_neto: Math.round(precioWebalia / 1.19) });
+            }
+        }
+        return filas;
+    }
+
+    async function loadCatalogFromSheets(forzarFuente = null) {
         const statusEl = document.getElementById('loading-status');
         const versionEl = document.getElementById('catalog-version');
         const fuenteSeleccionada = forzarFuente || document.querySelector('input[name="fuente-catalogo"]:checked').value;
         ui.btnRefreshCatalog.disabled = true;
-        ui.btnRefreshCatalog.innerHTML = '🔄 Actualizando...';
-        const cachedData = localStorage.getItem('catalogoCache');
+        ui.btnRefreshCatalog.innerHTML = '🔗 Conectando...';
+        const cachedRaw = localStorage.getItem('catalogoCache');
         const cacheTime = localStorage.getItem('catalogoCacheTime');
-        const cacheValid = cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION;
-        
-        const processData = (csvText, sourceName, isCache) => {
-             Papa.parse(csvText, {
-                delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                complete: (results) => {
-                    const dataRows = results.data.slice(1);
-                    catalogoCompleto = procesarCatalogo(dataRows);
-                    habilitarInterfaz();
-                    statusEl.textContent = `✅ Catálogo cargado: ${catalogoCompleto.length} productos`;
-                    statusEl.style.color = 'var(--accent-green)';
-                    versionEl.textContent = `${sourceName} | ${catalogoCompleto.length} productos`;
-                    llenarSelectorListasPrecio();
-                    ui.btnRefreshCatalog.disabled = false;
-                    ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
-                }
-            });
+        const cacheValid = cachedRaw && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION;
+
+        const usarCache = (motivo) => {
+            if (!cachedRaw) return false;
+            catalogoCompleto = JSON.parse(cachedRaw);
+            reindexCatalogo();
+            habilitarInterfaz();
+            const totalSkus = new Set(catalogoCompleto.map(p => p.sku)).size;
+            statusEl.textContent = `${motivo} — ${totalSkus} productos (${catalogoCompleto.length} registros de precio)`;
+            statusEl.style.color = motivo.includes('⚠️') ? 'orange' : 'var(--accent-green)';
+            versionEl.textContent = `💾 Cache local | ${totalSkus} productos`;
+            llenarSelectorListasPrecio();
+            ui.btnRefreshCatalog.disabled = false;
+            ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
+            return true;
         };
 
-        if (fuenteSeleccionada === 'cache' && cachedData) { processData(cachedData, "💾 Cache Local", true); return; }
-        if (fuenteSeleccionada === 'auto' && cacheValid) { processData(cachedData, "🔄 Cache Auto", true); return; }
-        
+        if (fuenteSeleccionada === 'cache' && cachedRaw) { usarCache('💾 Cache Local'); return; }
+        if (fuenteSeleccionada === 'auto' && cacheValid) { usarCache('🔄 Cache Auto'); return; }
+
+        statusEl.textContent = '🔗 Conectando a Google Sheets...';
+        statusEl.style.color = '';
         try {
-            let response = null;
-            for (let url of CATALOG_ALTERNATIVES) { try { response = await fetch(url); if (response && response.ok) break; } catch (e) {} }
-            if (!response || !response.ok) throw new Error('Fuentes no disponibles');
-            const csvText = await response.text();
-            localStorage.setItem('catalogoCache', csvText);
+            const [respPrincipal, respExcepciones] = await Promise.all([
+                fetch(urlHojaCSV(SHEETS_CONFIG.principal)),
+                fetch(urlHojaCSV(SHEETS_CONFIG.excepciones))
+            ]);
+            if (!respPrincipal.ok) throw new Error('No se pudo conectar a la hoja principal (revisa que esté compartida como "cualquiera con el enlace puede ver")');
+            const csvPrincipal = await respPrincipal.text();
+            const excepcionesFallaron = !respExcepciones.ok;
+            const csvExcepciones = respExcepciones.ok ? await respExcepciones.text() : '';
+
+            catalogoCompleto = [...parsearCatalogoPrincipal(csvPrincipal), ...parsearCatalogoExcepciones(csvExcepciones)];
+            reindexCatalogo();
+            if (catalogoCompleto.length === 0) throw new Error('La hoja respondió pero no se encontraron productos — revisa el nombre exacto de la pestaña');
+
+            localStorage.setItem('catalogoCache', JSON.stringify(catalogoCompleto));
             localStorage.setItem('catalogoCacheTime', Date.now().toString());
-            processData(csvText, "☁️ Descarga Reciente", false);
+            habilitarInterfaz();
+            const totalSkus = new Set(catalogoCompleto.map(p => p.sku)).size;
+            if (excepcionesFallaron) {
+                statusEl.textContent = `⚠️ Conectado, pero sin datos de excepciones/VIP — ${totalSkus} productos`;
+                statusEl.style.color = 'orange';
+            } else {
+                statusEl.textContent = `✅ Conectado a Google Sheets — ${totalSkus} productos (${catalogoCompleto.length} registros de precio)`;
+                statusEl.style.color = 'var(--accent-green)';
+            }
+            versionEl.textContent = `🔗 Google Sheets (en vivo) | ${totalSkus} productos`;
+            llenarSelectorListasPrecio();
+            ui.btnRefreshCatalog.disabled = false;
+            ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
         } catch (error) {
-            if (cachedData) processData(cachedData, "⚠️ Fallback a Cache", true);
-            else { statusEl.textContent = '❌ Error Fatal: Sin conexión y sin cache'; ui.btnRefreshCatalog.disabled = false; }
+            console.error(error);
+            if (!usarCache('⚠️ Sin conexión a Sheets — usando última copia local')) {
+                statusEl.textContent = '❌ Error: ' + error.message;
+                statusEl.style.color = 'red';
+                ui.btnRefreshCatalog.disabled = false;
+                ui.btnRefreshCatalog.innerHTML = '🔄 Actualizar Catálogo';
+            }
         }
     }
 
@@ -342,7 +484,7 @@
 
     function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
     function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
-    function procesarCatalogo(data) { return data ? data.map(row => { if (row.length < 5) return null; return { sku: row[0] ? normalizarSKU(row[0]) : "", descripcion: row[1] ? String(row[1]).trim() : "", tipo_precio: row[2] ? String(row[2]).trim() : "", precio_neto: limpiarValor(row[3]), precio_bruto: limpiarValor(row[4]) } }).filter(item => item && item.sku) : [] }
+    // procesarCatalogo (formato Git legado) eliminado — reemplazado por parsearCatalogoPrincipal / parsearCatalogoExcepciones
     
     // PARSERS
     function parsearPedidoTabla(texto) {
@@ -390,11 +532,12 @@
     }
     
     function getCategoriaPrecios(d) { const match = String(d).trim().match(/(.*?)\s*-\s*/); return (match && match[1]) ? match[1].trim() : "General"; }
-    function calcularCantidadesPorCategoria(p){ const c={}; p.forEach(i=>{ const pr=catalogoCompleto.find(p=>p.sku===i.sku); const d=pr?pr.descripcion:i.item||""; c[getCategoriaPrecios(d)]=(c[getCategoriaPrecios(d)]||0)+i.cantidad }); return c }
+    function categoriaDeProducto(pr, fallbackTexto) { return (pr && pr.categoria) ? pr.categoria : getCategoriaPrecios(fallbackTexto || ""); }
+    function calcularCantidadesPorCategoria(p){ const c={}; p.forEach(i=>{ const pr=preciosDe(i.sku)[0]; const cat=categoriaDeProducto(pr, pr?pr.descripcion:i.item); c[cat]=(c[cat]||0)+i.cantidad }); return c }
     
     // ========== LOGICA PRECIOS ==========
     function obtenerMejorPrecio(sku, tipoCliente, _, cantidadTotalCategoria, listaForzada = null) { 
-        const preciosProducto = catalogoCompleto.filter(p => p.sku === sku); 
+        const preciosProducto = preciosDe(sku); 
         
         if (preciosProducto.length === 0) return { p: null, t: "SKU NO ENCONTRADO" }; 
         
@@ -433,9 +576,9 @@
     }
     
     function corregirUnItem(i, t, n, c, agrupar, listaForzadaGlobal = null){ 
-        const r={...i},pr=catalogoCompleto.find(p=>p.sku===r.sku); 
+        const r={...i},pr=preciosDe(r.sku)[0]; 
         r.descripcion=pr?pr.descripcion:"Desc. no encontrada"; 
-        const ca=getCategoriaPrecios(r.descripcion); 
+        const ca=categoriaDeProducto(pr, r.descripcion); 
         const ct=agrupar?(c[ca]||r.cantidad):r.cantidad; 
         
         const listaEfectiva = i.listaManual || listaForzadaGlobal;
@@ -524,7 +667,7 @@
             const skusSeleccionados = indices.map(idx => pedidoNormalizado[idx].sku);
             const listasDisponibles = new Set();
             skusSeleccionados.forEach(sku => {
-                const precios = catalogoCompleto.filter(p => p.sku === sku);
+                const precios = preciosDe(sku);
                 precios.forEach(p => { if(p.tipo_precio) listasDisponibles.add(p.tipo_precio); });
             });
             if (listasDisponibles.size > 0) {
@@ -569,7 +712,7 @@
         finally { btnContainer.style.display = 'flex'; } 
     };
 
-    const showPriceModal = (sku) => { const allPricesForSku = catalogoCompleto.filter(p => p.sku === sku); const correctedItem = resultadosParaDescarga.find(r => r.sku === sku); if (allPricesForSku.length === 0) return; ui.priceModalTitle.textContent = `Precios para ${sku}`; const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); let contentHtml = '<ul class="list-none p-0 m-0 space-y-2">'; allPricesForSku.forEach(priceInfo => { const isApplied = correctedItem && correctedItem.tipoAplicado === priceInfo.tipo_precio; contentHtml += `<li style="padding: 8px; ${isApplied ? 'background-color: var(--accent-green); color: var(--bg-primary); border-radius: 4px;' : 'background-color: var(--bg-accent); border-radius: 4px;'}"><strong>${priceInfo.tipo_precio}</strong>: Neto ${f.format(priceInfo.precio_neto || 0)} / Bruto ${f.format(priceInfo.precio_bruto || 0)}${isApplied ? '<strong> (Aplicado)</strong>' : ''}</li>`; }); contentHtml += '</ul>'; ui.priceModalBody.innerHTML = contentHtml; ui.priceModal.style.display = 'flex'; };
+    const showPriceModal = (sku) => { const allPricesForSku = preciosDe(sku); const correctedItem = resultadosParaDescarga.find(r => r.sku === sku); if (allPricesForSku.length === 0) return; ui.priceModalTitle.textContent = `Precios para ${sku}`; const f = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); let contentHtml = '<ul class="list-none p-0 m-0 space-y-2">'; allPricesForSku.forEach(priceInfo => { const isApplied = correctedItem && correctedItem.tipoAplicado === priceInfo.tipo_precio; contentHtml += `<li style="padding: 8px; ${isApplied ? 'background-color: var(--accent-green); color: var(--bg-primary); border-radius: 4px;' : 'background-color: var(--bg-accent); border-radius: 4px;'}"><strong>${priceInfo.tipo_precio}</strong>: Neto ${f.format(priceInfo.precio_neto || 0)} / Bruto ${f.format(priceInfo.precio_bruto || 0)}${isApplied ? '<strong> (Aplicado)</strong>' : ''}</li>`; }); contentHtml += '</ul>'; ui.priceModalBody.innerHTML = contentHtml; ui.priceModal.style.display = 'flex'; };
     const hidePriceModal = () => { ui.priceModal.style.display = 'none'; };
 
     // ========== FUNCIONES OCR ORIGINALES (Tesseract) ==========
@@ -629,8 +772,12 @@
 
     // ========== 🆕 NUEVA FUNCIÓN: PROCESAMIENTO CON GROQ AI ==========
     async function processWithGroq(images) {
-        // Usa la constante definida arriba
-        const apiKey = GROQ_API_KEY_INTEGRATED;
+        if (!groqApiKeySession) {
+            const ingresada = window.prompt('Ingresa tu API Key de Groq (solo se usa en este navegador, no se guarda ni se sube a ningún lado):');
+            if (!ingresada || !ingresada.trim()) { alert('Se necesita una API Key de Groq para usar el procesamiento con IA.'); return; }
+            groqApiKeySession = ingresada.trim();
+        }
+        const apiKey = groqApiKeySession;
         
         ui.ocrPreviewSection.style.display = 'block';
         ui.ocrProcessSection.style.display = 'none';
@@ -847,15 +994,15 @@
         ui.priceModalClose.addEventListener('click', hidePriceModal);
         window.addEventListener('click', (event) => { if (event.target == ui.priceModal) hidePriceModal(); });
         ui.resultadosCorreccion.addEventListener('click', (e) => { if (e.target && e.target.classList.contains('sku-clickable')) showPriceModal(e.target.dataset.sku); });
-        ui.btnRefreshCatalog.addEventListener('click', () => loadCatalogFromGitHub());
+        ui.btnRefreshCatalog.addEventListener('click', () => loadCatalogFromSheets());
 
         document.querySelectorAll('input[name="fuente-catalogo"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 const desc = document.getElementById('fuente-descripcion');
                 switch(e.target.value) {
                     case 'cache': desc.textContent = '💾 Cache: Más rápido, usa versión guardada (4h de validez)'; break;
-                    case 'auto': desc.textContent = '🔄 Auto: Usa cache si es válido, sino descarga desde Git'; break;
-                    case 'git': desc.textContent = '☁️ Git: Siempre descarga la última versión (⚠️ cuidado con rate limit)'; break;
+                    case 'auto': desc.textContent = '🔄 Auto: Usa cache si es válido, sino conecta a Google Sheets'; break;
+                    case 'sheets': desc.textContent = '🔗 Google Sheets: Siempre trae los precios en vivo desde la hoja'; break;
                 }
             });
         });
@@ -929,10 +1076,10 @@
         ui.intelligentSearchResults.addEventListener('click', (e) => {
             const formatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
             if (e.target && e.target.matches('#btn-copiar-todo-catalogo')) { let texto = "Resultados de Búsqueda:\n\n"; for (const sku in lastSearchResults) { const producto = lastSearchResults[sku]; texto += `*Producto:* ${producto.sku} - ${producto.descripcion}\n*Precios:*\n`; texto += producto.prices.map(price => `- ${price.tipo}: Neto ${price.neto ? formatter.format(price.neto) : 'N/A'} / Bruto ${price.bruto ? formatter.format(price.bruto) : 'N/A'}`).join('\n'); texto += "\n---\n"; } navigator.clipboard.writeText(texto).then(() => { const originalText = e.target.textContent; e.target.textContent = '¡Copiado!'; setTimeout(() => { e.target.textContent = originalText; }, 2000); }); }
-            if (e.target && e.target.matches('.btn-copiar-catalogo')) { const sku = e.target.dataset.skuCopia; const productos = catalogoCompleto.filter(p => p.sku === sku); if (productos.length > 0) { let texto = `*Producto:* ${productos[0].sku} - ${productos[0].descripcion}\n\n*Lista de Precios:*\n`; texto += productos.map(p => `- ${p.tipo_precio}: Neto ${p.precio_neto ? formatter.format(p.precio_neto) : 'N/A'} / Bruto ${p.precio_bruto ? formatter.format(p.precio_bruto) : 'N/A'}`).join('\n'); navigator.clipboard.writeText(texto).then(() => { const originalText = e.target.textContent; e.target.textContent = '¡Copiado!'; setTimeout(() => { e.target.textContent = originalText; }, 2000); }); } }
+            if (e.target && e.target.matches('.btn-copiar-catalogo')) { const sku = e.target.dataset.skuCopia; const productos = preciosDe(sku); if (productos.length > 0) { let texto = `*Producto:* ${productos[0].sku} - ${productos[0].descripcion}\n\n*Lista de Precios:*\n`; texto += productos.map(p => `- ${p.tipo_precio}: Neto ${p.precio_neto ? formatter.format(p.precio_neto) : 'N/A'} / Bruto ${p.precio_bruto ? formatter.format(p.precio_bruto) : 'N/A'}`).join('\n'); navigator.clipboard.writeText(texto).then(() => { const originalText = e.target.textContent; e.target.textContent = '¡Copiado!'; setTimeout(() => { e.target.textContent = originalText; }, 2000); }); } }
         });
 
-        loadCatalogFromGitHub();
+        loadCatalogFromSheets();
     });
 </script>
 </body>
