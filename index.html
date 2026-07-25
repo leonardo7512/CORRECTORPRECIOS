@@ -160,8 +160,8 @@
             <p class="text-sm text-secondary">Versión 2.0 | Actualizado Enero 2026</p>
         </header>
 
-        <!-- Herramientas Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+        <!-- Herramientas -->
+        <div class="grid grid-cols-1 gap-8 mb-12 max-w-xl mx-auto">
             
             <!-- Corrector de Pedidos -->
             <div class="card-tool rounded-xl p-8">
@@ -173,13 +173,14 @@
                     <span class="badge badge-primary mb-4">Principal</span>
                     
                     <p class="text-secondary mb-6">
-                        Valida y corrige pedidos automáticamente comparando con el catálogo oficial. 
+                        Valida y corrige pedidos automáticamente comparando con el catálogo oficial en vivo. 
                         Detecta errores de precio y genera reportes detallados.
                     </p>
                     
                     <ul class="feature-list text-left w-full mb-6 text-sm">
+                        <li>Conectado en vivo a Google Sheets</li>
                         <li>Validación automática de precios</li>
-                        <li>Detección de listas (Detalle/Mayor)</li>
+                        <li>Detección de listas (Detalle/Mayor/VIP)</li>
                         <li>Agrupación por categorías</li>
                         <li>Exportación de reportes</li>
                         <li>Búsqueda inteligente en catálogo</li>
@@ -190,80 +191,20 @@
                     </a>
                 </div>
             </div>
-
-            <!-- Sincronizador de Catálogo -->
-            <div class="card-tool rounded-xl p-8">
-                <div class="flex flex-col items-center text-center">
-                    <div class="icon-wrapper" style="background: linear-gradient(135deg, var(--accent-green), #2f855a);">
-                        🔄
-                    </div>
-                    <h2 class="text-2xl font-bold mb-3">Sincronizador de Catálogo</h2>
-                    <span class="badge badge-new mb-4">Nuevo</span>
-                    
-                    <p class="text-secondary mb-6">
-                        Actualiza el catálogo Git desde Drive manteniendo la estructura intacta. 
-                        Detecta productos nuevos y cambios de precio automáticamente.
-                    </p>
-                    
-                    <ul class="feature-list text-left w-full mb-6 text-sm">
-                        <li>Estructura Git inmutable</li>
-                        <li>Detección de precios pendientes</li>
-                        <li>Comparación Drive ↔ Git</li>
-                        <li>Vista previa de cambios</li>
-                        <li>Generación CSV lista para Git</li>
-                    </ul>
-                    
-                    <a href="sincronizador.html" class="btn-primary w-full text-center" 
-                       style="background: linear-gradient(135deg, var(--accent-green), #2f855a);">
-                        Abrir Sincronizador →
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Flujo de Trabajo -->
-        <div class="card-tool rounded-xl p-8 mb-8">
-            <h3 class="text-2xl font-bold mb-6 text-center">📋 Flujo de Trabajo Recomendado</h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                <div>
-                    <div class="text-4xl mb-3">1️⃣</div>
-                    <h4 class="font-bold mb-2 text-blue-400">Actualizar Catálogo</h4>
-                    <p class="text-sm text-secondary">
-                        Usa el <strong>Sincronizador</strong> para actualizar precios desde Drive a Git
-                    </p>
-                </div>
-                
-                <div>
-                    <div class="text-4xl mb-3">2️⃣</div>
-                    <h4 class="font-bold mb-2 text-green-400">Subir a GitHub</h4>
-                    <p class="text-sm text-secondary">
-                        Sube el CSV generado a tu repositorio para publicar los cambios
-                    </p>
-                </div>
-                
-                <div>
-                    <div class="text-4xl mb-3">3️⃣</div>
-                    <h4 class="font-bold mb-2 text-purple-400">Corregir Pedidos</h4>
-                    <p class="text-sm text-secondary">
-                        Usa el <strong>Corrector</strong> con el catálogo actualizado para validar pedidos
-                    </p>
-                </div>
-            </div>
         </div>
 
         <!-- Información Técnica -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="card-tool rounded-lg p-6">
-                <h4 class="font-bold mb-3 text-blue-400">📦 Catálogo Actual</h4>
+                <h4 class="font-bold mb-3 text-blue-400">📊 Catálogo Actual</h4>
                 <p class="text-sm text-secondary mb-2">
-                    <strong>Archivo:</strong> 2708CATALOGO_ACTUALIZADO3.csv
+                    <strong>Fuente:</strong> Google Sheets, en vivo
                 </p>
                 <p class="text-sm text-secondary mb-2">
-                    <strong>Formato:</strong> SKU;DESCRIPCION;TIPO_PRECIO;PRECIO_NETO;PRECIO_BRUTO
+                    <strong>Hojas:</strong> Precios Aromaker (principal) + Catálogo de Excepciones (precios VIP)
                 </p>
                 <p class="text-sm text-secondary">
-                    <strong>Fuente:</strong> GitHub Pages (Auto-actualización cada 4 horas)
+                    <strong>Cache local:</strong> 4 horas, como respaldo sin conexión
                 </p>
             </div>
             
@@ -275,13 +216,6 @@
                            target="_blank" 
                            class="text-blue-400 hover:underline">
                             📁 Repositorio GitHub
-                        </a>
-                    </li>
-                    <li>
-                        <a href="2708CATALOGO_ACTUALIZADO3.csv" 
-                           download 
-                           class="text-blue-400 hover:underline">
-                            📥 Descargar Catálogo CSV
                         </a>
                     </li>
                     <li class="text-secondary">
