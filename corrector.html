@@ -382,7 +382,10 @@
             const descripcion = (row[iDescripcion] || '').trim();
             const sku = normalizarSKU(row[iSku]);
             if (!sku) continue; // fila vacía o de separación — se salta sin importar cuántas haya ni en qué posición quede
-            if (esFamiliaExcluidaDePrincipal(categoria)) continue; // viene solo de Excepciones
+            // Viene solo de Excepciones. EXCEPCIÓN: la Lata EXÓTICA Auto (FC13852–FC13858) es otro
+            // producto: vive en el principal con categoría "AROMATIZACIÓN LATA AUTO" y no está en
+            // Excepciones, así que no debe saltarse (misma regla que el Asistente AROMAKER).
+            if (esFamiliaExcluidaDePrincipal(categoria) && !/exotica/.test(normalizarTextoCatalogo(descripcion))) continue;
             const detalleBruto = limpiarValor(row[iPrecioDetalle]) || 0;
             const detalleNeto = limpiarValor(row[iNetoDetalle]) || 0;
             const mayorBruto = iPrecioMayor !== -1 ? (limpiarValor(row[iPrecioMayor]) || 0) : 0;
@@ -492,8 +495,8 @@
         const fuenteSeleccionada = forzarFuente || document.querySelector('input[name="fuente-catalogo"]:checked').value;
         ui.btnRefreshCatalog.disabled = true;
         ui.btnRefreshCatalog.innerHTML = '🔗 Conectando...';
-        const cachedRaw = localStorage.getItem('catalogoCache');
-        const cacheTime = localStorage.getItem('catalogoCacheTime');
+        const cachedRaw = localStorage.getItem('catalogoCacheV2');
+        const cacheTime = localStorage.getItem('catalogoCacheTimeV2');
         const cacheValid = cachedRaw && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION;
 
         const usarCache = (motivo) => {
@@ -505,8 +508,8 @@
             } catch (e) {
                 // Cache de una versión anterior (CSV plano, no JSON) o corrupto — se descarta y se sigue con la carga en vivo
                 console.warn('Cache local con formato viejo/corrupto, se descarta:', e.message);
-                localStorage.removeItem('catalogoCache');
-                localStorage.removeItem('catalogoCacheTime');
+                localStorage.removeItem('catalogoCacheV2');
+                localStorage.removeItem('catalogoCacheTimeV2');
                 return false;
             }
             reindexCatalogo();
@@ -540,8 +543,8 @@
             reindexCatalogo();
             if (catalogoCompleto.length === 0) throw new Error('La hoja respondió pero no se encontraron productos — revisa el nombre exacto de la pestaña');
 
-            localStorage.setItem('catalogoCache', JSON.stringify(catalogoCompleto));
-            localStorage.setItem('catalogoCacheTime', Date.now().toString());
+            localStorage.setItem('catalogoCacheV2', JSON.stringify(catalogoCompleto));
+            localStorage.setItem('catalogoCacheTimeV2', Date.now().toString());
             habilitarInterfaz();
             const totalSkus = new Set(catalogoCompleto.map(p => p.sku)).size;
             if (excepcionesFallaron) {
